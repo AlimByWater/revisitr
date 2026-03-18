@@ -200,31 +200,46 @@ GET    /dashboard/widgets
 
 ## Infrastructure
 
+Nginx на хосте обрабатывает SSL и маршрутизацию. Docker-контейнеры слушают на localhost.
+
 ```
                     elysium.fm
                         │
-                    ┌───────┐
-                    │Traefik│ (SSL, routing)
-                    └───┬───┘
+                  ┌───────────┐
+                  │ Host nginx │ (SSL, routing)
+                  └─────┬─────┘
                         │
            ┌────────────┼────────────┐
            │            │            │
-    /revisitr/api   /revisitr    (internal)
+  /revisitr/api/    /revisitr/    (internal)
            │            │            │
       ┌────────┐  ┌──────────┐  ┌────────┐
       │Backend │  │ Frontend │  │  Bot   │
-      │ :8080  │  │  nginx   │  │ :8081  │
+      │ :8090  │  │  :3340   │  │        │
       └────┬───┘  └──────────┘  └────┬───┘
            │                         │
       ┌────┴─────────────────────────┴───┐
-      │         PostgreSQL :5432          │
-      │           Redis :6379             │
+      │       PostgreSQL :5433 → :5432   │
+      │         Redis :6380 → :6379      │
       └──────────────────────────────────┘
 ```
+
+### Nginx routing (`infra/nginx-revisitr.conf`)
+- `/revisitr/api/*` → `127.0.0.1:8090` (strip `/revisitr` prefix)
+- `/revisitr/*` → `127.0.0.1:3340` (strip `/revisitr` prefix)
+
+### Port mapping (host → container)
+| Service    | Host port | Container port |
+|------------|-----------|----------------|
+| Backend    | 8090      | 8080           |
+| Frontend   | 3340      | 80             |
+| PostgreSQL | 5433      | 5432           |
+| Redis      | 6380      | 6379           |
 
 ## Deployment
 
 - GitHub Actions (self-hosted runner на том же сервере)
-- GHCR для Docker-образов
+- GHCR для Docker-образов (ghcr.io/alimbywater/revisitr/*)
 - Независимые деплои: backend, bot, frontend, infra
-- Traefik → zero-downtime через health checks
+- Nginx на хосте управляет SSL и routing
+- `infra/.env.prod` — credentials (не в git)

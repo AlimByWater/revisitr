@@ -59,5 +59,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
       - name: Deploy
         run: |
-          cd /opt/revisitr
-          BOT_TAG=${{ github.sha }} ./scripts/deploy.sh bot
+          cd /opt/revisitr/infra
+          export BOT_TAG=${{ github.sha }}
+          docker compose -f docker-compose.prod.yml pull bot
+          docker compose -f docker-compose.prod.yml up -d --no-deps bot

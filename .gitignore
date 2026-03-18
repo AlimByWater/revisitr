@@ -18,6 +18,7 @@ frontend/src/routeTree.gen.ts
 .env
 .env.local
 .env.production
+.env.prod
 !.env.example
 
 # IDE

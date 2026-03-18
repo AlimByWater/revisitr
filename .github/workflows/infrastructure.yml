@@ -20,5 +20,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run migrations
         run: |
-          cd /opt/revisitr
-          ./scripts/migrate.sh ${{ github.event.inputs.action || 'up' }}
+          cd /opt/revisitr/infra
+          ../scripts/migrate.sh ${{ github.event.inputs.action || 'up' }}

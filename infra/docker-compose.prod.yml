@@ -1,32 +1,9 @@
 services:
-  traefik:
-    image: traefik:v3.2
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-      - traefik-certs:/letsencrypt
-    restart: unless-stopped
-    networks:
-      - revisitr
-
   backend:
-    image: ghcr.io/${GITHUB_REPO:-revisitr}/backend:${BACKEND_TAG:-latest}
-    env_file:
-      - .env.prod
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`elysium.fm`) && PathPrefix(`/revisitr/api`)"
-      - "traefik.http.routers.backend.tls=true"
-      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
-      - "traefik.http.middlewares.backend-strip.stripprefix.prefixes=/revisitr"
-      - "traefik.http.routers.backend.middlewares=backend-strip"
-      - "traefik.http.services.backend.loadbalancer.server.port=8080"
-      - "traefik.http.services.backend.loadbalancer.healthcheck.path=/healthz"
-      - "traefik.http.services.backend.loadbalancer.healthcheck.interval=10s"
-      - "traefik.http.routers.backend.priority=2"
+    image: ghcr.io/${GITHUB_REPO:-alimbywater/revisitr}/backend:${BACKEND_TAG:-latest}
+    env_file: .env.prod
+    ports:
+      - "8090:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,9 +14,8 @@ services:
       - revisitr
 
   bot:
-    image: ghcr.io/${GITHUB_REPO:-revisitr}/bot:${BOT_TAG:-latest}
-    env_file:
-      - .env.prod
+    image: ghcr.io/${GITHUB_REPO:-alimbywater/revisitr}/bot:${BOT_TAG:-latest}
+    env_file: .env.prod
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,17 +26,9 @@ services:
       - revisitr
 
   frontend:
-    image: ghcr.io/${GITHUB_REPO:-revisitr}/frontend:${FRONTEND_TAG:-latest}
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`elysium.fm`) && PathPrefix(`/revisitr`)"
-      - "traefik.http.routers.frontend.tls=true"
-      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.middlewares.frontend-strip.stripprefix.prefixes=/revisitr"
-      - "traefik.http.routers.frontend.middlewares=frontend-strip"
-      - "traefik.http.services.frontend.loadbalancer.server.port=80"
-      - "traefik.http.services.frontend.loadbalancer.healthcheck.path=/health"
-      - "traefik.http.routers.frontend.priority=1"
+    image: ghcr.io/${GITHUB_REPO:-alimbywater/revisitr}/frontend:${FRONTEND_TAG:-latest}
+    ports:
+      - "3340:80"
     restart: unless-stopped
     networks:
       - revisitr
@@ -74,6 +42,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-revisitr}
       POSTGRES_USER: ${POSTGRES_USER:-revisitr}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-revisitr}"]
       interval: 10s
@@ -88,6 +58,8 @@ services:
     command: redis-server --requirepass ${REDIS_PASSWORD}
     volumes:
       - redisdata:/data
+    ports:
+      - "6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -100,7 +72,6 @@ services:
 volumes:
   pgdata:
   redisdata:
-  traefik-certs:
 
 networks:
   revisitr:

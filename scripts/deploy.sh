@@ -35,8 +35,8 @@ case "$COMPONENT" in
     ;;
   infra)
     log "Updating infrastructure"
-    docker compose -f "$COMPOSE_FILE" pull postgres redis traefik
-    docker compose -f "$COMPOSE_FILE" up -d postgres redis traefik
+    docker compose -f "$COMPOSE_FILE" pull postgres redis
+    docker compose -f "$COMPOSE_FILE" up -d postgres redis
     ;;
   *)
     echo "Unknown: $COMPONENT. Use: backend|bot|frontend|infra"; exit 1

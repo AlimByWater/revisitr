@@ -59,5 +59,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
       - name: Deploy
         run: |
-          cd /opt/revisitr
-          BACKEND_TAG=${{ github.sha }} ./scripts/deploy.sh backend
+          cd /opt/revisitr/infra
+          export BACKEND_TAG=${{ github.sha }}
+          docker compose -f docker-compose.prod.yml pull backend
+          docker compose -f docker-compose.prod.yml up -d --no-deps backend

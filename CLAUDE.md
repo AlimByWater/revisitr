@@ -6,8 +6,8 @@ SaaS-платформа лояльности для HoReCa (бары, кафе, 
 
 - **Backend**: Go 1.23+, Gin, sqlx/PostgreSQL, go-redis, telego (Telegram bot)
 - **Frontend**: React, TanStack (Router + Query + Table + Form), shadcn/ui, Tailwind, Vite
-- **Infrastructure**: Docker Compose, Traefik, PostgreSQL 16, Redis 7, GitHub Actions (self-hosted runner)
-- **Hosting**: Dedicated server, domain elysium.fm/revisitr
+- **Infrastructure**: Docker Compose, host nginx, PostgreSQL 16, Redis 7, GitHub Actions (self-hosted runner)
+- **Hosting**: Dedicated server, domain elysium.fm/revisitr (nginx routing, no Traefik)
 
 ## Architecture
 
@@ -56,10 +56,25 @@ cd backend && goose -dir migrations postgres "$DATABASE_URL" status
 cd backend && go vet ./... && staticcheck ./...
 cd frontend && npm run lint
 
-# Docker
-docker compose -f infra/docker-compose.yml up -d          # dev
-docker compose -f infra/docker-compose.prod.yml up -d      # prod
+# Docker (local dev)
+make dev-up                                                # PG + Redis
+make dev-down                                              # stop
+
+# Docker (production) — на сервере в /opt/revisitr/infra/
+docker compose -f docker-compose.prod.yml up -d            # all services
+scripts/deploy.sh backend|bot|frontend|infra               # independent deploy
 ```
+
+## Ports
+
+| Service    | Local dev | Production (host → container) |
+|------------|-----------|-------------------------------|
+| Backend    | 8080      | 8090 → 8080                   |
+| Frontend   | 5173      | 3340 → 80                     |
+| PostgreSQL | 5433      | 5433 → 5432                   |
+| Redis      | 6380      | 6380 → 6379                   |
+
+Production nginx routes: `/revisitr/api/*` → `:8090`, `/revisitr/*` → `:3340`
 
 ## Conventions
 

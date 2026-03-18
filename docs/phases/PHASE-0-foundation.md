@@ -14,7 +14,7 @@
 - [x] docs/architecture.md
 - [x] .gitignore (Go + Node + Docker + IDE)
 - [x] git init, первый коммит
-- [ ] GitHub remote, push
+- [x] GitHub remote, push (github.com:AlimByWater/revisitr.git)
 
 ### 0.2 Backend: скелет
 - [x] `go.mod` (module revisitr)
@@ -58,7 +58,7 @@
 - [x] `backend/Dockerfile.bot` — multi-stage для бота
 - [x] `frontend/Dockerfile` — multi-stage (node builder + nginx)
 - [x] `frontend/nginx.conf` — SPA routing, health check, gzip, cache
-- [x] `infra/docker-compose.prod.yml` — Traefik + backend + bot + frontend + PG + Redis
+- [x] `infra/docker-compose.prod.yml` — backend + bot + frontend + PG + Redis (без Traefik)
 
 ### 0.7 CI/CD
 - [x] `.github/workflows/backend.yml` — lint, test, build, deploy
@@ -66,18 +66,19 @@
 - [x] `.github/workflows/frontend.yml` — lint, build, deploy
 - [x] `.github/workflows/infrastructure.yml` — migrations
 - [x] `scripts/deploy.sh` — deploy backend|bot|frontend|infra
-- [ ] Self-hosted runner настроен и работает
+- [x] Self-hosted runner настроен и работает
 
-### 0.8 Traefik
-- [x] `infra/traefik/traefik.yml` — entrypoints, Let's Encrypt
-- [x] Routing rules (path-prefix based, strip prefix)
-- [x] Health check labels для всех сервисов
+### 0.8 Nginx routing (вместо Traefik)
+- [x] `infra/nginx-revisitr.conf` — routing rules для host nginx
+- [x] `/revisitr/api/*` → 127.0.0.1:8090 (strip prefix)
+- [x] `/revisitr/*` → 127.0.0.1:3340 (strip prefix)
+- [x] `infra/.env.prod` — production credentials
 
 ---
 
 ## Критерии завершения
 
-- [ ] `docker compose up` локально поднимает PG + Redis
+- [ ] `make dev-up` локально поднимает PG + Redis
 - [ ] Backend стартует, отвечает на `/healthz`
 - [ ] Bot стартует, отвечает на `/start` в Telegram
 - [ ] Frontend стартует, показывает layout с sidebar
@@ -86,6 +87,6 @@
 - [ ] `elysium.fm/revisitr/api/healthz` возвращает 200
 
 ## Оставшиеся задачи
-1. Создать GitHub repo + push
-2. Настроить self-hosted runner на сервере
+1. Локальная проверка (make dev-up → backend → frontend)
+2. Скопировать docker-compose.prod.yml + .env.prod + nginx-revisitr.conf на сервер
 3. Первый деплой + верификация

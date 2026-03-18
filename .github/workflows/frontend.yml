@@ -48,5 +48,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
       - name: Deploy
         run: |
-          cd /opt/revisitr
-          FRONTEND_TAG=${{ github.sha }} ./scripts/deploy.sh frontend
+          cd /opt/revisitr/infra
+          export FRONTEND_TAG=${{ github.sha }}
+          docker compose -f docker-compose.prod.yml pull frontend
+          docker compose -f docker-compose.prod.yml up -d --no-deps frontend
