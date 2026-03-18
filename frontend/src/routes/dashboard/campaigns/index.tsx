@@ -1,12 +1,8 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useCampaignsQuery } from '@/features/campaigns/queries'
 import { Mail, Plus } from 'lucide-react'
 import type { Campaign } from '@/features/campaigns/types'
-
-export const Route = createFileRoute('/dashboard/campaigns/')({
-  component: CampaignsPage,
-})
 
 const statusConfig: Record<
   Campaign['status'],
@@ -47,7 +43,7 @@ function formatDate(dateStr: string): string {
   })
 }
 
-function CampaignsPage() {
+export default function CampaignsPage() {
   const navigate = useNavigate()
   const { data, isLoading, isError } = useCampaignsQuery()
 
@@ -87,7 +83,7 @@ function CampaignsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-neutral-900">Рассылки</h1>
         <button
-          onClick={() => navigate({ to: '/dashboard/campaigns/create' })}
+          onClick={() => navigate('/dashboard/campaigns/create')}
           type="button"
           className={cn(
             'flex items-center gap-2 py-2.5 px-4 rounded-lg',
@@ -115,7 +111,7 @@ function CampaignsPage() {
             Telegram-бота
           </p>
           <button
-            onClick={() => navigate({ to: '/dashboard/campaigns/create' })}
+            onClick={() => navigate('/dashboard/campaigns/create')}
             type="button"
             className={cn(
               'inline-flex items-center gap-2 py-2.5 px-4 rounded-lg',
@@ -162,10 +158,7 @@ function CampaignsPage() {
                     key={campaign.id}
                     className="hover:bg-neutral-50 transition-colors cursor-pointer"
                     onClick={() =>
-                      navigate({
-                        to: '/dashboard/campaigns/$campaignId',
-                        params: { campaignId: String(campaign.id) },
-                      })
+                      navigate(`/dashboard/campaigns/${campaign.id}`)
                     }
                   >
                     <td className="px-6 py-4">

@@ -1,14 +1,10 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Link, useParams } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useBotQuery } from '@/features/bots/queries'
 import { botsApi } from '@/features/bots/api'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import type { BotButton, BotSettings, FormField } from '@/features/bots/types'
-
-export const Route = createFileRoute('/dashboard/bots/$botId')({
-  component: BotDetailPage,
-})
 
 const statusConfig = {
   active: { label: 'Активен', className: 'bg-green-100 text-green-700' },
@@ -32,8 +28,8 @@ const inputClassName = cn(
   'disabled:opacity-50 disabled:cursor-not-allowed',
 )
 
-function BotDetailPage() {
-  const { botId } = Route.useParams()
+export default function BotDetailPage() {
+  const { botId } = useParams<{ botId: string }>()
   const id = Number(botId)
   const { data: bot, isLoading, isError } = useBotQuery(id)
 

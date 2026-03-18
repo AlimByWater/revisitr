@@ -1,14 +1,10 @@
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
 
-export const Route = createFileRoute('/auth/register')({
-  component: RegisterPage,
-})
-
-function RegisterPage() {
-  const router = useRouter()
+export default function RegisterPage() {
+  const navigate = useNavigate()
   const register = useAuthStore((s) => s.register)
 
   const [name, setName] = useState('')
@@ -32,7 +28,7 @@ function RegisterPage() {
         organization,
         phone: phone || undefined,
       })
-      router.navigate({ to: '/dashboard' })
+      navigate('/dashboard')
     } catch (err: unknown) {
       if (
         err &&

@@ -1,15 +1,11 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { Heart, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useProgramsQuery, useUpdateProgramMutation } from '@/features/loyalty/queries'
 import { CreateProgramModal } from '@/components/loyalty/CreateProgramModal'
 
-export const Route = createFileRoute('/dashboard/loyalty/')({
-  component: LoyaltyProgramsPage,
-})
-
-function LoyaltyProgramsPage() {
+export default function LoyaltyProgramsPage() {
   const navigate = useNavigate()
   const { data: programs, isLoading } = useProgramsQuery()
   const updateMutation = useUpdateProgramMutation()
@@ -62,10 +58,7 @@ function LoyaltyProgramsPage() {
               key={program.id}
               type="button"
               onClick={() =>
-                navigate({
-                  to: '/dashboard/loyalty/$programId',
-                  params: { programId: String(program.id) },
-                })
+                navigate(`/dashboard/loyalty/${program.id}`)
               }
               className="w-full text-left bg-white rounded-2xl shadow-sm border border-surface-border p-6 hover:border-neutral-300 transition-colors"
             >

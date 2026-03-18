@@ -1,14 +1,10 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useBotsQuery } from '@/features/bots/queries'
 import { CreateBotModal } from '@/components/bots/CreateBotModal'
 import { Bot as BotIcon, Plus, Users } from 'lucide-react'
 import type { Bot } from '@/features/bots/types'
-
-export const Route = createFileRoute('/dashboard/bots/')({
-  component: BotsPage,
-})
 
 const statusConfig: Record<Bot['status'], { label: string; className: string }> = {
   active: {
@@ -33,7 +29,7 @@ function formatDate(dateStr: string): string {
   })
 }
 
-function BotsPage() {
+export default function BotsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const { data: bots, isLoading, isError } = useBotsQuery()
 
@@ -120,8 +116,7 @@ function BotsPage() {
             return (
               <Link
                 key={bot.id}
-                to="/dashboard/bots/$botId"
-                params={{ botId: String(bot.id) }}
+                to={`/dashboard/bots/${bot.id}`}
                 className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 hover:border-neutral-300 transition-colors group"
               >
                 <div className="flex items-start justify-between mb-3">

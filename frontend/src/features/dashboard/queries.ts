@@ -1,17 +1,15 @@
-import { useQuery } from '@tanstack/react-query'
+import { useApiQuery } from '../../lib/swr'
 import { dashboardApi } from './api'
 import type { DashboardFilter } from './types'
 
 export function useDashboardWidgetsQuery(filter: DashboardFilter) {
-  return useQuery({
-    queryKey: ['dashboard', 'widgets', filter],
-    queryFn: () => dashboardApi.getWidgets(filter),
-  })
+  return useApiQuery(`dashboard-widgets-${JSON.stringify(filter)}`, () =>
+    dashboardApi.getWidgets(filter),
+  )
 }
 
 export function useDashboardChartsQuery(filter: DashboardFilter) {
-  return useQuery({
-    queryKey: ['dashboard', 'charts', filter],
-    queryFn: () => dashboardApi.getCharts(filter),
-  })
+  return useApiQuery(`dashboard-charts-${JSON.stringify(filter)}`, () =>
+    dashboardApi.getCharts(filter),
+  )
 }

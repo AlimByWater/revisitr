@@ -1,13 +1,5 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import { useState, useMemo } from 'react'
-import {
-  useReactTable,
-  getCoreRowModel,
-  flexRender,
-  createColumnHelper,
-  type SortingState,
-  type PaginationState,
-} from '@tanstack/react-table'
 import { cn } from '@/lib/utils'
 import { useClientsQuery, useClientStatsQuery } from '@/features/clients/queries'
 import { useBotsQuery } from '@/features/bots/queries'
@@ -27,10 +19,6 @@ import {
   ArrowDown,
 } from 'lucide-react'
 
-export const Route = createFileRoute('/dashboard/clients/')({
-  component: ClientsPage,
-})
-
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ru-RU', {
     day: 'numeric',
@@ -43,7 +31,63 @@ function formatBalance(value: number): string {
   return value.toLocaleString('ru-RU')
 }
 
-const columnHelper = createColumnHelper<ClientProfile>()
+interface Column {
+  id: string
+  header: string
+  render: (row: ClientProfile) => React.ReactNode
+}
+
+const columns: Column[] = [
+  {
+    id: 'name',
+    header: 'Имя',
+    render: (row) => (
+      <span className="font-medium text-neutral-900">
+        {[row.first_name, row.last_name].filter(Boolean).join(' ')}
+      </span>
+    ),
+  },
+  {
+    id: 'bot_name',
+    header: 'Бот',
+    render: (row) => <span className="text-neutral-600">{row.bot_name}</span>,
+  },
+  {
+    id: 'loyalty_level',
+    header: 'Уровень',
+    render: (row) =>
+      row.loyalty_level ? (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
+          {row.loyalty_level}
+        </span>
+      ) : (
+        <span className="text-neutral-400">—</span>
+      ),
+  },
+  {
+    id: 'loyalty_balance',
+    header: 'Баланс',
+    render: (row) => (
+      <span className="font-medium text-neutral-900 tabular-nums">
+        {formatBalance(row.loyalty_balance)}
+      </span>
+    ),
+  },
+  {
+    id: 'purchase_count',
+    header: 'Покупки',
+    render: (row) => (
+      <span className="text-neutral-600 tabular-nums">{row.purchase_count}</span>
+    ),
+  },
+  {
+    id: 'registered_at',
+    header: 'Зарегистрирован',
+    render: (row) => (
+      <span className="text-neutral-500">{formatDate(row.registered_at)}</span>
+    ),
+  },
+]
 
 function StatCard({
   label,
@@ -67,105 +111,55 @@ function StatCard({
   )
 }
 
-function ClientsPage() {
+export default function ClientsPage() {
   const navigate = useNavigate()
   const { data: bots } = useBotsQuery()
   const { data: stats } = useClientStatsQuery()
 
   const [search, setSearch] = useState('')
   const [botFilter, setBotFilter] = useState<number | undefined>(undefined)
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 20,
-  })
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined)
+  const [sortDesc, setSortDesc] = useState(false)
+  const [pageIndex, setPageIndex] = useState(0)
+  const pageSize = 20
 
   const filter: ClientFilter = useMemo(
     () => ({
       search: search || undefined,
       bot_id: botFilter,
-      sort_by: sorting[0]?.id,
-      sort_order: sorting[0] ? (sorting[0].desc ? 'desc' : 'asc') : undefined,
-      limit: pagination.pageSize,
-      offset: pagination.pageIndex * pagination.pageSize,
+      sort_by: sortBy,
+      sort_order: sortBy ? (sortDesc ? 'desc' : 'asc') : undefined,
+      limit: pageSize,
+      offset: pageIndex * pageSize,
     }),
-    [search, botFilter, sorting, pagination],
+    [search, botFilter, sortBy, sortDesc, pageIndex],
   )
 
   const { data, isLoading, isError } = useClientsQuery(filter)
 
-  const columns = useMemo(
-    () => [
-      columnHelper.accessor(
-        (row) =>
-          [row.first_name, row.last_name].filter(Boolean).join(' '),
-        {
-          id: 'name',
-          header: 'Имя',
-          cell: (info) => (
-            <span className="font-medium text-neutral-900">
-              {info.getValue()}
-            </span>
-          ),
-        },
-      ),
-      columnHelper.accessor('bot_name', {
-        header: 'Бот',
-        cell: (info) => (
-          <span className="text-neutral-600">{info.getValue()}</span>
-        ),
-      }),
-      columnHelper.accessor('loyalty_level', {
-        header: 'Уровень',
-        cell: (info) => {
-          const level = info.getValue()
-          if (!level) return <span className="text-neutral-400">—</span>
-          return (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
-              {level}
-            </span>
-          )
-        },
-      }),
-      columnHelper.accessor('loyalty_balance', {
-        header: 'Баланс',
-        cell: (info) => (
-          <span className="font-medium text-neutral-900 tabular-nums">
-            {formatBalance(info.getValue())}
-          </span>
-        ),
-      }),
-      columnHelper.accessor('purchase_count', {
-        header: 'Покупки',
-        cell: (info) => (
-          <span className="text-neutral-600 tabular-nums">
-            {info.getValue()}
-          </span>
-        ),
-      }),
-      columnHelper.accessor('registered_at', {
-        header: 'Зарегистрирован',
-        cell: (info) => (
-          <span className="text-neutral-500">{formatDate(info.getValue())}</span>
-        ),
-      }),
-    ],
-    [],
-  )
+  const pageCount = data ? Math.ceil(data.total / pageSize) : 0
+  const canPreviousPage = pageIndex > 0
+  const canNextPage = pageIndex < pageCount - 1
 
-  const pageCount = data ? Math.ceil(data.total / pagination.pageSize) : 0
+  function handleSort(columnId: string) {
+    if (sortBy === columnId) {
+      if (sortDesc) {
+        setSortBy(undefined)
+        setSortDesc(false)
+      } else {
+        setSortDesc(true)
+      }
+    } else {
+      setSortBy(columnId)
+      setSortDesc(false)
+    }
+    setPageIndex(0)
+  }
 
-  const table = useReactTable({
-    data: data?.items ?? [],
-    columns,
-    pageCount,
-    state: { sorting, pagination },
-    onSortingChange: setSorting,
-    onPaginationChange: setPagination,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    manualSorting: true,
-  })
+  function getSortIcon(columnId: string) {
+    if (sortBy !== columnId) return <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />
+    return sortDesc ? <ArrowDown className="w-3.5 h-3.5" /> : <ArrowUp className="w-3.5 h-3.5" />
+  }
 
   return (
     <div className="max-w-6xl">
@@ -206,7 +200,7 @@ function ClientsPage() {
             value={search}
             onChange={(e) => {
               setSearch(e.target.value)
-              setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+              setPageIndex(0)
             }}
             placeholder="Поиск по имени или телефону..."
             className={cn(
@@ -221,7 +215,7 @@ function ClientsPage() {
           value={botFilter ?? ''}
           onChange={(e) => {
             setBotFilter(e.target.value ? Number(e.target.value) : undefined)
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+            setPageIndex(0)
           }}
           aria-label="Фильтр по боту"
           className={cn(
@@ -268,64 +262,37 @@ function ClientsPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden">
             <table className="w-full">
               <thead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr
-                    key={headerGroup.id}
-                    className="border-b border-surface-border"
-                  >
-                    {headerGroup.headers.map((header) => {
-                      const sorted = header.column.getIsSorted()
-                      return (
-                        <th
-                          key={header.id}
-                          className="text-left text-xs font-medium text-neutral-500 uppercase tracking-wider px-4 py-3"
-                        >
-                          {header.isPlaceholder ? null : (
-                            <button
-                              type="button"
-                              className={cn(
-                                'flex items-center gap-1 hover:text-neutral-900 transition-colors',
-                                sorted && 'text-neutral-900',
-                              )}
-                              onClick={header.column.getToggleSortingHandler()}
-                            >
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext(),
-                              )}
-                              {sorted === 'asc' ? (
-                                <ArrowUp className="w-3.5 h-3.5" />
-                              ) : sorted === 'desc' ? (
-                                <ArrowDown className="w-3.5 h-3.5" />
-                              ) : (
-                                <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />
-                              )}
-                            </button>
-                          )}
-                        </th>
-                      )
-                    })}
-                  </tr>
-                ))}
+                <tr className="border-b border-surface-border">
+                  {columns.map((col) => (
+                    <th
+                      key={col.id}
+                      className="text-left text-xs font-medium text-neutral-500 uppercase tracking-wider px-4 py-3"
+                    >
+                      <button
+                        type="button"
+                        className={cn(
+                          'flex items-center gap-1 hover:text-neutral-900 transition-colors',
+                          sortBy === col.id && 'text-neutral-900',
+                        )}
+                        onClick={() => handleSort(col.id)}
+                      >
+                        {col.header}
+                        {getSortIcon(col.id)}
+                      </button>
+                    </th>
+                  ))}
+                </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
-                {table.getRowModel().rows.map((row) => (
+                {data.items.map((row) => (
                   <tr
                     key={row.id}
                     className="hover:bg-neutral-50 cursor-pointer transition-colors"
-                    onClick={() =>
-                      navigate({
-                        to: '/dashboard/clients/$clientId',
-                        params: { clientId: String(row.original.id) },
-                      })
-                    }
+                    onClick={() => navigate(`/dashboard/clients/${row.id}`)}
                   >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-3 text-sm">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
+                    {columns.map((col) => (
+                      <td key={col.id} className="px-4 py-3 text-sm">
+                        {col.render(row)}
                       </td>
                     ))}
                   </tr>
@@ -342,8 +309,8 @@ function ClientsPage() {
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
+                onClick={() => setPageIndex(0)}
+                disabled={!canPreviousPage}
                 aria-label="Первая страница"
                 className={cn(
                   'p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors',
@@ -354,8 +321,8 @@ function ClientsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
+                onClick={() => setPageIndex((p) => p - 1)}
+                disabled={!canPreviousPage}
                 aria-label="Предыдущая страница"
                 className={cn(
                   'p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors',
@@ -365,12 +332,12 @@ function ClientsPage() {
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <span className="px-3 py-2 text-sm text-neutral-700">
-                {pagination.pageIndex + 1} / {pageCount || 1}
+                {pageIndex + 1} / {pageCount || 1}
               </span>
               <button
                 type="button"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
+                onClick={() => setPageIndex((p) => p + 1)}
+                disabled={!canNextPage}
                 aria-label="Следующая страница"
                 className={cn(
                   'p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors',
@@ -381,8 +348,8 @@ function ClientsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => table.setPageIndex(pageCount - 1)}
-                disabled={!table.getCanNextPage()}
+                onClick={() => setPageIndex(pageCount - 1)}
+                disabled={!canNextPage}
                 aria-label="Последняя страница"
                 className={cn(
                   'p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors',

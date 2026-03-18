@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Link, useParams } from 'react-router-dom'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
@@ -21,10 +21,6 @@ import {
   Plus,
   Hash,
 } from 'lucide-react'
-
-export const Route = createFileRoute('/dashboard/clients/$clientId')({
-  component: ClientDetailPage,
-})
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ru-RU', {
@@ -90,8 +86,8 @@ function InfoRow({
   )
 }
 
-function ClientDetailPage() {
-  const { clientId } = Route.useParams()
+export default function ClientDetailPage() {
+  const { clientId } = useParams<{ clientId: string }>()
   const id = Number(clientId)
 
   const { data: client, isLoading } = useClientProfileQuery(id)

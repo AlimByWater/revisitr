@@ -1,52 +1,36 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useApiQuery, useApiMutation } from '../../lib/swr'
 import { botsApi } from './api'
 import type { CreateBotRequest, Bot } from './types'
 
 export function useBotsQuery() {
-  return useQuery({
-    queryKey: ['bots'],
-    queryFn: botsApi.list,
-  })
+  return useApiQuery('bots', botsApi.list)
 }
 
 export function useBotQuery(id: number) {
-  return useQuery({
-    queryKey: ['bots', id],
-    queryFn: () => botsApi.getById(id),
-    enabled: !!id,
-  })
+  return useApiQuery(id ? `bots-${id}` : null, () => botsApi.getById(id))
 }
 
 export function useCreateBotMutation() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (data: CreateBotRequest) => botsApi.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bots'] })
-    },
-  })
+  return useApiMutation(
+    'bots/create',
+    (data: CreateBotRequest) => botsApi.create(data),
+    ['bots'],
+  )
 }
 
 export function useUpdateBotMutation() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Bot> }) =>
+  return useApiMutation(
+    'bots/update',
+    ({ id, data }: { id: number; data: Partial<Bot> }) =>
       botsApi.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bots'] })
-    },
-  })
+    ['bots'],
+  )
 }
 
 export function useDeleteBotMutation() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (id: number) => botsApi.remove(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bots'] })
-    },
-  })
+  return useApiMutation(
+    'bots/delete',
+    (id: number) => botsApi.remove(id),
+    ['bots'],
+  )
 }

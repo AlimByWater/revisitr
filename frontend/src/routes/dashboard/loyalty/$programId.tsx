@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Link, useParams } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -10,15 +10,11 @@ import {
 import { deleteLevel } from '@/features/loyalty/api'
 import type { LoyaltyLevel, ProgramConfig } from '@/features/loyalty/types'
 
-export const Route = createFileRoute('/dashboard/loyalty/$programId')({
-  component: ProgramDetailPage,
-})
-
-function ProgramDetailPage() {
-  const { programId } = Route.useParams()
+export default function ProgramDetailPage() {
+  const { programId } = useParams<{ programId: string }>()
   const id = Number(programId)
 
-  const { data: program, isLoading, refetch } = useProgramQuery(id)
+  const { data: program, isLoading, mutate: refetch } = useProgramQuery(id)
   const updateProgram = useUpdateProgramMutation()
   const updateLevels = useUpdateLevelsMutation(id)
 

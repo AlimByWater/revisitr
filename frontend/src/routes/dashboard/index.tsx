@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
 import {
   TrendingUp,
   TrendingDown,
@@ -28,17 +27,13 @@ import {
 import { useBotsQuery } from '@/features/bots/queries'
 import type { DashboardFilter, DashboardMetric } from '@/features/dashboard/types'
 
-export const Route = createFileRoute('/dashboard/')({
-  component: DashboardHome,
-})
-
 const PERIODS = [
   { value: '7d', label: '7д' },
   { value: '30d', label: '30д' },
   { value: '90d', label: '90д' },
 ] as const
 
-function DashboardHome() {
+export default function DashboardHome() {
   const [filter, setFilter] = useState<DashboardFilter>({ period: '30d' })
 
   const { data: widgets, isLoading: widgetsLoading } =

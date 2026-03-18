@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useBotsQuery } from '@/features/bots/queries'
@@ -9,11 +9,7 @@ import {
 import { ArrowLeft, Eye, Send } from 'lucide-react'
 import type { AudienceFilter } from '@/features/campaigns/types'
 
-export const Route = createFileRoute('/dashboard/campaigns/create')({
-  component: CreateCampaignPage,
-})
-
-function CreateCampaignPage() {
+export default function CreateCampaignPage() {
   const navigate = useNavigate()
   const { data: bots } = useBotsQuery()
   const createMutation = useCreateCampaignMutation()
@@ -56,7 +52,7 @@ function CreateCampaignPage() {
       },
       {
         onSuccess: () => {
-          navigate({ to: '/dashboard/campaigns' })
+          navigate('/dashboard/campaigns')
         },
       },
     )
@@ -66,7 +62,7 @@ function CreateCampaignPage() {
     <div className="max-w-2xl">
       <div className="flex items-center gap-4 mb-6">
         <button
-          onClick={() => navigate({ to: '/dashboard/campaigns' })}
+          onClick={() => navigate('/dashboard/campaigns')}
           type="button"
           className="p-2 rounded-lg hover:bg-neutral-100 transition-colors"
         >
@@ -192,7 +188,7 @@ function CreateCampaignPage() {
         <div className="flex items-center justify-end gap-3 mt-6">
           <button
             type="button"
-            onClick={() => navigate({ to: '/dashboard/campaigns' })}
+            onClick={() => navigate('/dashboard/campaigns')}
             className={cn(
               'px-4 py-2.5 rounded-lg text-sm font-medium',
               'border border-neutral-200 text-neutral-700',

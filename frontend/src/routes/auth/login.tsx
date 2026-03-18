@@ -1,14 +1,10 @@
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
 
-export const Route = createFileRoute('/auth/login')({
-  component: LoginPage,
-})
-
-function LoginPage() {
-  const router = useRouter()
+export default function LoginPage() {
+  const navigate = useNavigate()
   const login = useAuthStore((s) => s.login)
 
   const [email, setEmail] = useState('')
@@ -23,7 +19,7 @@ function LoginPage() {
 
     try {
       await login({ email, password })
-      router.navigate({ to: '/dashboard' })
+      navigate('/dashboard')
     } catch (err: unknown) {
       if (
         err &&

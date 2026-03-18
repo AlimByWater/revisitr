@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { User } from 'lucide-react'
 
 export function Header() {
@@ -13,7 +13,6 @@ export function Header() {
           <Link
             to="/dashboard"
             className="text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
-            activeProps={{ className: 'text-neutral-900' }}
           >
             Панель управления
           </Link>

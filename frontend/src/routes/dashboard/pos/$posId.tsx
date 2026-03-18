@@ -1,13 +1,9 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Link, useParams } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { usePOSDetailQuery, useUpdatePOSMutation } from '@/features/pos/queries'
 import type { Schedule, DaySchedule } from '@/features/pos/types'
-
-export const Route = createFileRoute('/dashboard/pos/$posId')({
-  component: POSDetailPage,
-})
 
 const DAYS: { key: string; label: string }[] = [
   { key: 'mon', label: 'Пн' },
@@ -21,8 +17,8 @@ const DAYS: { key: string; label: string }[] = [
 
 const DEFAULT_DAY: DaySchedule = { open: '09:00', close: '22:00' }
 
-function POSDetailPage() {
-  const { posId } = Route.useParams()
+export default function POSDetailPage() {
+  const { posId } = useParams<{ posId: string }>()
   const id = Number(posId)
 
   const { data: location, isLoading } = usePOSDetailQuery(id)

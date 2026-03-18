@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useNavigate, useParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import {
   useCampaignQuery,
@@ -7,10 +7,6 @@ import {
 } from '@/features/campaigns/queries'
 import { ArrowLeft, Send, Trash2, Users, CheckCircle, XCircle } from 'lucide-react'
 import type { Campaign } from '@/features/campaigns/types'
-
-export const Route = createFileRoute('/dashboard/campaigns/$campaignId')({
-  component: CampaignDetailPage,
-})
 
 const statusConfig: Record<
   Campaign['status'],
@@ -48,9 +44,9 @@ function formatDate(dateStr: string): string {
   })
 }
 
-function CampaignDetailPage() {
+export default function CampaignDetailPage() {
   const navigate = useNavigate()
-  const { campaignId } = Route.useParams()
+  const { campaignId } = useParams<{ campaignId: string }>()
   const id = Number(campaignId)
 
   const { data: campaign, isLoading, isError } = useCampaignQuery(id)
@@ -65,7 +61,7 @@ function CampaignDetailPage() {
   function handleDelete() {
     if (!confirm('Удалить рассылку?')) return
     deleteMutation.mutate(id, {
-      onSuccess: () => navigate({ to: '/dashboard/campaigns' }),
+      onSuccess: () => navigate('/dashboard/campaigns'),
     })
   }
 
@@ -99,7 +95,7 @@ function CampaignDetailPage() {
     <div className="max-w-3xl">
       <div className="flex items-center gap-4 mb-6">
         <button
-          onClick={() => navigate({ to: '/dashboard/campaigns' })}
+          onClick={() => navigate('/dashboard/campaigns')}
           type="button"
           className="p-2 rounded-lg hover:bg-neutral-100 transition-colors"
         >

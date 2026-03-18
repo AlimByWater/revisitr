@@ -1,39 +1,30 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useApiQuery, useApiMutation } from '../../lib/swr'
 import { clientsApi } from './api'
 import type { ClientFilter, UpdateClientRequest } from './types'
 
 export function useClientsQuery(filter: ClientFilter) {
-  return useQuery({
-    queryKey: ['clients', filter],
-    queryFn: () => clientsApi.list(filter),
-    placeholderData: (prev) => prev,
-  })
+  return useApiQuery(
+    `clients-${JSON.stringify(filter)}`,
+    () => clientsApi.list(filter),
+    { keepPreviousData: true },
+  )
 }
 
 export function useClientProfileQuery(id: number) {
-  return useQuery({
-    queryKey: ['clients', id],
-    queryFn: () => clientsApi.getById(id),
-    enabled: !!id,
-  })
+  return useApiQuery(id ? `clients-${id}` : null, () =>
+    clientsApi.getById(id),
+  )
 }
 
 export function useClientStatsQuery() {
-  return useQuery({
-    queryKey: ['clients', 'stats'],
-    queryFn: clientsApi.getStats,
-  })
+  return useApiQuery('clients-stats', clientsApi.getStats)
 }
 
 export function useUpdateTagsMutation() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UpdateClientRequest }) =>
+  return useApiMutation(
+    'clients/update-tags',
+    ({ id, data }: { id: number; data: UpdateClientRequest }) =>
       clientsApi.updateTags(id, data),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['clients', variables.id] })
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
-    },
-  })
+    ['clients'],
+  )
 }

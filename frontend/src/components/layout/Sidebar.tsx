@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useRouterState } from '@tanstack/react-router'
+import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
@@ -97,8 +97,8 @@ const navigation: NavItem[] = [
 
 function NavGroup({ item }: { item: NavItem }) {
   const [expanded, setExpanded] = useState(false)
-  const routerState = useRouterState()
-  const currentPath = routerState.location.pathname
+  const location = useLocation()
+  const currentPath = location.pathname
 
   const isActive = item.href
     ? currentPath === item.href

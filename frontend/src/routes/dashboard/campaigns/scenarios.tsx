@@ -1,4 +1,3 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useBotsQuery } from '@/features/bots/queries'
@@ -11,10 +10,6 @@ import {
 import { Plus, Trash2, Zap } from 'lucide-react'
 import type { AutoScenario } from '@/features/campaigns/types'
 
-export const Route = createFileRoute('/dashboard/campaigns/scenarios')({
-  component: ScenariosPage,
-})
-
 const triggerLabels: Record<AutoScenario['trigger_type'], string> = {
   inactive_days: 'Не был N дней',
   visit_count: 'N-й визит',
@@ -23,7 +18,7 @@ const triggerLabels: Record<AutoScenario['trigger_type'], string> = {
   birthday: 'День рождения',
 }
 
-function ScenariosPage() {
+export default function ScenariosPage() {
   const { data: scenarios, isLoading, isError } = useScenariosQuery()
   const { data: bots } = useBotsQuery()
   const createMutation = useCreateScenarioMutation()

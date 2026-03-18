@@ -1,15 +1,11 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { Store, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { usePOSQuery } from '@/features/pos/queries'
 import { CreatePOSModal } from '@/components/pos/CreatePOSModal'
 
-export const Route = createFileRoute('/dashboard/pos/')({
-  component: POSListPage,
-})
-
-function POSListPage() {
+export default function POSListPage() {
   const navigate = useNavigate()
   const { data: locations, isLoading } = usePOSQuery()
   const [showCreate, setShowCreate] = useState(false)
@@ -57,10 +53,7 @@ function POSListPage() {
               key={loc.id}
               type="button"
               onClick={() =>
-                navigate({
-                  to: '/dashboard/pos/$posId',
-                  params: { posId: String(loc.id) },
-                })
+                navigate(`/dashboard/pos/${loc.id}`)
               }
               className="w-full text-left bg-white rounded-2xl shadow-sm border border-surface-border p-6 hover:border-neutral-300 transition-colors"
             >
