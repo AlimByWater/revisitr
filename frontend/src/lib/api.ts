@@ -5,6 +5,11 @@ export const api = axios.create({
   timeout: 10000,
 })
 
+const BASE_PATH = import.meta.env.BASE_URL?.replace(/\/$/, '') || ''
+const LOGIN_PATH = `${BASE_PATH}/auth/login`
+
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/refresh']
+
 let isRefreshing = false
 let failedQueue: Array<{
   resolve: (token: string) => void
@@ -39,11 +44,8 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    // Don't try to refresh if the failing request is the refresh endpoint itself
-    if (originalRequest.url === '/auth/refresh') {
-      localStorage.removeItem('token')
-      localStorage.removeItem('refresh_token')
-      window.location.href = '/auth/login'
+    // Don't try to refresh for auth endpoints — let the caller handle the error
+    if (AUTH_ENDPOINTS.some((ep) => originalRequest.url?.endsWith(ep))) {
       return Promise.reject(error)
     }
 
@@ -62,7 +64,7 @@ api.interceptors.response.use(
     const refreshToken = localStorage.getItem('refresh_token')
     if (!refreshToken) {
       localStorage.removeItem('token')
-      window.location.href = '/auth/login'
+      window.location.href = LOGIN_PATH
       isRefreshing = false
       return Promise.reject(error)
     }
@@ -82,7 +84,7 @@ api.interceptors.response.use(
       processQueue(refreshError, null)
       localStorage.removeItem('token')
       localStorage.removeItem('refresh_token')
-      window.location.href = '/auth/login'
+      window.location.href = LOGIN_PATH
       return Promise.reject(refreshError)
     } finally {
       isRefreshing = false
