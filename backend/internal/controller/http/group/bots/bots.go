@@ -53,7 +53,7 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 }
 
 func (g *Group) handleCreate() (string, string, gin.HandlerFunc) {
-	return http.MethodPost, "/", func(c *gin.Context) {
+	return http.MethodPost, "", func(c *gin.Context) {
 		orgID, _ := c.Get("org_id")
 
 		var req entity.CreateBotRequest
@@ -73,7 +73,7 @@ func (g *Group) handleCreate() (string, string, gin.HandlerFunc) {
 }
 
 func (g *Group) handleList() (string, string, gin.HandlerFunc) {
-	return http.MethodGet, "/", func(c *gin.Context) {
+	return http.MethodGet, "", func(c *gin.Context) {
 		orgID, _ := c.Get("org_id")
 
 		bots, err := g.uc.GetByOrgID(c.Request.Context(), orgID.(int))

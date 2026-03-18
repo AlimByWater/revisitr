@@ -49,7 +49,7 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 }
 
 func (g *Group) handleList() (string, string, gin.HandlerFunc) {
-	return http.MethodGet, "/", func(c *gin.Context) {
+	return http.MethodGet, "", func(c *gin.Context) {
 		orgID, _ := c.Get("org_id")
 
 		var filter entity.ClientFilter

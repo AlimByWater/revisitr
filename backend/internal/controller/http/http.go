@@ -42,6 +42,7 @@ func (m *Module) Init(_ context.Context, stop context.CancelFunc, logger *slog.L
 
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
+	engine.RedirectTrailingSlash = false
 
 	engine.Use(
 		middleware.Recovery(logger),
