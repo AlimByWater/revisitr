@@ -1,0 +1,24 @@
+name: Infrastructure
+
+on:
+  push:
+    branches: [main]
+    paths: ['backend/migrations/**']
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'migrate action'
+        required: true
+        type: choice
+        options: [up, down, status]
+
+jobs:
+  migrate:
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run migrations
+        run: |
+          cd /opt/revisitr
+          ./scripts/migrate.sh ${{ github.event.inputs.action || 'up' }}

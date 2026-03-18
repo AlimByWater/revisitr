@@ -2,7 +2,7 @@
 
 > Цель: рабочий скелет проекта — код компилируется, деплоится, запускается пустой.
 
-## Статус: ⏳ Не начата
+## Статус: 🔄 В процессе
 
 ---
 
@@ -13,67 +13,65 @@
 - [x] CLAUDE.md
 - [x] docs/architecture.md
 - [x] .gitignore (Go + Node + Docker + IDE)
-- [ ] git init, первый коммит
+- [x] git init, первый коммит
 - [ ] GitHub remote, push
 
 ### 0.2 Backend: скелет
-- [ ] `go.mod` (module revisitr)
-- [ ] `cmd/server/main.go` — минимальный Gin-сервер с health check
-- [ ] `cmd/bot/main.go` — минимальный telego-бот с /start
-- [ ] `internal/application/app.go` — lifecycle (Init/Run/Shutdown)
-- [ ] `internal/application/env/` — загрузка .env (без Vault для MVP)
-- [ ] `internal/application/config/` — config structs
-- [ ] `internal/controller/http/http.go` — Gin setup, group interface
-- [ ] `internal/controller/http/middleware/` — CORS, recovery, logging, JWT auth
-- [ ] `internal/repository/postgres/postgres.go` — sqlx connect, schema create
-- [ ] `internal/repository/redis/redis.go` — go-redis connect
-- [ ] `internal/entity/` — базовые entity (User, Organization)
-- [ ] Health check endpoint: `GET /healthz`
-- [ ] Structured logging (slog)
+- [x] `go.mod` (module revisitr)
+- [x] `cmd/server/main.go` — минимальный Gin-сервер с health check
+- [x] `cmd/bot/main.go` — минимальный telego-бот с /start
+- [x] `internal/application/app.go` — lifecycle (Init/Run/Shutdown)
+- [x] `internal/application/env/` — загрузка .env (без Vault для MVP)
+- [x] `internal/application/config/` — config structs
+- [x] `internal/controller/http/http.go` — Gin setup, group interface
+- [x] `internal/controller/http/middleware/` — CORS, recovery, logging, JWT auth
+- [x] `internal/repository/postgres/postgres.go` — sqlx connect, schema create
+- [x] `internal/repository/redis/redis.go` — go-redis connect
+- [x] `internal/entity/` — базовые entity (User, Organization)
+- [x] Health check endpoint: `GET /healthz`
+- [x] Structured logging (slog)
 
 ### 0.3 Frontend: скелет
-- [ ] `package.json` с зависимостями (React, TanStack Router/Query, shadcn/ui, Tailwind, Vite)
-- [ ] Vite config + TanStack Router plugin
-- [ ] `tsconfig.json`
-- [ ] Tailwind config + shadcn/ui init
-- [ ] Root layout (`__root.tsx`) с базовым sidebar + header
-- [ ] Auth layout (login page — заглушка)
-- [ ] Dashboard layout с пустым контентом
-- [ ] API client (`lib/api.ts`) с proxy на backend
-- [ ] `.env.example`
+- [x] `package.json` с зависимостями (React, TanStack Router/Query, shadcn/ui, Tailwind, Vite)
+- [x] Vite config + TanStack Router plugin
+- [x] `tsconfig.json`
+- [x] Tailwind config + кастомные цвета (accent, sidebar, surface)
+- [x] Root layout (`__root.tsx`) с QueryClient context
+- [x] Auth layout (login page с формой)
+- [x] Dashboard layout с sidebar + header + Outlet
+- [x] API client (`lib/api.ts`) с auth interceptor
+- [x] `.env.example`
 
 ### 0.4 Infrastructure: local dev
 - [x] `infra/docker-compose.yml` — PostgreSQL 16 + Redis 7
-- [x] `infra/postgres/init.sql` — CREATE DATABASE revisitr
+- [x] `infra/postgres/init.sql` — расширения (uuid-ossp, pg_trgm)
 - [x] `.env.example` для всего проекта
 - [x] `Makefile` в корне (dev-up, dev-down, backend-run, bot-run, frontend-dev)
 
 ### 0.5 Migrations
-- [ ] Установка goose
-- [ ] Первая миграция: `users` + `organizations` таблицы
+- [x] goose как зависимость в go.mod
+- [x] Первая миграция: `users` + `organizations` таблицы
 - [ ] Интеграция goose в `cmd/server` как subcommand (или отдельно)
 
 ### 0.6 Docker: production builds
-- [ ] `backend/Dockerfile` — multi-stage (builder + alpine runtime)
-- [ ] `backend/Dockerfile.bot` — multi-stage для бота
-- [ ] `frontend/Dockerfile` — multi-stage (node builder + nginx)
-- [ ] `frontend/nginx.conf` — SPA routing, health check
-- [ ] `infra/docker-compose.prod.yml` — Traefik + backend + bot + frontend + PG + Redis
+- [x] `backend/Dockerfile` — multi-stage (builder + alpine runtime)
+- [x] `backend/Dockerfile.bot` — multi-stage для бота
+- [x] `frontend/Dockerfile` — multi-stage (node builder + nginx)
+- [x] `frontend/nginx.conf` — SPA routing, health check, gzip, cache
+- [x] `infra/docker-compose.prod.yml` — Traefik + backend + bot + frontend + PG + Redis
 
 ### 0.7 CI/CD
-- [ ] `.github/workflows/backend.yml` — lint, test, build, deploy (path filter: backend/**)
-- [ ] `.github/workflows/bot.yml` — lint, test, build, deploy (path filter: backend/** с bot-specific)
-- [ ] `.github/workflows/frontend.yml` — lint, test, build, deploy (path filter: frontend/**)
-- [ ] `.github/workflows/infrastructure.yml` — migrations (path filter: backend/migrations/**)
-- [ ] `scripts/deploy.sh` — deploy backend|bot|frontend|infra
+- [x] `.github/workflows/backend.yml` — lint, test, build, deploy
+- [x] `.github/workflows/bot.yml` — lint, test, build, deploy
+- [x] `.github/workflows/frontend.yml` — lint, build, deploy
+- [x] `.github/workflows/infrastructure.yml` — migrations
+- [x] `scripts/deploy.sh` — deploy backend|bot|frontend|infra
 - [ ] Self-hosted runner настроен и работает
 
 ### 0.8 Traefik
-- [ ] `infra/traefik/traefik.yml` — entrypoints, Let's Encrypt (если нужен SSL)
-- [ ] Routing rules:
-  - `elysium.fm/revisitr/api/*` → backend:8080
-  - `elysium.fm/revisitr/*` → frontend:80
-- [ ] Health check labels для всех сервисов
+- [x] `infra/traefik/traefik.yml` — entrypoints, Let's Encrypt
+- [x] Routing rules (path-prefix based, strip prefix)
+- [x] Health check labels для всех сервисов
 
 ---
 
@@ -86,3 +84,8 @@
 - [ ] Push в main → GitHub Actions → деплой на сервер
 - [ ] `elysium.fm/revisitr/` показывает фронтенд
 - [ ] `elysium.fm/revisitr/api/healthz` возвращает 200
+
+## Оставшиеся задачи
+1. Создать GitHub repo + push
+2. Настроить self-hosted runner на сервере
+3. Первый деплой + верификация

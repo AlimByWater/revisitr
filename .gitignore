@@ -1,6 +1,8 @@
 # Go
 backend/bin/
 backend/tmp/
+backend/server
+backend/bot
 *.exe
 *.test
 *.out
@@ -39,3 +41,6 @@ docker-compose.override.yml
 coverage/
 *.coverprofile
 coverage.out
+
+# Build artifacts
+*.tsbuildinfo
