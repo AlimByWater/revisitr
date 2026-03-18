@@ -41,33 +41,36 @@ function authLoader() {
   return null
 }
 
-export const router = createBrowserRouter([
-  {
-    path: '/',
-    children: [
-      { index: true, loader: () => redirect('/dashboard') },
-      { path: 'auth/login', element: <LoginPage /> },
-      { path: 'auth/register', element: <RegisterPage /> },
-      {
-        path: 'dashboard',
-        element: <DashboardLayout />,
-        loader: authLoader,
-        children: [
-          { index: true, element: <DashboardHome /> },
-          { path: 'bots', element: <BotsPage /> },
-          { path: 'bots/:botId', element: <BotDetailPage /> },
-          { path: 'clients', element: <ClientsPage /> },
-          { path: 'clients/:clientId', element: <ClientDetailPage /> },
-          { path: 'loyalty', element: <LoyaltyProgramsPage /> },
-          { path: 'loyalty/:programId', element: <ProgramDetailPage /> },
-          { path: 'pos', element: <POSListPage /> },
-          { path: 'pos/:posId', element: <POSDetailPage /> },
-          { path: 'campaigns', element: <CampaignsPage /> },
-          { path: 'campaigns/create', element: <CreateCampaignPage /> },
-          { path: 'campaigns/scenarios', element: <ScenariosPage /> },
-          { path: 'campaigns/:campaignId', element: <CampaignDetailPage /> },
-        ],
-      },
-    ],
-  },
-])
+export const router = createBrowserRouter(
+  [
+    {
+      path: '/',
+      children: [
+        { index: true, loader: () => redirect('/dashboard') },
+        { path: 'auth/login', element: <LoginPage /> },
+        { path: 'auth/register', element: <RegisterPage /> },
+        {
+          path: 'dashboard',
+          element: <DashboardLayout />,
+          loader: authLoader,
+          children: [
+            { index: true, element: <DashboardHome /> },
+            { path: 'bots', element: <BotsPage /> },
+            { path: 'bots/:botId', element: <BotDetailPage /> },
+            { path: 'clients', element: <ClientsPage /> },
+            { path: 'clients/:clientId', element: <ClientDetailPage /> },
+            { path: 'loyalty', element: <LoyaltyProgramsPage /> },
+            { path: 'loyalty/:programId', element: <ProgramDetailPage /> },
+            { path: 'pos', element: <POSListPage /> },
+            { path: 'pos/:posId', element: <POSDetailPage /> },
+            { path: 'campaigns', element: <CampaignsPage /> },
+            { path: 'campaigns/create', element: <CreateCampaignPage /> },
+            { path: 'campaigns/scenarios', element: <ScenariosPage /> },
+            { path: 'campaigns/:campaignId', element: <CampaignDetailPage /> },
+          ],
+        },
+      ],
+    },
+  ],
+  { basename: '/revisitr' },
+)
