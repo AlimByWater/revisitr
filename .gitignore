@@ -1,0 +1,41 @@
+# Go
+backend/bin/
+backend/tmp/
+*.exe
+*.test
+*.out
+vendor/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/src/routeTree.gen.ts
+
+# Environment
+.env
+.env.local
+.env.production
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+
+# Test coverage
+coverage/
+*.coverprofile
+coverage.out
