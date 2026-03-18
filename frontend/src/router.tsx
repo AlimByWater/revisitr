@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { createBrowserRouter, redirect, Outlet } from 'react-router-dom'
 import { Sidebar } from './components/layout/Sidebar'
 import { Header } from './components/layout/Header'
+import { MobileNav } from './components/layout/MobileNav'
 
 // Auth pages
 import LoginPage from './routes/auth/login'
@@ -22,12 +24,15 @@ import CampaignDetailPage from './routes/dashboard/campaigns/$campaignId'
 import ScenariosPage from './routes/dashboard/campaigns/scenarios'
 
 function DashboardLayout() {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />
+      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Header />
-        <main className="flex-1 p-6">
+        <Header onMenuToggle={() => setMobileNavOpen(true)} />
+        <main className="flex-1 p-4 md:p-6">
           <Outlet />
         </main>
       </div>

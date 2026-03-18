@@ -4,10 +4,13 @@ import { Heart, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useProgramsQuery, useUpdateProgramMutation } from '@/features/loyalty/queries'
 import { CreateProgramModal } from '@/components/loyalty/CreateProgramModal'
+import { EmptyState } from '@/components/common/EmptyState'
+import { ErrorState } from '@/components/common/ErrorState'
+import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 
 export default function LoyaltyProgramsPage() {
   const navigate = useNavigate()
-  const { data: programs, isLoading } = useProgramsQuery()
+  const { data: programs, isLoading, isError, mutate } = useProgramsQuery()
   const updateMutation = useUpdateProgramMutation()
   const [showCreate, setShowCreate] = useState(false)
 
@@ -17,50 +20,65 @@ export default function LoyaltyProgramsPage() {
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Программы лояльности</h1>
+      <div className="flex items-center justify-between mb-6 animate-in">
+        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Программы лояльности</h1>
         <button
           type="button"
           onClick={() => setShowCreate(true)}
           className={cn(
-            'inline-flex items-center gap-2 px-4 py-2.5 rounded-lg',
-            'bg-neutral-900 text-white text-sm font-medium',
-            'hover:bg-neutral-800 transition-colors',
+            'flex items-center gap-2 py-2.5 px-4 rounded-lg',
+            'bg-accent text-white text-sm font-medium',
+            'hover:bg-accent-hover active:bg-accent/80',
+            'transition-all duration-150',
+            'focus:outline-none focus:ring-2 focus:ring-accent/20',
+            'shadow-sm shadow-accent/20',
           )}
         >
           <Plus className="w-4 h-4" />
-          Создать программу
+          <span className="hidden sm:inline">Создать программу</span>
+          <span className="sm:hidden">Создать</span>
         </button>
       </div>
 
-      {isLoading && (
-        <div className="text-sm text-neutral-500">Загрузка...</div>
-      )}
-
-      {!isLoading && (!programs || programs.length === 0) && (
-        <div className="bg-white rounded-2xl border border-surface-border p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-4">
-            <Heart className="w-8 h-8 text-neutral-400" />
-          </div>
-          <h2 className="text-lg font-semibold text-neutral-700 mb-2">
-            Нет программ лояльности
-          </h2>
-          <p className="text-sm text-neutral-400 max-w-md mx-auto">
-            Создайте первую программу лояльности для ваших клиентов
-          </p>
-        </div>
-      )}
-
-      {programs && programs.length > 0 && (
+      {isLoading ? (
         <div className="space-y-3">
-          {programs.map((program) => (
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={cn('animate-in', `animate-in-delay-${i + 1}`)}>
+              <CardSkeleton />
+            </div>
+          ))}
+        </div>
+      ) : isError ? (
+        <ErrorState
+          title="Не удалось загрузить программы"
+          message="Проверьте подключение к серверу и попробуйте снова."
+          onRetry={() => mutate()}
+        />
+      ) : !programs || programs.length === 0 ? (
+        <EmptyState
+          icon={Heart}
+          title="Нет программ лояльности"
+          description="Создайте первую программу лояльности для ваших клиентов — бонусную или скидочную."
+          actionLabel="Создать программу"
+          onAction={() => setShowCreate(true)}
+          variant="loyalty"
+        />
+      ) : (
+        <div className="space-y-3">
+          {programs.map((program, i) => (
             <button
               key={program.id}
               type="button"
               onClick={() =>
                 navigate(`/dashboard/loyalty/${program.id}`)
               }
-              className="w-full text-left bg-white rounded-2xl shadow-sm border border-surface-border p-6 hover:border-neutral-300 transition-colors"
+              className={cn(
+                'w-full text-left bg-white rounded-2xl shadow-sm border border-surface-border p-6',
+                'hover:border-neutral-300 hover:shadow-md',
+                'transition-all duration-200 group',
+                'animate-in',
+                `animate-in-delay-${Math.min(i + 1, 5)}`,
+              )}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">

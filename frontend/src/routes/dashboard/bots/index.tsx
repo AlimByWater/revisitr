@@ -3,6 +3,9 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useBotsQuery } from '@/features/bots/queries'
 import { CreateBotModal } from '@/components/bots/CreateBotModal'
+import { EmptyState } from '@/components/common/EmptyState'
+import { ErrorState } from '@/components/common/ErrorState'
+import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 import { Bot as BotIcon, Plus, Users } from 'lucide-react'
 import type { Bot } from '@/features/bots/types'
 
@@ -31,98 +34,73 @@ function formatDate(dateStr: string): string {
 
 export default function BotsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const { data: bots, isLoading, isError } = useBotsQuery()
-
-  if (isLoading) {
-    return (
-      <div className="max-w-4xl">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-neutral-900">Боты</h1>
-        </div>
-        <div className="flex items-center justify-center py-20">
-          <div className="w-6 h-6 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
-        </div>
-      </div>
-    )
-  }
-
-  if (isError) {
-    return (
-      <div className="max-w-4xl">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-neutral-900">Боты</h1>
-        </div>
-        <div className="bg-white rounded-2xl border border-surface-border p-12 text-center">
-          <p className="text-sm text-red-600">
-            Не удалось загрузить список ботов. Попробуйте обновить страницу.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  const hasBots = bots && bots.length > 0
+  const { data: bots, isLoading, isError, mutate } = useBotsQuery()
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-neutral-900">Боты</h1>
+      <div className="flex items-center justify-between mb-6 animate-in">
+        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Боты</h1>
         <button
           onClick={() => setShowCreateModal(true)}
           type="button"
           className={cn(
             'flex items-center gap-2 py-2.5 px-4 rounded-lg',
             'bg-accent text-white text-sm font-medium',
-            'hover:bg-accent/90 active:bg-accent/80',
-            'transition-colors',
+            'hover:bg-accent-hover active:bg-accent/80',
+            'transition-all duration-150',
             'focus:outline-none focus:ring-2 focus:ring-accent/20',
+            'shadow-sm shadow-accent/20',
           )}
         >
           <Plus className="w-4 h-4" />
-          Создать бота
+          <span className="hidden sm:inline">Создать бота</span>
+          <span className="sm:hidden">Создать</span>
         </button>
       </div>
 
-      {!hasBots ? (
-        <div className="bg-white rounded-2xl border border-surface-border p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-4">
-            <BotIcon className="w-8 h-8 text-neutral-400" />
-          </div>
-          <h2 className="text-lg font-semibold text-neutral-700 mb-2">
-            У вас пока нет ботов
-          </h2>
-          <p className="text-sm text-neutral-400 max-w-md mx-auto mb-6">
-            Создайте Telegram-бота для вашего ресторана, чтобы начать работу с программой лояльности
-          </p>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            type="button"
-            className={cn(
-              'inline-flex items-center gap-2 py-2.5 px-4 rounded-lg',
-              'bg-accent text-white text-sm font-medium',
-              'hover:bg-accent/90 active:bg-accent/80',
-              'transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-accent/20',
-            )}
-          >
-            <Plus className="w-4 h-4" />
-            Создать бота
-          </button>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className={cn('animate-in', `animate-in-delay-${i + 1}`)}>
+              <CardSkeleton />
+            </div>
+          ))}
         </div>
+      ) : isError ? (
+        <ErrorState
+          title="Не удалось загрузить ботов"
+          message="Проверьте подключение к серверу и попробуйте снова."
+          onRetry={() => mutate()}
+        />
+      ) : !bots || bots.length === 0 ? (
+        <EmptyState
+          icon={BotIcon}
+          title="У вас пока нет ботов"
+          description="Создайте Telegram-бота для вашего ресторана, чтобы начать работу с программой лояльности и рассылками."
+          actionLabel="Создать бота"
+          onAction={() => setShowCreateModal(true)}
+          variant="bots"
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {bots.map((bot) => {
+          {bots.map((bot, i) => {
             const status = statusConfig[bot.status]
             return (
               <Link
                 key={bot.id}
                 to={`/dashboard/bots/${bot.id}`}
-                className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 hover:border-neutral-300 transition-colors group"
+                className={cn(
+                  'bg-white rounded-2xl shadow-sm border border-surface-border p-6',
+                  'hover:border-neutral-300 hover:shadow-md',
+                  'transition-all duration-200 group',
+                  'animate-in',
+                  `animate-in-delay-${Math.min(i + 1, 5)}`,
+                )}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center group-hover:bg-neutral-200 transition-colors">
-                      <BotIcon className="w-5 h-5 text-neutral-500" />
+                    <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center group-hover:bg-accent/10 transition-colors duration-200">
+                      <BotIcon className="w-5 h-5 text-neutral-500 group-hover:text-accent transition-colors duration-200" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-neutral-900">{bot.name}</h3>
@@ -142,7 +120,7 @@ export default function BotsPage() {
                 <div className="flex items-center justify-between text-sm text-neutral-400 mt-4 pt-4 border-t border-surface-border">
                   <div className="flex items-center gap-1.5">
                     <Users className="w-4 h-4" />
-                    <span>{bot.client_count ?? 0} клиентов</span>
+                    <span className="tabular-nums">{bot.client_count ?? 0} клиентов</span>
                   </div>
                   <span>{formatDate(bot.created_at)}</span>
                 </div>

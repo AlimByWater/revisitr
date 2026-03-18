@@ -102,7 +102,7 @@ export default function CampaignDetailPage() {
           <ArrowLeft className="w-5 h-5 text-neutral-500" />
         </button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-neutral-900">
+          <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
             {campaign.name}
           </h1>
         </div>
@@ -155,7 +155,7 @@ export default function CampaignDetailPage() {
               <Users className="w-4 h-4 text-neutral-400" />
               <span className="text-xs text-neutral-400">Всего</span>
             </div>
-            <p className="text-2xl font-bold text-neutral-900">
+            <p className="text-2xl font-bold font-mono text-neutral-900 tracking-tight">
               {campaign.stats.total}
             </p>
           </div>
@@ -164,7 +164,7 @@ export default function CampaignDetailPage() {
               <CheckCircle className="w-4 h-4 text-green-500" />
               <span className="text-xs text-neutral-400">Доставлено</span>
             </div>
-            <p className="text-2xl font-bold text-green-600">
+            <p className="text-2xl font-bold font-mono text-green-600 tracking-tight">
               {campaign.stats.sent}
             </p>
           </div>
@@ -173,7 +173,7 @@ export default function CampaignDetailPage() {
               <XCircle className="w-4 h-4 text-red-500" />
               <span className="text-xs text-neutral-400">Ошибки</span>
             </div>
-            <p className="text-2xl font-bold text-red-600">
+            <p className="text-2xl font-bold font-mono text-red-600 tracking-tight">
               {campaign.stats.failed}
             </p>
           </div>

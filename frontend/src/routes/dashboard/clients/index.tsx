@@ -3,6 +3,9 @@ import { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { useClientsQuery, useClientStatsQuery } from '@/features/clients/queries'
 import { useBotsQuery } from '@/features/bots/queries'
+import { EmptyState } from '@/components/common/EmptyState'
+import { ErrorState } from '@/components/common/ErrorState'
+import { TableSkeleton, MetricSkeleton } from '@/components/common/LoadingSkeleton'
 import type { ClientProfile, ClientFilter } from '@/features/clients/types'
 import {
   Users,
@@ -106,7 +109,7 @@ function StatCard({
         </div>
         <span className="text-sm text-neutral-500">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-neutral-900">{value}</p>
+      <p className="text-2xl font-bold font-mono text-neutral-900 tracking-tight">{value}</p>
     </div>
   )
 }
@@ -135,7 +138,7 @@ export default function ClientsPage() {
     [search, botFilter, sortBy, sortDesc, pageIndex],
   )
 
-  const { data, isLoading, isError } = useClientsQuery(filter)
+  const { data, isLoading, isError, mutate } = useClientsQuery(filter)
 
   const pageCount = data ? Math.ceil(data.total / pageSize) : 0
   const canPreviousPage = pageIndex > 0
@@ -163,8 +166,8 @@ export default function ClientsPage() {
 
   return (
     <div className="max-w-6xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-neutral-900">Клиенты</h1>
+      <div className="flex items-center justify-between mb-6 animate-in">
+        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Клиенты</h1>
       </div>
 
       {/* Stats */}
@@ -236,27 +239,22 @@ export default function ClientsPage() {
 
       {/* Table */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-6 h-6 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
+        <div className="animate-in animate-in-delay-1">
+          <TableSkeleton />
         </div>
       ) : isError ? (
-        <div className="bg-white rounded-2xl border border-surface-border p-12 text-center">
-          <p className="text-sm text-red-600">
-            Не удалось загрузить список клиентов. Попробуйте обновить страницу.
-          </p>
-        </div>
+        <ErrorState
+          title="Не удалось загрузить клиентов"
+          message="Проверьте подключение к серверу и попробуйте снова."
+          onRetry={() => mutate()}
+        />
       ) : !data?.items.length ? (
-        <div className="bg-white rounded-2xl border border-surface-border p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-4">
-            <Users className="w-8 h-8 text-neutral-400" />
-          </div>
-          <h2 className="text-lg font-semibold text-neutral-700 mb-2">
-            Клиентов пока нет
-          </h2>
-          <p className="text-sm text-neutral-400 max-w-md mx-auto">
-            Клиенты появятся после того, как начнут взаимодействовать с вашим Telegram-ботом
-          </p>
-        </div>
+        <EmptyState
+          icon={Users}
+          title="Клиентов пока нет"
+          description="Клиенты появятся после того, как начнут взаимодействовать с вашим Telegram-ботом."
+          variant="clients"
+        />
       ) : (
         <>
           <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden">

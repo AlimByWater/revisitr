@@ -27,12 +27,23 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
-          'Inter',
+          'Outfit',
           '-apple-system',
           'BlinkMacSystemFont',
           'Segoe UI',
-          'Roboto',
           'sans-serif',
+        ],
+        serif: [
+          'Playfair Display',
+          'Georgia',
+          'Cambria',
+          'serif',
+        ],
+        mono: [
+          'JetBrains Mono',
+          'Fira Code',
+          'Consolas',
+          'monospace',
         ],
       },
     },

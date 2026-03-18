@@ -98,7 +98,7 @@ export default function ProgramDetailPage() {
       </Link>
 
       <div className="flex items-center gap-3 mb-8">
-        <h1 className="text-2xl font-bold">{program.name}</h1>
+        <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">{program.name}</h1>
         <span
           className={cn(
             'text-xs font-medium px-2 py-0.5 rounded-full',

@@ -83,7 +83,7 @@ export default function ScenariosPage() {
     return (
       <div className="max-w-4xl">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-neutral-900">
+          <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
             Авто-сценарии
           </h1>
         </div>
@@ -98,7 +98,7 @@ export default function ScenariosPage() {
     return (
       <div className="max-w-4xl">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-neutral-900">
+          <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
             Авто-сценарии
           </h1>
         </div>
@@ -116,7 +116,7 @@ export default function ScenariosPage() {
   return (
     <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-neutral-900">Авто-сценарии</h1>
+        <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">Авто-сценарии</h1>
         <button
           onClick={() => setShowForm(true)}
           type="button"

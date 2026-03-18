@@ -25,6 +25,7 @@ import {
   useDashboardChartsQuery,
 } from '@/features/dashboard/queries'
 import { useBotsQuery } from '@/features/bots/queries'
+import { MetricSkeleton, ChartSkeleton as ChartSkeletonComponent } from '@/components/common/LoadingSkeleton'
 import type { DashboardFilter, DashboardMetric } from '@/features/dashboard/types'
 
 const PERIODS = [
@@ -44,9 +45,9 @@ export default function DashboardHome() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 mb-1">Дашборд</h1>
-        <p className="text-neutral-500 text-sm">
+      <div className="animate-in">
+        <h1 className="font-serif text-3xl font-bold text-neutral-900 mb-1 tracking-tight">Дашборд</h1>
+        <p className="text-neutral-400 text-sm">
           Обзор ключевых показателей
         </p>
       </div>
@@ -92,7 +93,7 @@ export default function DashboardHome() {
       </div>
 
       {/* Widget cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in animate-in-delay-1">
         <MetricCard
           label="Выручка"
           metric={widgets?.revenue}
@@ -124,7 +125,7 @@ export default function DashboardHome() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in animate-in-delay-2">
         <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
           <h3 className="text-sm font-semibold text-neutral-700 mb-4">
             Выручка по дням
@@ -163,8 +164,9 @@ export default function DashboardHome() {
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#171717"
-                  fill="#f5f5f5"
+                  stroke="#E85D3A"
+                  fill="#E85D3A"
+                  fillOpacity={0.08}
                   strokeWidth={2}
                 />
               </AreaChart>
@@ -205,7 +207,7 @@ export default function DashboardHome() {
                     fontSize: 13,
                   }}
                 />
-                <Bar dataKey="value" fill="#171717" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value" fill="#E85D3A" radius={[4, 4, 0, 0]} opacity={0.85} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -229,13 +231,7 @@ function MetricCard({
   format: 'currency' | 'number'
 }) {
   if (loading || !metric) {
-    return (
-      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 animate-pulse">
-        <div className="h-4 bg-neutral-100 rounded w-20 mb-3" />
-        <div className="h-7 bg-neutral-100 rounded w-24 mb-2" />
-        <div className="h-4 bg-neutral-100 rounded w-16" />
-      </div>
-    )
+    return <MetricSkeleton />
   }
 
   const formattedValue =
@@ -254,7 +250,7 @@ function MetricCard({
           {label}
         </span>
       </div>
-      <div className="text-2xl font-bold text-neutral-900 mb-1">
+      <div className="text-3xl font-bold font-mono text-neutral-900 mb-1 tracking-tight">
         {formattedValue}
       </div>
       <div className={cn('flex items-center gap-1 text-sm', trendColor)}>
@@ -269,11 +265,7 @@ function MetricCard({
 }
 
 function ChartSkeleton() {
-  return (
-    <div className="h-[240px] bg-neutral-50 rounded-xl animate-pulse flex items-center justify-center">
-      <span className="text-neutral-300 text-sm">Загрузка...</span>
-    </div>
-  )
+  return <ChartSkeletonComponent />
 }
 
 function formatDateShort(dateStr: string) {

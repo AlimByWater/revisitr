@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -14,5 +14,96 @@
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
     background-repeat: repeat;
     background-size: 256px 256px;
+  }
+}
+
+@layer utilities {
+  /* Staggered page entrance */
+  .animate-in {
+    animation: fadeSlideIn 0.4s ease-out both;
+  }
+
+  .animate-in-delay-1 { animation-delay: 0.05s; }
+  .animate-in-delay-2 { animation-delay: 0.1s; }
+  .animate-in-delay-3 { animation-delay: 0.15s; }
+  .animate-in-delay-4 { animation-delay: 0.2s; }
+  .animate-in-delay-5 { animation-delay: 0.25s; }
+
+  @keyframes fadeSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Shimmer skeleton effect */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+    background: #f0f0f0;
+  }
+
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.5) 50%,
+      transparent 100%
+    );
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* Mobile drawer */
+  .drawer-enter {
+    animation: drawerSlideIn 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+
+  .drawer-exit {
+    animation: drawerSlideOut 0.25s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+
+  @keyframes drawerSlideIn {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+
+  @keyframes drawerSlideOut {
+    from { transform: translateX(0); }
+    to { transform: translateX(-100%); }
+  }
+
+  .backdrop-enter {
+    animation: backdropFadeIn 0.3s ease both;
+  }
+
+  .backdrop-exit {
+    animation: backdropFadeOut 0.25s ease both;
+  }
+
+  @keyframes backdropFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes backdropFadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  /* Number counter */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 }

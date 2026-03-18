@@ -3,7 +3,9 @@ import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useBotQuery } from '@/features/bots/queries'
 import { botsApi } from '@/features/bots/api'
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { ErrorState } from '@/components/common/ErrorState'
+import { CardSkeleton } from '@/components/common/LoadingSkeleton'
+import { ArrowLeft, Plus, Trash2, Check } from 'lucide-react'
 import type { BotButton, BotSettings, FormField } from '@/features/bots/types'
 
 const statusConfig = {
@@ -69,8 +71,15 @@ export default function BotDetailPage() {
   if (isLoading) {
     return (
       <div className="max-w-3xl">
-        <div className="flex items-center justify-center py-20">
-          <div className="w-6 h-6 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
+        <div className="mb-6 animate-in">
+          <div className="h-4 w-32 shimmer rounded" />
+        </div>
+        <div className="space-y-6">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={cn('animate-in', `animate-in-delay-${i + 1}`)}>
+              <CardSkeleton />
+            </div>
+          ))}
         </div>
       </div>
     )
@@ -86,11 +95,10 @@ export default function BotDetailPage() {
           <ArrowLeft className="w-4 h-4" />
           Назад к списку
         </Link>
-        <div className="bg-white rounded-2xl border border-surface-border p-12 text-center">
-          <p className="text-sm text-red-600">
-            Не удалось загрузить информацию о боте.
-          </p>
-        </div>
+        <ErrorState
+          title="Не удалось загрузить бота"
+          message="Проверьте подключение к серверу и попробуйте снова."
+        />
       </div>
     )
   }
@@ -179,10 +187,10 @@ export default function BotDetailPage() {
       </Link>
 
       {/* Bot info header */}
-      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 mb-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 mb-6 animate-in">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-neutral-900">{bot.name}</h1>
+            <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">{bot.name}</h1>
             <p className="text-neutral-400 mt-1">@{bot.username}</p>
           </div>
           <span
@@ -432,10 +440,16 @@ export default function BotDetailPage() {
           <div className="flex items-center justify-between">
             <div>
               {saveError && (
-                <p className="text-sm text-red-600">{saveError}</p>
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 border border-red-100">
+                  <span className="text-red-500 font-mono text-xs">✕</span>
+                  <p className="text-sm text-red-600">{saveError}</p>
+                </div>
               )}
               {saveSuccess && (
-                <p className="text-sm text-green-600">Настройки сохранены</p>
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 border border-green-100">
+                  <Check className="w-3.5 h-3.5 text-green-600" />
+                  <p className="text-sm text-green-600 font-medium">Сохранено</p>
+                </div>
               )}
             </div>
             <button
@@ -443,11 +457,12 @@ export default function BotDetailPage() {
               onClick={handleSave}
               disabled={isSaving}
               className={cn(
-                'py-2.5 px-6 rounded-lg',
-                'bg-neutral-900 text-white text-sm font-medium',
-                'hover:bg-neutral-800 active:bg-neutral-950',
-                'transition-colors',
-                'focus:outline-none focus:ring-2 focus:ring-neutral-900/20',
+                'py-2.5 px-6 rounded-xl',
+                'bg-accent text-white text-sm font-semibold',
+                'hover:bg-accent-hover active:bg-accent/80',
+                'transition-all duration-150',
+                'focus:outline-none focus:ring-2 focus:ring-accent/20',
+                'shadow-sm shadow-accent/20',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
               )}
             >

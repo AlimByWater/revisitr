@@ -68,7 +68,7 @@ export default function CreateCampaignPage() {
         >
           <ArrowLeft className="w-5 h-5 text-neutral-500" />
         </button>
-        <h1 className="text-2xl font-bold text-neutral-900">
+        <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
           Создать рассылку
         </h1>
       </div>

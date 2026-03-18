@@ -144,9 +144,10 @@ export function CreatePOSModal({ onClose }: CreatePOSModalProps) {
               type="submit"
               disabled={createMutation.isPending || !name.trim()}
               className={cn(
-                'flex-1 px-4 py-2.5 rounded-lg text-sm font-medium',
-                'bg-neutral-900 text-white',
-                'hover:bg-neutral-800 transition-colors',
+                'flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold',
+                'bg-accent text-white',
+                'hover:bg-accent-hover transition-all duration-150',
+                'shadow-sm shadow-accent/20',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
               )}
             >

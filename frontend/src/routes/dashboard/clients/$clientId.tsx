@@ -151,7 +151,7 @@ export default function ClientDetailPage() {
         Назад к клиентам
       </Link>
 
-      <h1 className="text-2xl font-bold text-neutral-900 mb-6">{fullName}</h1>
+      <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight mb-6">{fullName}</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Info card */}

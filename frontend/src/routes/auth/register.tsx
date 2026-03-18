@@ -3,6 +3,19 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
 
+const FLOOR_PLAN = [
+  '┌─────┐   ┌─────┐   ┌─────┐   ┌─────┐   ┌─────┐',
+  '│     │   │     │   │     │   │     │   │     │',
+  '│  ·  │   │  ·  │   │  ·  │   │  ·  │   │  ·  │',
+  '│     │   │     │   │     │   │     │   │     │',
+  '└─────┘   └─────┘   └─────┘   └─────┘   └─────┘',
+  '     ┌─────┐   ┌─────┐   ┌─────┐   ┌─────┐',
+  '     │     │   │     │   │     │   │     │',
+  '     │  ·  │   │  ·  │   │  ·  │   │  ·  │',
+  '     │     │   │     │   │     │   │     │',
+  '     └─────┘   └─────┘   └─────┘   └─────┘',
+].join('\n')
+
 export default function RegisterPage() {
   const navigate = useNavigate()
   const register = useAuthStore((s) => s.register)
@@ -50,33 +63,112 @@ export default function RegisterPage() {
     }
   }
 
-  const inputClassName = cn(
-    'w-full px-4 py-2.5 rounded-lg border border-surface-border',
-    'text-sm placeholder:text-neutral-400',
+  const inputClass = cn(
+    'w-full px-4 py-3 rounded-xl border border-surface-border bg-white',
+    'text-sm placeholder:text-neutral-300',
     'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
-    'transition-colors',
+    'transition-all duration-200',
     'disabled:opacity-50 disabled:cursor-not-allowed',
   )
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">
-            revi<span className="text-accent">s</span>itr
-          </h1>
-          <p className="text-neutral-500 mt-2 text-sm">
-            Создайте аккаунт для управления лояльностью
-          </p>
+    <div className="min-h-screen flex">
+      {/* ─── Brand panel ─── */}
+      <div className="hidden lg:flex lg:w-[48%] bg-sidebar relative overflow-hidden flex-col justify-between p-10 xl:p-14">
+        {/* ASCII floor plan texture */}
+        <div
+          className="absolute inset-0 flex items-center justify-center overflow-hidden select-none pointer-events-none"
+          aria-hidden="true"
+        >
+          <pre className="text-white/[0.035] text-[11px] font-mono leading-relaxed whitespace-pre">
+            {[FLOOR_PLAN, FLOOR_PLAN, FLOOR_PLAN, FLOOR_PLAN, FLOOR_PLAN, FLOOR_PLAN].join('\n')}
+          </pre>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-20 animate-in">
+            <span className="text-2xl font-bold text-white tracking-tight">
+              revi<span className="text-accent">s</span>itr
+            </span>
+            <span className="text-[10px] font-bold text-accent bg-accent/10 px-1.5 py-0.5 rounded uppercase tracking-wider">
+              PRO
+            </span>
+          </div>
+
+          <div className="mb-10 animate-in animate-in-delay-1">
+            <h2 className="font-serif text-[3rem] xl:text-[4rem] font-bold text-white leading-[1.08] tracking-tight">
+              Начните<br />
+              <span className="text-accent">бесплатно</span>
+            </h2>
+          </div>
+
+          <div
+            className="font-mono text-accent/25 text-xs mb-8 tracking-[0.4em] animate-in animate-in-delay-2"
+            aria-hidden="true"
+          >
+            ━━━━━━━━━━━━━━
+          </div>
+
+          <div className="space-y-3.5 animate-in animate-in-delay-3">
+            <div className="flex items-start gap-3">
+              <span className="text-accent font-mono text-sm mt-[3px]">▸</span>
+              <p className="text-sm">
+                <span className="text-white/80 font-medium">Быстрая настройка</span>
+                <span className="text-white/35 ml-1.5">— бот за 5 минут</span>
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-accent font-mono text-sm mt-[3px]">▸</span>
+              <p className="text-sm">
+                <span className="text-white/80 font-medium">Без ограничений</span>
+                <span className="text-white/35 ml-1.5">— все функции доступны</span>
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-accent font-mono text-sm mt-[3px]">▸</span>
+              <p className="text-sm">
+                <span className="text-white/80 font-medium">Поддержка 24/7</span>
+                <span className="text-white/35 ml-1.5">— поможем разобраться</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-10 animate-in animate-in-delay-4">
+          <div className="font-mono text-white/[0.06] text-[10px] mb-3" aria-hidden="true">
+            {'─'.repeat(50)}
+          </div>
+          <p className="text-white/20 text-[11px] font-mono uppercase tracking-wider">
+            © 2026 Revisitr · Платформа для HoReCa
+          </p>
+        </div>
+      </div>
+
+      {/* ─── Form panel ─── */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-white">
+        <div className="w-full max-w-[400px]">
+          {/* Mobile brand */}
+          <div className="lg:hidden text-center mb-10 animate-in">
+            <h1 className="text-3xl font-bold tracking-tight">
+              revi<span className="text-accent">s</span>itr
+            </h1>
+            <p className="text-neutral-400 mt-2 text-sm">
+              Платформа лояльности для HoReCa
+            </p>
+          </div>
+
+          <div className="mb-8 animate-in">
+            <h2 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+              Регистрация
+            </h2>
+            <p className="text-neutral-400 mt-2 text-sm">
+              Создайте аккаунт для управления лояльностью
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4 animate-in animate-in-delay-1">
             <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-neutral-700 mb-1.5"
-              >
+              <label htmlFor="name" className="block text-sm font-medium text-neutral-700 mb-1.5">
                 Имя
               </label>
               <input
@@ -88,15 +180,12 @@ export default function RegisterPage() {
                 required
                 autoComplete="name"
                 disabled={isLoading}
-                className={inputClassName}
+                className={inputClass}
               />
             </div>
 
             <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-neutral-700 mb-1.5"
-              >
+              <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-1.5">
                 Email
               </label>
               <input
@@ -108,15 +197,12 @@ export default function RegisterPage() {
                 required
                 autoComplete="email"
                 disabled={isLoading}
-                className={inputClassName}
+                className={inputClass}
               />
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-neutral-700 mb-1.5"
-              >
+              <label htmlFor="password" className="block text-sm font-medium text-neutral-700 mb-1.5">
                 Пароль
               </label>
               <input
@@ -129,36 +215,30 @@ export default function RegisterPage() {
                 minLength={6}
                 autoComplete="new-password"
                 disabled={isLoading}
-                className={inputClassName}
+                className={inputClass}
               />
             </div>
 
             <div>
-              <label
-                htmlFor="organization"
-                className="block text-sm font-medium text-neutral-700 mb-1.5"
-              >
-                Название организации
+              <label htmlFor="organization" className="block text-sm font-medium text-neutral-700 mb-1.5">
+                Название заведения
               </label>
               <input
                 id="organization"
                 type="text"
                 value={organization}
                 onChange={(e) => setOrganization(e.target.value)}
-                placeholder="Ресторан 'Уют'"
+                placeholder="Ресторан «Уют»"
                 required
                 disabled={isLoading}
-                className={inputClassName}
+                className={inputClass}
               />
             </div>
 
             <div>
-              <label
-                htmlFor="phone"
-                className="block text-sm font-medium text-neutral-700 mb-1.5"
-              >
+              <label htmlFor="phone" className="block text-sm font-medium text-neutral-700 mb-1.5">
                 Телефон{' '}
-                <span className="text-neutral-400 font-normal">(необязательно)</span>
+                <span className="text-neutral-300 font-normal">(необязательно)</span>
               </label>
               <input
                 id="phone"
@@ -168,23 +248,27 @@ export default function RegisterPage() {
                 placeholder="+7 (999) 123-45-67"
                 autoComplete="tel"
                 disabled={isLoading}
-                className={inputClassName}
+                className={inputClass}
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-600">{error}</p>
+              <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-red-50 border border-red-100">
+                <span className="text-red-500 font-mono text-xs shrink-0">✕</span>
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
             )}
 
             <button
               type="submit"
               disabled={isLoading}
               className={cn(
-                'w-full py-2.5 px-4 rounded-lg',
-                'bg-neutral-900 text-white text-sm font-medium',
-                'hover:bg-neutral-800 active:bg-neutral-950',
-                'transition-colors',
-                'focus:outline-none focus:ring-2 focus:ring-neutral-900/20',
+                'w-full py-3 px-4 rounded-xl',
+                'bg-accent text-white text-sm font-semibold',
+                'hover:bg-accent-hover active:bg-accent/80',
+                'transition-all duration-150',
+                'focus:outline-none focus:ring-2 focus:ring-accent/20',
+                'shadow-md shadow-accent/20',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
               )}
             >
@@ -192,7 +276,7 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-neutral-500 mt-6">
+          <p className="text-center text-sm text-neutral-400 mt-8 animate-in animate-in-delay-2">
             Уже есть аккаунт?{' '}
             <Link to="/auth/login" className="text-accent hover:underline font-medium">
               Войти
