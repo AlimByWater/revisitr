@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -10,9 +9,9 @@ import (
 
 	"revisitr/internal/application/config"
 	"revisitr/internal/application/env"
-
-	"github.com/mymmrac/telego"
-	tu "github.com/mymmrac/telego/telegoutil"
+	pgRepo "revisitr/internal/repository/postgres"
+	"revisitr/internal/service/botmanager"
+	"revisitr/internal/service/campaign"
 )
 
 func main() {
@@ -27,52 +26,54 @@ func main() {
 
 	cfg := config.NewFromEnv()
 
-	if cfg.Bot.Token == "" {
-		logger.Error("BOT_TOKEN is required")
-		os.Exit(1)
-	}
-
-	bot, err := telego.NewBot(cfg.Bot.Token)
-	if err != nil {
-		logger.Error("failed to create bot", "error", err)
-		os.Exit(1)
-	}
-
+	// Init PostgreSQL
+	pg := pgRepo.New(&postgresConfig{cfg: cfg})
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	updates, err := bot.UpdatesViaLongPolling(nil)
-	if err != nil {
-		logger.Error("failed to start long polling", "error", err)
+	if err := pg.Init(ctx, logger); err != nil {
+		logger.Error("postgres init failed", "error", err)
+		os.Exit(1)
+	}
+	defer pg.Close()
+
+	// Create repositories
+	botsRepo := pgRepo.NewBots(pg)
+	botClientsRepo := pgRepo.NewBotClients(pg)
+	loyaltyRepo := pgRepo.NewLoyalty(pg)
+	posRepo := pgRepo.NewPOS(pg)
+
+	campaignsRepo := pgRepo.NewCampaigns(pg)
+	scenariosRepo := pgRepo.NewAutoScenarios(pg)
+
+	// Create and start bot manager
+	mgr := botmanager.New(botsRepo, botClientsRepo, loyaltyRepo, posRepo, logger)
+
+	if err := mgr.Start(ctx); err != nil {
+		logger.Error("bot manager start failed", "error", err)
 		os.Exit(1)
 	}
 
-	logger.Info("bot started, waiting for updates")
+	logger.Info("bot service started", "active_bots", mgr.ActiveCount())
 
-	go func() {
-		for update := range updates {
-			if update.Message == nil {
-				continue
-			}
+	// Start auto-scenario scheduler
+	scheduler := campaign.NewScheduler(scenariosRepo, botsRepo, botClientsRepo, loyaltyRepo, logger)
+	go scheduler.Run(ctx)
 
-			if update.Message.Text == "/start" {
-				msg := tu.Message(
-					tu.ID(update.Message.Chat.ID),
-					fmt.Sprintf("Добро пожаловать в Revisitr! 🎉"),
-				)
-				if _, err := bot.SendMessage(msg); err != nil {
-					logger.Error("failed to send message", "error", err)
-				}
-				logger.Info("handled /start",
-					"chat_id", update.Message.Chat.ID,
-					"user", update.Message.From.Username,
-				)
-			}
-		}
-	}()
+	// Campaign sender available for use
+	_ = campaign.NewSender(campaignsRepo, botsRepo, botClientsRepo, logger)
 
 	<-ctx.Done()
-	logger.Info("shutting down bot")
-	bot.StopLongPolling()
-	logger.Info("bot stopped")
+	logger.Info("shutting down bot service")
+	mgr.Shutdown()
+	logger.Info("bot service stopped")
 }
+
+type postgresConfig struct{ cfg *config.Module }
+
+func (c *postgresConfig) GetHost() string     { return c.cfg.Postgres.Host }
+func (c *postgresConfig) GetPort() string     { return c.cfg.Postgres.Port }
+func (c *postgresConfig) GetUser() string     { return c.cfg.Postgres.User }
+func (c *postgresConfig) GetPassword() string { return c.cfg.Postgres.Password }
+func (c *postgresConfig) GetDatabase() string { return c.cfg.Postgres.Database }
+func (c *postgresConfig) GetSSLMode() string  { return c.cfg.Postgres.SSLMode }
