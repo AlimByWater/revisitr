@@ -151,17 +151,17 @@ export default function CampaignsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right hidden md:table-cell">
-                        <span className="text-sm text-neutral-500 tabular-nums">
+                        <span className="text-sm font-mono text-neutral-500 tabular-nums">
                           {campaign.stats.total}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right hidden md:table-cell">
-                        <span className="text-sm text-neutral-500 tabular-nums">
+                        <span className="text-sm font-mono text-neutral-500 tabular-nums">
                           {campaign.stats.sent}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right hidden sm:table-cell">
-                        <span className="text-sm text-neutral-400">
+                        <span className="text-sm font-mono text-neutral-400 tabular-nums">
                           {formatDate(campaign.created_at)}
                         </span>
                       </td>

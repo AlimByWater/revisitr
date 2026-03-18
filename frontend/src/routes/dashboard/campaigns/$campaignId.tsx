@@ -131,14 +131,14 @@ export default function CampaignDetailPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-neutral-400 mb-1">Создано</p>
-              <p className="text-sm text-neutral-700">
+              <p className="text-sm font-mono text-neutral-700 tabular-nums">
                 {formatDate(campaign.created_at)}
               </p>
             </div>
             {campaign.sent_at && (
               <div>
                 <p className="text-xs text-neutral-400 mb-1">Отправлено</p>
-                <p className="text-sm text-neutral-700">
+                <p className="text-sm font-mono text-neutral-700 tabular-nums">
                   {formatDate(campaign.sent_at)}
                 </p>
               </div>

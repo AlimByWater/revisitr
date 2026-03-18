@@ -47,7 +47,7 @@ export default function DashboardHome() {
     <div className="space-y-6">
       <div className="animate-in">
         <h1 className="font-serif text-3xl font-bold text-neutral-900 mb-1 tracking-tight">Дашборд</h1>
-        <p className="text-neutral-400 text-sm">
+        <p className="font-mono text-neutral-300 text-xs uppercase tracking-wider">
           Обзор ключевых показателей
         </p>
       </div>

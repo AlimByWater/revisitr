@@ -221,7 +221,7 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-white/10">
-        <p className="text-xs text-sidebar-muted text-center">
+        <p className="text-[11px] font-mono text-white/20 text-center uppercase tracking-wider">
           &copy; 2026 Revisitr
         </p>
       </div>

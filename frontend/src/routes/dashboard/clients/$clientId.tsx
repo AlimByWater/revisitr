@@ -210,7 +210,7 @@ export default function ClientDetailPage() {
                   <Wallet className="w-4 h-4 text-neutral-400" />
                   <span className="text-xs text-neutral-500">Баланс</span>
                 </div>
-                <p className="text-xl font-bold text-neutral-900 tabular-nums">
+                <p className="text-xl font-bold font-mono text-neutral-900 tabular-nums tracking-tight">
                   {formatBalance(client.loyalty_balance)}
                 </p>
               </div>
@@ -219,7 +219,7 @@ export default function ClientDetailPage() {
                   <TrendingUp className="w-4 h-4 text-neutral-400" />
                   <span className="text-xs text-neutral-500">Покупок</span>
                 </div>
-                <p className="text-xl font-bold text-neutral-900 tabular-nums">
+                <p className="text-xl font-bold font-mono text-neutral-900 tabular-nums tracking-tight">
                   {client.purchase_count}
                 </p>
               </div>
@@ -231,7 +231,7 @@ export default function ClientDetailPage() {
                   Сумма покупок
                 </span>
               </div>
-              <p className="text-xl font-bold text-neutral-900 tabular-nums">
+              <p className="text-xl font-bold font-mono text-neutral-900 tabular-nums tracking-tight">
                 {formatBalance(client.total_purchases)}
               </p>
             </div>
@@ -338,7 +338,7 @@ export default function ClientDetailPage() {
                 const config = transactionTypeConfig[tx.type]
                 return (
                   <tr key={tx.id} className="hover:bg-neutral-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-neutral-600">
+                    <td className="px-4 py-3 text-sm font-mono text-neutral-600 tabular-nums">
                       {formatDateTime(tx.created_at)}
                     </td>
                     <td className="px-4 py-3">
@@ -351,7 +351,7 @@ export default function ClientDetailPage() {
                         {config.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-right font-medium tabular-nums">
+                    <td className="px-4 py-3 text-sm text-right font-mono font-medium tabular-nums">
                       <span
                         className={
                           tx.type === 'earn'
@@ -365,7 +365,7 @@ export default function ClientDetailPage() {
                         {formatBalance(Math.abs(tx.amount))}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-neutral-600 tabular-nums">
+                    <td className="px-4 py-3 text-sm text-right font-mono text-neutral-600 tabular-nums">
                       {formatBalance(tx.balance_after)}
                     </td>
                     <td className="px-4 py-3 text-sm text-neutral-500">

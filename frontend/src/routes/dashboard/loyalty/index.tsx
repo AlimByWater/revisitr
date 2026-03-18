@@ -100,7 +100,7 @@ export default function LoyaltyProgramsPage() {
                 <div className="flex items-center gap-4">
                   {program.levels && (
                     <span className="text-xs text-neutral-500">
-                      {program.levels.length}{' '}
+                      <span className="font-mono tabular-nums">{program.levels.length}</span>{' '}
                       {pluralLevels(program.levels.length)}
                     </span>
                   )}

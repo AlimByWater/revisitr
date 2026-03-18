@@ -39,7 +39,7 @@ export function ErrorState({
         </svg>
       </div>
 
-      <h3 className="text-lg font-semibold text-neutral-800 mb-1.5 text-center">
+      <h3 className="font-serif text-xl font-bold text-neutral-800 mb-1.5 text-center tracking-tight">
         {title}
       </h3>
       <p className="text-sm text-neutral-400 max-w-sm text-center mb-6 leading-relaxed">

@@ -120,9 +120,9 @@ export default function BotsPage() {
                 <div className="flex items-center justify-between text-sm text-neutral-400 mt-4 pt-4 border-t border-surface-border">
                   <div className="flex items-center gap-1.5">
                     <Users className="w-4 h-4" />
-                    <span className="tabular-nums">{bot.client_count ?? 0} клиентов</span>
+                    <span className="font-mono tabular-nums">{bot.client_count ?? 0} клиентов</span>
                   </div>
-                  <span>{formatDate(bot.created_at)}</span>
+                  <span className="font-mono tabular-nums">{formatDate(bot.created_at)}</span>
                 </div>
               </Link>
             )

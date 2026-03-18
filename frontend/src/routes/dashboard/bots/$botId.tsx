@@ -203,7 +203,7 @@ export default function BotDetailPage() {
           </span>
         </div>
         <p className="text-sm text-neutral-400 mt-4">
-          Создан {formatDate(bot.created_at)}
+          Создан <span className="font-mono tabular-nums">{formatDate(bot.created_at)}</span>
         </p>
       </div>
 

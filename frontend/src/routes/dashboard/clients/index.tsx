@@ -71,7 +71,7 @@ const columns: Column[] = [
     id: 'loyalty_balance',
     header: 'Баланс',
     render: (row) => (
-      <span className="font-medium text-neutral-900 tabular-nums">
+      <span className="font-mono font-medium text-neutral-900 tabular-nums">
         {formatBalance(row.loyalty_balance)}
       </span>
     ),
@@ -80,14 +80,14 @@ const columns: Column[] = [
     id: 'purchase_count',
     header: 'Покупки',
     render: (row) => (
-      <span className="text-neutral-600 tabular-nums">{row.purchase_count}</span>
+      <span className="font-mono text-neutral-600 tabular-nums">{row.purchase_count}</span>
     ),
   },
   {
     id: 'registered_at',
     header: 'Зарегистрирован',
     render: (row) => (
-      <span className="text-neutral-500">{formatDate(row.registered_at)}</span>
+      <span className="font-mono text-neutral-500 tabular-nums">{formatDate(row.registered_at)}</span>
     ),
   },
 ]
@@ -107,9 +107,9 @@ function StatCard({
         <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
           <Icon className="w-5 h-5 text-neutral-500" />
         </div>
-        <span className="text-sm text-neutral-500">{label}</span>
+        <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{label}</span>
       </div>
-      <p className="text-2xl font-bold font-mono text-neutral-900 tracking-tight">{value}</p>
+      <p className="text-2xl font-bold font-mono text-neutral-900 tracking-tight tabular-nums">{value}</p>
     </div>
   )
 }
