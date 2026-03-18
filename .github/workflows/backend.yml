@@ -9,7 +9,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/backend
 
 jobs:
   lint:
@@ -44,6 +43,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+      - name: Set image name
+        run: echo "IMAGE_NAME=$(echo '${{ github.repository }}/backend' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
       - uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}

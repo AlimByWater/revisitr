@@ -56,6 +56,14 @@ func Auth(jwtSecret string) gin.HandlerFunc {
 		}
 
 		c.Set("user_id", int(userID))
+
+		if orgID, ok := claims["org_id"].(float64); ok {
+			c.Set("org_id", int(orgID))
+		}
+		if role, ok := claims["role"].(string); ok {
+			c.Set("role", role)
+		}
+
 		c.Next()
 	}
 }

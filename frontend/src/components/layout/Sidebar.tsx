@@ -54,7 +54,7 @@ const navigation: NavItem[] = [
     label: 'Лояльность',
     icon: Heart,
     children: [
-      { label: 'Мои программы', href: '/dashboard/loyalty/programs' },
+      { label: 'Мои программы', href: '/dashboard/loyalty' },
       { label: 'Wallet', href: '/dashboard/loyalty/wallet' },
     ],
   },
@@ -62,9 +62,9 @@ const navigation: NavItem[] = [
     label: 'Рассылки',
     icon: Mail,
     children: [
-      { label: 'Запуск', href: '/dashboard/mailings/launch' },
-      { label: 'Авто-рассылки', href: '/dashboard/mailings/auto' },
-      { label: 'Архив', href: '/dashboard/mailings/archive' },
+      { label: 'Все рассылки', href: '/dashboard/campaigns' },
+      { label: 'Создать', href: '/dashboard/campaigns/create' },
+      { label: 'Авто-сценарии', href: '/dashboard/campaigns/scenarios' },
     ],
   },
   {
@@ -86,7 +86,7 @@ const navigation: NavItem[] = [
   {
     label: 'Точки продаж',
     icon: Store,
-    href: '/dashboard/locations',
+    href: '/dashboard/pos',
   },
   {
     label: 'Интеграции',
