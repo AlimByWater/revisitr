@@ -90,11 +90,11 @@ export default function MailingsAnalyticsPage() {
               <h3 className="text-sm font-semibold text-neutral-700">По рассылкам</h3>
             </div>
             <span className="font-mono text-[11px] text-neutral-400 tabular-nums">
-              {data.by_campaign.length} рассылок
+              {(data.by_campaign ?? []).length} рассылок
             </span>
           </div>
 
-          {data.by_campaign.length === 0 ? (
+          {(data.by_campaign ?? []).length === 0 ? (
             <div className="px-6 py-12 text-center text-sm text-neutral-400">
               Нет рассылок за выбранный период
             </div>
@@ -118,7 +118,7 @@ export default function MailingsAnalyticsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.by_campaign.map((row) => (
+                  {(data.by_campaign ?? []).map((row) => (
                     <tr
                       key={row.campaign_id}
                       className="border-b border-surface-border last:border-0 hover:bg-neutral-50 transition-colors"

@@ -76,7 +76,7 @@ func main() {
 
 	// ── Services ──────────────────────────────────────────────────────────────
 
-	posSyncSvc := posService.NewSyncService(integrationsRepo)
+	posSyncSvc := posService.NewSyncService(integrationsRepo, botClientsRepo, logger)
 	rfmSvc := rfmService.New(botClientsRepo, loyaltyRepo, logger)
 
 	// ── Usecases ──────────────────────────────────────────────────────────────

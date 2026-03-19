@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"revisitr/internal/entity"
+	posService "revisitr/internal/service/pos"
 )
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -43,6 +44,12 @@ func (m *mockIntegrationsRepo) UpdateLastSync(ctx context.Context, id int, statu
 func (m *mockIntegrationsRepo) UpsertOrder(ctx context.Context, order *entity.ExternalOrder) error {
 	return m.upsertOrderFn(ctx, order)
 }
+func (m *mockIntegrationsRepo) GetOrdersByIntegration(_ context.Context, _ int, _ int, _ int) ([]entity.ExternalOrder, int, error) {
+	return nil, 0, nil
+}
+func (m *mockIntegrationsRepo) GetSyncStats(_ context.Context, _ int) (*entity.IntegrationStats, error) {
+	return &entity.IntegrationStats{}, nil
+}
 
 type mockSyncService struct {
 	syncFn func(ctx context.Context, integration *entity.Integration) error
@@ -50,6 +57,15 @@ type mockSyncService struct {
 
 func (m *mockSyncService) Sync(ctx context.Context, integration *entity.Integration) error {
 	return m.syncFn(ctx, integration)
+}
+func (m *mockSyncService) TestConnection(_ context.Context, _ *entity.Integration) error {
+	return nil
+}
+func (m *mockSyncService) GetCustomers(_ context.Context, _ *entity.Integration, _ posService.CustomerListOpts) ([]posService.POSCustomer, error) {
+	return nil, nil
+}
+func (m *mockSyncService) GetMenu(_ context.Context, _ *entity.Integration) (*posService.POSMenu, error) {
+	return nil, nil
 }
 
 func testIntegration(id, orgID int) *entity.Integration {

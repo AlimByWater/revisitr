@@ -11,6 +11,7 @@ import (
 
 	"revisitr/internal/controller/http/middleware"
 	"revisitr/internal/entity"
+	posService "revisitr/internal/service/pos"
 	integrationsUC "revisitr/internal/usecase/integrations"
 )
 
@@ -21,6 +22,11 @@ type integrationsUsecase interface {
 	Update(ctx context.Context, id, orgID int, req *entity.UpdateIntegrationRequest) (*entity.Integration, error)
 	Delete(ctx context.Context, id, orgID int) error
 	SyncNow(ctx context.Context, id, orgID int) error
+	TestConnection(ctx context.Context, id, orgID int) error
+	GetOrders(ctx context.Context, id, orgID, limit, offset int) ([]entity.ExternalOrder, int, error)
+	GetCustomers(ctx context.Context, id, orgID int, opts posService.CustomerListOpts) ([]posService.POSCustomer, error)
+	GetMenu(ctx context.Context, id, orgID int) (*posService.POSMenu, error)
+	GetStats(ctx context.Context, id, orgID int) (*entity.IntegrationStats, error)
 }
 
 type Group struct {
@@ -48,6 +54,11 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handleUpdate,
 		g.handleDelete,
 		g.handleSync,
+		g.handleTestConnection,
+		g.handleGetOrders,
+		g.handleGetCustomers,
+		g.handleGetMenu,
+		g.handleGetStats,
 	}
 }
 
@@ -167,7 +178,123 @@ func (g *Group) handleSync() (string, string, gin.HandlerFunc) {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "sync started"})
+		c.JSON(http.StatusOK, gin.H{"message": "sync completed"})
+	}
+}
+
+func (g *Group) handleTestConnection() (string, string, gin.HandlerFunc) {
+	return http.MethodPost, "/:id/test", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid integration id"})
+			return
+		}
+
+		if err := g.uc.TestConnection(c.Request.Context(), id, orgID.(int)); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "connection successful"})
+	}
+}
+
+func (g *Group) handleGetOrders() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/:id/orders", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid integration id"})
+			return
+		}
+
+		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+		if limit > 100 {
+			limit = 100
+		}
+
+		orders, total, err := g.uc.GetOrders(c.Request.Context(), id, orgID.(int), limit, offset)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"items": orders,
+			"total": total,
+		})
+	}
+}
+
+func (g *Group) handleGetCustomers() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/:id/customers", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid integration id"})
+			return
+		}
+
+		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+		search := c.Query("search")
+
+		customers, err := g.uc.GetCustomers(c.Request.Context(), id, orgID.(int), posService.CustomerListOpts{
+			Limit:  limit,
+			Offset: offset,
+			Search: search,
+		})
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, customers)
+	}
+}
+
+func (g *Group) handleGetMenu() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/:id/menu", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid integration id"})
+			return
+		}
+
+		menu, err := g.uc.GetMenu(c.Request.Context(), id, orgID.(int))
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, menu)
+	}
+}
+
+func (g *Group) handleGetStats() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/:id/stats", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid integration id"})
+			return
+		}
+
+		stats, err := g.uc.GetStats(c.Request.Context(), id, orgID.(int))
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, stats)
 	}
 }
 

@@ -10,6 +10,16 @@ import (
 type IntegrationConfig struct {
 	APIURL string `json:"api_url,omitempty"`
 	APIKey string `json:"api_key,omitempty"`
+
+	// iiko-specific
+	OrgID string `json:"org_id,omitempty"`
+
+	// r-keeper-specific
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+
+	// Sync settings
+	SyncInterval int `json:"sync_interval,omitempty"` // minutes, 0 = manual only
 }
 
 func (c IntegrationConfig) Value() (driver.Value, error) {
@@ -46,7 +56,7 @@ type Integration struct {
 }
 
 type CreateIntegrationRequest struct {
-	Type   string            `json:"type"   binding:"required,oneof=iiko rkeeper 1c"`
+	Type   string            `json:"type"   binding:"required,oneof=iiko rkeeper 1c mock"`
 	Config IntegrationConfig `json:"config" binding:"required"`
 }
 
@@ -84,6 +94,13 @@ func (items *OrderItems) Scan(src interface{}) error {
 	default:
 		return fmt.Errorf("OrderItems.Scan: unsupported type %T", src)
 	}
+}
+
+type IntegrationStats struct {
+	TotalOrders      int     `json:"total_orders" db:"total_orders"`
+	TotalRevenue     float64 `json:"total_revenue" db:"total_revenue"`
+	MatchedClients   int     `json:"matched_clients" db:"matched_clients"`
+	UnmatchedOrders  int     `json:"unmatched_orders" db:"unmatched_orders"`
 }
 
 type ExternalOrder struct {

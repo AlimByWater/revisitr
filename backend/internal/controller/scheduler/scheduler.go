@@ -42,12 +42,14 @@ func (s *Scheduler) runTask(ctx context.Context, task Task) {
 		s.logger.Info("scheduler: task started", "task", task.Name, "interval", task.Interval)
 	}
 
-	// Run immediately once on startup
-	if err := task.Fn(ctx); err != nil {
-		if s.logger != nil {
-			s.logger.Error("scheduler: task failed", "task", task.Name, "error", err)
-		}
+	// Delay first run to let repos initialize (lazy init race).
+	select {
+	case <-time.After(10 * time.Second):
+	case <-ctx.Done():
+		return
 	}
+
+	s.safeRun(ctx, task)
 
 	ticker := time.NewTicker(task.Interval)
 	defer ticker.Stop()
@@ -60,11 +62,22 @@ func (s *Scheduler) runTask(ctx context.Context, task Task) {
 			}
 			return
 		case <-ticker.C:
-			if err := task.Fn(ctx); err != nil {
-				if s.logger != nil {
-					s.logger.Error("scheduler: task failed", "task", task.Name, "error", err)
-				}
+			s.safeRun(ctx, task)
+		}
+	}
+}
+
+func (s *Scheduler) safeRun(ctx context.Context, task Task) {
+	defer func() {
+		if r := recover(); r != nil {
+			if s.logger != nil {
+				s.logger.Error("scheduler: task panicked", "task", task.Name, "panic", r)
 			}
+		}
+	}()
+	if err := task.Fn(ctx); err != nil {
+		if s.logger != nil {
+			s.logger.Error("scheduler: task failed", "task", task.Name, "error", err)
 		}
 	}
 }

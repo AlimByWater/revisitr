@@ -97,6 +97,50 @@ func (r *Integrations) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
+func (r *Integrations) GetActive(ctx context.Context) ([]entity.Integration, error) {
+	var intgs []entity.Integration
+	err := r.pg.DB().SelectContext(ctx, &intgs,
+		"SELECT * FROM integrations WHERE status = 'active' ORDER BY id")
+	if err != nil {
+		return nil, fmt.Errorf("integrations.GetActive: %w", err)
+	}
+	return intgs, nil
+}
+
+func (r *Integrations) GetOrdersByIntegration(ctx context.Context, integrationID, limit, offset int) ([]entity.ExternalOrder, int, error) {
+	var total int
+	err := r.pg.DB().GetContext(ctx, &total,
+		"SELECT COUNT(*) FROM external_orders WHERE integration_id = $1", integrationID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("integrations.GetOrdersByIntegration count: %w", err)
+	}
+
+	var orders []entity.ExternalOrder
+	err = r.pg.DB().SelectContext(ctx, &orders,
+		"SELECT * FROM external_orders WHERE integration_id = $1 ORDER BY ordered_at DESC NULLS LAST LIMIT $2 OFFSET $3",
+		integrationID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("integrations.GetOrdersByIntegration: %w", err)
+	}
+	return orders, total, nil
+}
+
+func (r *Integrations) GetSyncStats(ctx context.Context, integrationID int) (*entity.IntegrationStats, error) {
+	stats := &entity.IntegrationStats{}
+	err := r.pg.DB().GetContext(ctx, stats, `
+		SELECT
+			COUNT(*) as total_orders,
+			COALESCE(SUM(total), 0) as total_revenue,
+			COUNT(DISTINCT client_id) FILTER (WHERE client_id IS NOT NULL) as matched_clients,
+			COUNT(*) FILTER (WHERE client_id IS NULL) as unmatched_orders
+		FROM external_orders
+		WHERE integration_id = $1`, integrationID)
+	if err != nil {
+		return nil, fmt.Errorf("integrations.GetSyncStats: %w", err)
+	}
+	return stats, nil
+}
+
 func (r *Integrations) UpdateLastSync(ctx context.Context, id int, status string) error {
 	now := time.Now()
 	result, err := r.pg.DB().ExecContext(ctx,

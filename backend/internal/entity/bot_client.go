@@ -41,7 +41,7 @@ type BotClient struct {
 	Username     string     `db:"username" json:"username,omitempty"`
 	FirstName    string     `db:"first_name" json:"first_name"`
 	LastName     string     `db:"last_name" json:"last_name,omitempty"`
-	Phone        string     `db:"phone" json:"phone,omitempty"`
+	Phone        *string    `db:"phone" json:"phone,omitempty"`
 	Gender       *string    `db:"gender" json:"gender,omitempty"`
 	BirthDate    *time.Time `db:"birth_date" json:"birth_date,omitempty"`
 	City         *string    `db:"city" json:"city,omitempty"`

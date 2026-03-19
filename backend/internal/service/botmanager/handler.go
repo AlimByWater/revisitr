@@ -126,7 +126,7 @@ func (h *handler) handleContact(ctx context.Context, msg *telego.Message) {
 		Username:   msg.From.Username,
 		FirstName:  msg.From.FirstName,
 		LastName:   msg.From.LastName,
-		Phone:      contact.PhoneNumber,
+		Phone:      &contact.PhoneNumber,
 	}
 
 	if err := h.mgr.clientsRepo.Create(ctx, client); err != nil {
