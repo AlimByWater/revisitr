@@ -6,20 +6,26 @@ const config: Config = {
     extend: {
       colors: {
         accent: {
-          DEFAULT: '#E85D3A',
-          hover: '#D4502F',
-          light: '#FFF0EC',
+          DEFAULT: 'var(--color-accent)',
+          hover: 'var(--color-accent-hover)',
+          light: 'var(--color-accent-light)',
         },
         sidebar: {
-          DEFAULT: '#1A1A1A',
-          hover: '#2A2A2A',
-          active: '#333333',
-          muted: '#888888',
+          DEFAULT: 'var(--color-sidebar-bg)',
+          hover: 'var(--color-sidebar-hover)',
+          active: 'var(--color-sidebar-active)',
+          muted: 'var(--color-sidebar-muted)',
+          text: 'var(--color-sidebar-text)',
         },
         surface: {
-          DEFAULT: '#FAFAFA',
-          card: '#FFFFFF',
-          border: '#E5E5E5',
+          DEFAULT: 'var(--color-surface)',
+          card: 'var(--color-surface-card)',
+          border: 'var(--color-surface-border)',
+        },
+        th: {
+          primary: 'var(--color-text-primary)',
+          secondary: 'var(--color-text-secondary)',
+          muted: 'var(--color-text-muted)',
         },
       },
       width: {
@@ -45,6 +51,18 @@ const config: Config = {
           'Consolas',
           'monospace',
         ],
+        display: ['var(--font-display)'],
+      },
+      borderRadius: {
+        sm: 'var(--radius-sm)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
+        '2xl': 'var(--radius-2xl)',
+      },
+      boxShadow: {
+        card: 'var(--shadow-card)',
+        'card-hover': 'var(--shadow-card-hover)',
       },
     },
   },

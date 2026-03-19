@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useBotsQuery } from '@/features/bots/queries'
+import { useTheme } from '@/contexts/ThemeContext'
 import {
   LayoutDashboard,
   TrendingUp,
@@ -98,7 +99,7 @@ const navigation: NavItem[] = [
   },
 ]
 
-function NavGroup({ item, badges }: { item: NavItem; badges: Record<string, number> }) {
+function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<string, number>; isAurora: boolean }) {
   const location = useLocation()
   const currentPath = location.pathname
 
@@ -123,13 +124,24 @@ function NavGroup({ item, badges }: { item: NavItem; badges: Record<string, numb
         className={cn(
           'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
           isActive
-            ? 'bg-sidebar-active text-white'
-            : 'text-sidebar-muted hover:text-white hover:bg-sidebar-hover hover:translate-x-0.5',
+            ? isAurora
+              ? 'bg-[var(--color-accent)]/15 text-white'
+              : 'bg-sidebar-active text-white'
+            : isAurora
+              ? 'text-white/40 hover:text-white/90 hover:bg-white/[0.06] hover:translate-x-0.5'
+              : 'text-sidebar-muted hover:text-white hover:bg-sidebar-hover hover:translate-x-0.5',
         )}
       >
         <Icon className="w-5 h-5 shrink-0" />
         <span className="flex-1">{item.label}</span>
-        {isActive && <div className="w-1.5 h-1.5 rounded-full bg-accent animate-dot-in" />}
+        {isActive && (
+          <div
+            className={cn(
+              'w-1.5 h-1.5 rounded-full animate-dot-in',
+              isAurora ? 'bg-violet-400' : 'bg-accent',
+            )}
+          />
+        )}
       </Link>
     )
   }
@@ -141,8 +153,10 @@ function NavGroup({ item, badges }: { item: NavItem; badges: Record<string, numb
         className={cn(
           'w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
           isActive
-            ? 'text-white'
-            : 'text-sidebar-muted hover:text-white hover:bg-sidebar-hover hover:translate-x-0.5',
+            ? isAurora ? 'text-white/90' : 'text-white'
+            : isAurora
+              ? 'text-white/40 hover:text-white/90 hover:bg-white/[0.06] hover:translate-x-0.5'
+              : 'text-sidebar-muted hover:text-white hover:bg-sidebar-hover hover:translate-x-0.5',
         )}
         type="button"
         aria-expanded={expanded}
@@ -150,7 +164,12 @@ function NavGroup({ item, badges }: { item: NavItem; badges: Record<string, numb
         <Icon className="w-5 h-5 shrink-0" />
         <span className="flex-1 text-left">{item.label}</span>
         {badge !== undefined && badge > 0 && (
-          <span className="text-[10px] font-bold tabular-nums bg-accent/15 text-accent px-1.5 py-0.5 rounded-md min-w-[20px] text-center">
+          <span className={cn(
+            'text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md min-w-[20px] text-center',
+            isAurora
+              ? 'bg-violet-500/20 text-violet-300'
+              : 'bg-accent/15 text-accent',
+          )}>
             {badge}
           </span>
         )}
@@ -178,8 +197,12 @@ function NavGroup({ item, badges }: { item: NavItem; badges: Record<string, numb
               className={cn(
                 'block px-4 py-2 rounded-lg text-sm transition-all duration-200',
                 isChildActive
-                  ? 'text-white bg-sidebar-active'
-                  : 'text-sidebar-muted hover:text-white hover:bg-sidebar-hover hover:translate-x-0.5',
+                  ? isAurora
+                    ? 'text-white bg-[var(--color-accent)]/15'
+                    : 'text-white bg-sidebar-active'
+                  : isAurora
+                    ? 'text-white/35 hover:text-white/90 hover:bg-white/[0.06] hover:translate-x-0.5'
+                    : 'text-sidebar-muted hover:text-white hover:bg-sidebar-hover hover:translate-x-0.5',
               )}
             >
               {child.label}
@@ -193,6 +216,8 @@ function NavGroup({ item, badges }: { item: NavItem; badges: Record<string, numb
 
 export function Sidebar() {
   const { data: bots } = useBotsQuery()
+  const { theme } = useTheme()
+  const isAurora = theme === 'aurora'
 
   const badges: Record<string, number> = {
     bots: bots?.length ?? 0,
@@ -202,10 +227,29 @@ export function Sidebar() {
     <aside className="w-sidebar sidebar-glass shrink-0 flex-col h-screen sticky top-0 hidden lg:flex">
       <div className="p-6">
         <div className="flex items-center gap-2 group/logo">
-          <span className="text-2xl font-bold text-white tracking-tight select-none">
-            revi<span className="text-accent transition-all duration-300 group-hover/logo:drop-shadow-[0_0_10px_rgba(232,93,58,0.65)]">s</span>itr
+          <span className={cn(
+            'text-2xl font-bold tracking-tight select-none',
+            isAurora ? 'text-white/90' : 'text-white',
+          )}>
+            revi
+            <span
+              className={cn(
+                'transition-all duration-300',
+                isAurora
+                  ? 'text-violet-400 group-hover/logo:drop-shadow-[0_0_10px_rgba(139,92,246,0.65)]'
+                  : 'text-accent group-hover/logo:drop-shadow-[0_0_10px_rgba(232,93,58,0.65)]',
+              )}
+            >
+              s
+            </span>
+            itr
           </span>
-          <span className="text-[10px] font-bold text-accent bg-accent/10 px-1.5 py-0.5 rounded uppercase tracking-wider">
+          <span className={cn(
+            'text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider',
+            isAurora
+              ? 'text-violet-300 bg-violet-500/15'
+              : 'text-accent bg-accent/10',
+          )}>
             PRO
           </span>
         </div>
@@ -216,24 +260,30 @@ export function Sidebar() {
         aria-label="Основная навигация"
       >
         {/* Primary */}
-        <NavGroup item={navigation[0]} badges={badges} />
+        <NavGroup item={navigation[0]} badges={badges} isAurora={isAurora} />
 
         {/* Business data */}
         <div className="mt-4 space-y-0.5">
           {navigation.slice(1, 6).map((item) => (
-            <NavGroup key={item.label} item={item} badges={badges} />
+            <NavGroup key={item.label} item={item} badges={badges} isAurora={isAurora} />
           ))}
         </div>
 
         {/* Configuration */}
-        <div className="mt-4 pt-4 border-t border-white/[0.07] space-y-0.5">
+        <div className={cn(
+          'mt-4 pt-4 border-t space-y-0.5',
+          isAurora ? 'border-white/[0.05]' : 'border-white/[0.07]',
+        )}>
           {navigation.slice(6).map((item) => (
-            <NavGroup key={item.label} item={item} badges={badges} />
+            <NavGroup key={item.label} item={item} badges={badges} isAurora={isAurora} />
           ))}
         </div>
       </nav>
 
-      <div className="p-4 border-t border-white/10">
+      <div className={cn(
+        'p-4 border-t',
+        isAurora ? 'border-white/[0.05]' : 'border-white/10',
+      )}>
         <p className="text-[11px] font-mono text-white/20 text-center uppercase tracking-wider">
           &copy; 2026 Revisitr
         </p>
