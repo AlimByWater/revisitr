@@ -20,5 +20,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run migrations
         run: |
-          cd /opt/revisitr/infra
-          ../scripts/migrate.sh ${{ github.event.inputs.action || 'up' }}
+          cp infra/docker-compose.prod.yml /opt/revisitr/infra/docker-compose.prod.yml
+          bash infra/scripts/migrate.sh ${{ github.event.inputs.action || 'up' }}
