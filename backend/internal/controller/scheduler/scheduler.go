@@ -17,12 +17,13 @@ type Task struct {
 // It lives in the controller layer as an input adapter (like HTTP handlers):
 // it receives timer ticks and calls usecases/services with no business logic.
 type Scheduler struct {
-	tasks  []Task
-	logger *slog.Logger
+	tasks        []Task
+	logger       *slog.Logger
+	StartupDelay time.Duration // delay before first run; default 10s to avoid DB lazy-init race
 }
 
 func New(logger *slog.Logger) *Scheduler {
-	return &Scheduler{logger: logger}
+	return &Scheduler{logger: logger, StartupDelay: 10 * time.Second}
 }
 
 func (s *Scheduler) Register(task Task) {
@@ -43,10 +44,12 @@ func (s *Scheduler) runTask(ctx context.Context, task Task) {
 	}
 
 	// Delay first run to let repos initialize (lazy init race).
-	select {
-	case <-time.After(10 * time.Second):
-	case <-ctx.Done():
-		return
+	if s.StartupDelay > 0 {
+		select {
+		case <-time.After(s.StartupDelay):
+		case <-ctx.Done():
+			return
+		}
 	}
 
 	s.safeRun(ctx, task)

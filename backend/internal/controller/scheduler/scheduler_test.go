@@ -12,6 +12,7 @@ func TestScheduler_RunsTaskImmediately(t *testing.T) {
 	var count int32
 
 	sched := New(nil)
+	sched.StartupDelay = 0
 	sched.Register(Task{
 		Name:     "test",
 		Interval: time.Hour, // long interval — only immediate run matters
@@ -36,6 +37,7 @@ func TestScheduler_LogsErrors(t *testing.T) {
 	var called int32
 
 	sched := New(nil)
+	sched.StartupDelay = 0
 	sched.Register(Task{
 		Name:     "failing",
 		Interval: time.Hour,
@@ -60,6 +62,7 @@ func TestScheduler_MultipleTasksRun(t *testing.T) {
 	var a, b int32
 
 	sched := New(nil)
+	sched.StartupDelay = 0
 	sched.Register(Task{
 		Name:     "task-a",
 		Interval: time.Hour,
