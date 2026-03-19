@@ -69,6 +69,18 @@ services:
     networks:
       - revisitr
 
+  migrator:
+    image: ghcr.io/${GITHUB_REPO:-alimbywater/revisitr}/backend:${BACKEND_TAG:-latest}
+    env_file: .env.prod
+    entrypoint: ["/usr/local/bin/goose"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - revisitr
+    profiles:
+      - migrate
+
 volumes:
   pgdata:
   redisdata:

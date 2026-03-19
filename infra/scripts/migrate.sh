@@ -13,7 +13,7 @@ DSN="host=postgres port=5432 user=${POSTGRES_USER:-revisitr} password=${POSTGRES
 
 case "$ACTION" in
   up|down|status)
-    docker compose -f "$COMPOSE_FILE" run --rm --entrypoint goose backend \
+    docker compose -f "$COMPOSE_FILE" --profile migrate run --rm migrator \
       -dir /migrations postgres "$DSN" "$ACTION"
     ;;
   *)
