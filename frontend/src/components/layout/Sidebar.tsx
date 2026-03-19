@@ -121,15 +121,15 @@ function NavGroup({ item, badges }: { item: NavItem; badges: Record<string, numb
       <Link
         to={item.href!}
         className={cn(
-          'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+          'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
           isActive
             ? 'bg-sidebar-active text-white'
-            : 'text-sidebar-muted hover:text-white hover:bg-sidebar-hover',
+            : 'text-sidebar-muted hover:text-white hover:bg-sidebar-hover hover:translate-x-0.5',
         )}
       >
         <Icon className="w-5 h-5 shrink-0" />
         <span className="flex-1">{item.label}</span>
-        {isActive && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
+        {isActive && <div className="w-1.5 h-1.5 rounded-full bg-accent animate-dot-in" />}
       </Link>
     )
   }
@@ -139,10 +139,10 @@ function NavGroup({ item, badges }: { item: NavItem; badges: Record<string, numb
       <button
         onClick={() => setExpanded(!expanded)}
         className={cn(
-          'w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+          'w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
           isActive
             ? 'text-white'
-            : 'text-sidebar-muted hover:text-white hover:bg-sidebar-hover',
+            : 'text-sidebar-muted hover:text-white hover:bg-sidebar-hover hover:translate-x-0.5',
         )}
         type="button"
         aria-expanded={expanded}
@@ -176,10 +176,10 @@ function NavGroup({ item, badges }: { item: NavItem; badges: Record<string, numb
               key={child.href}
               to={child.href}
               className={cn(
-                'block px-4 py-2 rounded-lg text-sm transition-all duration-150',
+                'block px-4 py-2 rounded-lg text-sm transition-all duration-200',
                 isChildActive
                   ? 'text-white bg-sidebar-active'
-                  : 'text-sidebar-muted hover:text-white hover:bg-sidebar-hover',
+                  : 'text-sidebar-muted hover:text-white hover:bg-sidebar-hover hover:translate-x-0.5',
               )}
             >
               {child.label}
@@ -199,11 +199,11 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-sidebar bg-sidebar shrink-0 flex-col h-screen sticky top-0 hidden lg:flex">
+    <aside className="w-sidebar sidebar-glass shrink-0 flex-col h-screen sticky top-0 hidden lg:flex">
       <div className="p-6">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-white tracking-tight">
-            revi<span className="text-accent">s</span>itr
+        <div className="flex items-center gap-2 group/logo">
+          <span className="text-2xl font-bold text-white tracking-tight select-none">
+            revi<span className="text-accent transition-all duration-300 group-hover/logo:drop-shadow-[0_0_10px_rgba(232,93,58,0.65)]">s</span>itr
           </span>
           <span className="text-[10px] font-bold text-accent bg-accent/10 px-1.5 py-0.5 rounded uppercase tracking-wider">
             PRO
@@ -212,12 +212,25 @@ export function Sidebar() {
       </div>
 
       <nav
-        className="flex-1 px-3 space-y-1 overflow-y-auto"
+        className="flex-1 px-3 overflow-y-auto py-1"
         aria-label="Основная навигация"
       >
-        {navigation.map((item) => (
-          <NavGroup key={item.label} item={item} badges={badges} />
-        ))}
+        {/* Primary */}
+        <NavGroup item={navigation[0]} badges={badges} />
+
+        {/* Business data */}
+        <div className="mt-4 space-y-0.5">
+          {navigation.slice(1, 6).map((item) => (
+            <NavGroup key={item.label} item={item} badges={badges} />
+          ))}
+        </div>
+
+        {/* Configuration */}
+        <div className="mt-4 pt-4 border-t border-white/[0.07] space-y-0.5">
+          {navigation.slice(6).map((item) => (
+            <NavGroup key={item.label} item={item} badges={badges} />
+          ))}
+        </div>
       </nav>
 
       <div className="p-4 border-t border-white/10">

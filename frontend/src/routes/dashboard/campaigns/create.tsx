@@ -88,7 +88,7 @@ export default function CreateCampaignPage() {
               value={botId}
               onChange={(e) => handleBotChange(e.target.value)}
               className={cn(
-                'w-full px-3 py-2.5 rounded-lg border border-neutral-200',
+                'w-full max-w-sm px-3 py-2.5 rounded-lg border border-neutral-200',
                 'text-sm text-neutral-900 bg-white',
                 'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
               )}
@@ -117,7 +117,7 @@ export default function CreateCampaignPage() {
               onChange={(e) => setName(e.target.value)}
               placeholder="Например: Акция выходного дня"
               className={cn(
-                'w-full px-3 py-2.5 rounded-lg border border-neutral-200',
+                'w-full max-w-sm px-3 py-2.5 rounded-lg border border-neutral-200',
                 'text-sm text-neutral-900 placeholder:text-neutral-400',
                 'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
               )}
@@ -126,18 +126,27 @@ export default function CreateCampaignPage() {
 
           {/* Message */}
           <div>
-            <label
-              htmlFor="message"
-              className="block text-sm font-medium text-neutral-700 mb-1.5"
-            >
-              Сообщение
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label
+                htmlFor="message"
+                className="block text-sm font-medium text-neutral-700"
+              >
+                Текст сообщения
+              </label>
+              <span className={cn(
+                'text-xs tabular-nums',
+                message.length > 3800 ? 'text-red-500' : 'text-neutral-400',
+              )}>
+                {message.length} / 4096
+              </span>
+            </div>
             <textarea
               id="message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={6}
-              placeholder="Текст сообщения для клиентов..."
+              maxLength={4096}
+              placeholder="Текст сообщения. Поддерживается форматирование Telegram: *жирный*, _курсив_"
               className={cn(
                 'w-full px-3 py-2.5 rounded-lg border border-neutral-200',
                 'text-sm text-neutral-900 placeholder:text-neutral-400 resize-none',
@@ -150,10 +159,10 @@ export default function CreateCampaignPage() {
           <div className="bg-neutral-50 rounded-xl p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-neutral-700">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400">
                   Аудитория
                 </p>
-                <p className="text-xs text-neutral-400 mt-0.5">
+                <p className="text-xs text-neutral-500 mt-0.5">
                   {botId
                     ? 'Клиенты выбранного бота'
                     : 'Выберите бота для просмотра аудитории'}
@@ -162,7 +171,7 @@ export default function CreateCampaignPage() {
               <div className="flex items-center gap-3">
                 {previewMutation.isSuccess && (
                   <span className="text-sm font-semibold text-neutral-900">
-                    {previewMutation.data} клиентов
+                    Получат: {previewMutation.data} чел.
                   </span>
                 )}
                 <button
@@ -177,7 +186,7 @@ export default function CreateCampaignPage() {
                   )}
                 >
                   <Eye className="w-4 h-4" />
-                  Просмотр
+                  {previewMutation.isPending ? 'Считаем...' : 'Посчитать'}
                 </button>
               </div>
             </div>

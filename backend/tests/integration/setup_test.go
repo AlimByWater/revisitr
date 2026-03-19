@@ -15,23 +15,32 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	analyticsGroup "revisitr/internal/controller/http/group/analytics"
 	authGroup "revisitr/internal/controller/http/group/auth"
 	botsGroup "revisitr/internal/controller/http/group/bots"
 	campaignsGroup "revisitr/internal/controller/http/group/campaigns"
 	clientsGroup "revisitr/internal/controller/http/group/clients"
 	dashboardGroup "revisitr/internal/controller/http/group/dashboard"
 	"revisitr/internal/controller/http/group/health"
+	integrationsGroup "revisitr/internal/controller/http/group/integrations"
 	loyaltyGroup "revisitr/internal/controller/http/group/loyalty"
 	posGroup "revisitr/internal/controller/http/group/pos"
+	promotionsGroup "revisitr/internal/controller/http/group/promotions"
+	segmentsGroup "revisitr/internal/controller/http/group/segments"
 	pgRepo "revisitr/internal/repository/postgres"
 	redisRepo "revisitr/internal/repository/redis"
+	posService "revisitr/internal/service/pos"
+	analyticsUC "revisitr/internal/usecase/analytics"
 	authUC "revisitr/internal/usecase/auth"
 	botsUC "revisitr/internal/usecase/bots"
 	campaignsUC "revisitr/internal/usecase/campaigns"
 	clientsUC "revisitr/internal/usecase/clients"
 	dashboardUC "revisitr/internal/usecase/dashboard"
+	integrationsUC "revisitr/internal/usecase/integrations"
 	loyaltyUC "revisitr/internal/usecase/loyalty"
 	posUC "revisitr/internal/usecase/pos"
+	promotionsUC "revisitr/internal/usecase/promotions"
+	segmentsUC "revisitr/internal/usecase/segments"
 )
 
 const (
@@ -106,6 +115,10 @@ func TestMain(m *testing.M) {
 	campaignsRepo := pgRepo.NewCampaigns(pgMod)
 	scenariosRepo := pgRepo.NewAutoScenarios(pgMod)
 	posRepo := pgRepo.NewPOS(pgMod)
+	analyticsRepo := pgRepo.NewAnalytics(pgMod)
+	segmentsRepo := pgRepo.NewSegments(pgMod)
+	promotionsRepo := pgRepo.NewPromotions(pgMod)
+	integrationsRepo := pgRepo.NewIntegrations(pgMod)
 
 	// Usecases
 	authUsecase := authUC.New(authCfg{}, usersRepo, sessionsRepo)
@@ -115,6 +128,11 @@ func TestMain(m *testing.M) {
 	dashboardUsecase := dashboardUC.New(dashboardRepo)
 	campaignsUsecase := campaignsUC.New(campaignsRepo, scenariosRepo, clientsRepo)
 	posUsecase := posUC.New(posRepo)
+	analyticsUsecase := analyticsUC.New(analyticsRepo)
+	segmentsUsecase := segmentsUC.New(segmentsRepo, clientsRepo)
+	promotionsUsecase := promotionsUC.New(promotionsRepo)
+	posSyncSvc := posService.NewSyncService(integrationsRepo)
+	integrationsUsecase := integrationsUC.New(integrationsRepo, posSyncSvc)
 
 	for _, uc := range []interface{ Init(context.Context, *slog.Logger) error }{
 		authUsecase, botsUsecase, loyaltyUsecase,
@@ -135,6 +153,10 @@ func TestMain(m *testing.M) {
 		dashboardGroup.New(dashboardUsecase, testJWTSecret),
 		campaignsGroup.New(campaignsUsecase, testJWTSecret),
 		posGroup.New(posUsecase, testJWTSecret),
+		analyticsGroup.New(analyticsUsecase, testJWTSecret),
+		segmentsGroup.New(segmentsUsecase, testJWTSecret),
+		promotionsGroup.New(promotionsUsecase, testJWTSecret),
+		integrationsGroup.New(integrationsUsecase, testJWTSecret),
 	}
 
 	// HTTP test server

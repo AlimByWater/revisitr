@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { cn } from '@/lib/utils'
+import { cn, getApiErrorMessage } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
 
 // Restaurant floor plan — tables in a dining room
@@ -42,21 +42,7 @@ export default function LoginPage() {
       await login({ email, password })
       navigate('/dashboard')
     } catch (err: unknown) {
-      if (
-        err &&
-        typeof err === 'object' &&
-        'response' in err &&
-        err.response &&
-        typeof err.response === 'object' &&
-        'data' in err.response &&
-        err.response.data &&
-        typeof err.response.data === 'object' &&
-        'message' in err.response.data
-      ) {
-        setError(String((err.response as { data: { message: string } }).data.message))
-      } else {
-        setError('Не удалось войти. Проверьте email и пароль.')
-      }
+      setError(getApiErrorMessage(err, 'Не удалось войти. Проверьте email и пароль.'))
     } finally {
       setIsLoading(false)
     }
@@ -173,6 +159,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@restaurant.com"
                 required
+                autoFocus
                 autoComplete="email"
                 disabled={isLoading}
                 className={inputClass}

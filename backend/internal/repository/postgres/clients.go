@@ -269,3 +269,47 @@ func (r *Clients) GetTransactionsByClientID(ctx context.Context, clientID int, l
 
 	return txs, nil
 }
+
+// GetIDsByFilter returns client IDs matching a segment filter for a given org.
+func (r *Clients) GetIDsByFilter(ctx context.Context, orgID int, f entity.SegmentFilter) ([]int, error) {
+	args := []interface{}{orgID}
+	idx := 2
+	where := []string{"b.org_id = $1"}
+
+	if f.Gender != nil {
+		where = append(where, fmt.Sprintf("bc.gender = $%d", idx))
+		args = append(args, *f.Gender)
+		idx++
+	}
+	if f.AgeFrom != nil {
+		where = append(where, fmt.Sprintf("DATE_PART('year', AGE(bc.birth_date)) >= $%d", idx))
+		args = append(args, *f.AgeFrom)
+		idx++
+	}
+	if f.AgeTo != nil {
+		where = append(where, fmt.Sprintf("DATE_PART('year', AGE(bc.birth_date)) <= $%d", idx))
+		args = append(args, *f.AgeTo)
+		idx++
+	}
+	if f.Tags != nil && len(f.Tags) > 0 {
+		for _, tag := range f.Tags {
+			where = append(where, fmt.Sprintf("bc.tags @> $%d::jsonb", idx))
+			args = append(args, `["`+tag+`"]`)
+			idx++
+		}
+	}
+
+	query := fmt.Sprintf(`
+		SELECT DISTINCT bc.id
+		FROM bot_clients bc
+		JOIN bots b ON bc.bot_id = b.id
+		WHERE %s`,
+		strings.Join(where, " AND "),
+	)
+
+	var ids []int
+	if err := r.pg.DB().SelectContext(ctx, &ids, query, args...); err != nil {
+		return nil, fmt.Errorf("clients.GetIDsByFilter: %w", err)
+	}
+	return ids, nil
+}

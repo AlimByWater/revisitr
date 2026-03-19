@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { cn } from '@/lib/utils'
+import { cn, getApiErrorMessage } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
 
 const FLOOR_PLAN = [
@@ -43,21 +43,7 @@ export default function RegisterPage() {
       })
       navigate('/dashboard')
     } catch (err: unknown) {
-      if (
-        err &&
-        typeof err === 'object' &&
-        'response' in err &&
-        err.response &&
-        typeof err.response === 'object' &&
-        'data' in err.response &&
-        err.response.data &&
-        typeof err.response.data === 'object' &&
-        'message' in err.response.data
-      ) {
-        setError(String((err.response as { data: { message: string } }).data.message))
-      } else {
-        setError('Не удалось зарегистрироваться. Попробуйте позже.')
-      }
+      setError(getApiErrorMessage(err, 'Не удалось зарегистрироваться. Попробуйте позже.'))
     } finally {
       setIsLoading(false)
     }
@@ -169,7 +155,7 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-4 animate-in animate-in-delay-1">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-neutral-700 mb-1.5">
-                Имя
+                Имя и фамилия
               </label>
               <input
                 id="name"
@@ -178,6 +164,7 @@ export default function RegisterPage() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Иван Иванов"
                 required
+                autoFocus
                 autoComplete="name"
                 disabled={isLoading}
                 className={inputClass}
@@ -210,13 +197,14 @@ export default function RegisterPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Минимум 6 символов"
+                placeholder="Придумайте пароль"
                 required
                 minLength={6}
                 autoComplete="new-password"
                 disabled={isLoading}
                 className={inputClass}
               />
+              <p className="mt-1.5 text-xs text-neutral-400">Минимум 6 символов</p>
             </div>
 
             <div>
@@ -233,6 +221,7 @@ export default function RegisterPage() {
                 disabled={isLoading}
                 className={inputClass}
               />
+              <p className="mt-1.5 text-xs text-neutral-400">Можно добавить несколько заведений позже</p>
             </div>
 
             <div>

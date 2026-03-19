@@ -12,15 +12,15 @@ import type { Bot } from '@/features/bots/types'
 const statusConfig: Record<Bot['status'], { label: string; className: string }> = {
   active: {
     label: 'Активен',
-    className: 'bg-green-100 text-green-700',
+    className: 'bg-green-500 text-white',
   },
   inactive: {
     label: 'Неактивен',
-    className: 'bg-neutral-100 text-neutral-500',
+    className: 'bg-neutral-200 text-neutral-500',
   },
   error: {
     label: 'Ошибка',
-    className: 'bg-red-100 text-red-700',
+    className: 'bg-red-500 text-white',
   },
 }
 
@@ -102,14 +102,14 @@ export default function BotsPage() {
                     <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center group-hover:bg-accent/10 transition-colors duration-200">
                       <BotIcon className="w-5 h-5 text-neutral-500 group-hover:text-accent transition-colors duration-200" />
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-neutral-900">{bot.name}</h3>
-                      <p className="text-sm text-neutral-400">@{bot.username}</p>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-neutral-900 truncate">{bot.name}</h3>
+                      <p className="text-sm text-neutral-400 truncate">{bot.username ? `@${bot.username}` : '—'}</p>
                     </div>
                   </div>
                   <span
                     className={cn(
-                      'text-xs font-medium px-2 py-1 rounded-full',
+                      'font-mono text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider',
                       status.className,
                     )}
                   >
@@ -117,12 +117,16 @@ export default function BotsPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-sm text-neutral-400 mt-4 pt-4 border-t border-surface-border">
-                  <div className="flex items-center gap-1.5">
-                    <Users className="w-4 h-4" />
-                    <span className="font-mono tabular-nums">{bot.client_count ?? 0} клиентов</span>
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-surface-border">
+                  <div className="flex items-center gap-1.5 text-neutral-400">
+                    <Users className="w-3.5 h-3.5" />
+                    <span className="font-mono text-[11px] uppercase tracking-wider tabular-nums">
+                      {(bot.client_count ?? 0).toLocaleString('ru-RU')} клиентов
+                    </span>
                   </div>
-                  <span className="font-mono tabular-nums">{formatDate(bot.created_at)}</span>
+                  <span className="font-mono text-[11px] uppercase tracking-wider tabular-nums text-neutral-400">
+                    {formatDate(bot.created_at)}
+                  </span>
                 </div>
               </Link>
             )

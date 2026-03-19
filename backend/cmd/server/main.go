@@ -10,23 +10,34 @@ import (
 	"revisitr/internal/application/config"
 	"revisitr/internal/application/env"
 	httpCtrl "revisitr/internal/controller/http"
+	analyticsGroup "revisitr/internal/controller/http/group/analytics"
 	authGroup "revisitr/internal/controller/http/group/auth"
 	botsGroup "revisitr/internal/controller/http/group/bots"
 	campaignsGroup "revisitr/internal/controller/http/group/campaigns"
 	clientsGroup "revisitr/internal/controller/http/group/clients"
 	dashboardGroup "revisitr/internal/controller/http/group/dashboard"
 	"revisitr/internal/controller/http/group/health"
+	integrationsGroup "revisitr/internal/controller/http/group/integrations"
 	loyaltyGroup "revisitr/internal/controller/http/group/loyalty"
 	posGroup "revisitr/internal/controller/http/group/pos"
+	promotionsGroup "revisitr/internal/controller/http/group/promotions"
+	segmentsGroup "revisitr/internal/controller/http/group/segments"
+	"revisitr/internal/controller/scheduler"
 	pgRepo "revisitr/internal/repository/postgres"
 	redisRepo "revisitr/internal/repository/redis"
+	posService "revisitr/internal/service/pos"
+	rfmService "revisitr/internal/service/rfm"
+	analyticsUC "revisitr/internal/usecase/analytics"
 	authUC "revisitr/internal/usecase/auth"
 	botsUC "revisitr/internal/usecase/bots"
-	loyaltyUC "revisitr/internal/usecase/loyalty"
 	campaignsUC "revisitr/internal/usecase/campaigns"
 	clientsUC "revisitr/internal/usecase/clients"
 	dashboardUC "revisitr/internal/usecase/dashboard"
+	integrationsUC "revisitr/internal/usecase/integrations"
+	loyaltyUC "revisitr/internal/usecase/loyalty"
 	posUC "revisitr/internal/usecase/pos"
+	promotionsUC "revisitr/internal/usecase/promotions"
+	segmentsUC "revisitr/internal/usecase/segments"
 )
 
 func main() {
@@ -44,32 +55,49 @@ func main() {
 	pg := pgRepo.New(&postgresConfig{cfg: cfg})
 	rds := redisRepo.New(&redisConfig{cfg: cfg})
 
+	// ── Repositories ──────────────────────────────────────────────────────────
+
 	usersRepo := pgRepo.NewUsers(pg)
 	sessionsRepo := redisRepo.NewSessions(rds)
-
-	authUsecase := authUC.New(&authConfig{cfg: cfg}, usersRepo, sessionsRepo)
-
 	botsRepo := pgRepo.NewBots(pg)
 	botClientsRepo := pgRepo.NewBotClients(pg)
-	botsUsecase := botsUC.New(botsRepo, botClientsRepo)
-
 	loyaltyRepo := pgRepo.NewLoyalty(pg)
-	loyaltyUsecase := loyaltyUC.New(loyaltyRepo)
-
 	clientsRepo := pgRepo.NewClients(pg)
-	clientsUsecase := clientsUC.New(clientsRepo)
-
 	dashboardRepo := pgRepo.NewDashboard(pg)
-	dashboardUsecase := dashboardUC.New(dashboardRepo)
-
 	campaignsRepo := pgRepo.NewCampaigns(pg)
 	scenariosRepo := pgRepo.NewAutoScenarios(pg)
-	campaignsUsecase := campaignsUC.New(campaignsRepo, scenariosRepo, clientsRepo)
-
 	posRepo := pgRepo.NewPOS(pg)
+
+	// Phase 3 repos
+	analyticsRepo := pgRepo.NewAnalytics(pg)
+	segmentsRepo := pgRepo.NewSegments(pg)
+	promotionsRepo := pgRepo.NewPromotions(pg)
+	integrationsRepo := pgRepo.NewIntegrations(pg)
+
+	// ── Services ──────────────────────────────────────────────────────────────
+
+	posSyncSvc := posService.NewSyncService(integrationsRepo)
+	rfmSvc := rfmService.New(botClientsRepo, loyaltyRepo, logger)
+
+	// ── Usecases ──────────────────────────────────────────────────────────────
+
+	authUsecase := authUC.New(&authConfig{cfg: cfg}, usersRepo, sessionsRepo)
+	botsUsecase := botsUC.New(botsRepo, botClientsRepo)
+	loyaltyUsecase := loyaltyUC.New(loyaltyRepo)
+	clientsUsecase := clientsUC.New(clientsRepo)
+	dashboardUsecase := dashboardUC.New(dashboardRepo)
+	campaignsUsecase := campaignsUC.New(campaignsRepo, scenariosRepo, clientsRepo)
 	posUsecase := posUC.New(posRepo)
 
+	// Phase 3 usecases
+	analyticsUsecase := analyticsUC.New(analyticsRepo)
+	segmentsUsecase := segmentsUC.New(segmentsRepo, clientsRepo)
+	promotionsUsecase := promotionsUC.New(promotionsRepo)
+	integrationsUsecase := integrationsUC.New(integrationsRepo, posSyncSvc)
+
 	jwtSecret := cfg.Auth.JWTSecret
+
+	// ── Controller groups ─────────────────────────────────────────────────────
 
 	healthGrp := health.New()
 	authGrp := authGroup.New(authUsecase)
@@ -79,12 +107,52 @@ func main() {
 	dashboardGrp := dashboardGroup.New(dashboardUsecase, jwtSecret)
 	campaignsGrp := campaignsGroup.New(campaignsUsecase, jwtSecret)
 	posGrp := posGroup.New(posUsecase, jwtSecret)
-	httpModule := httpCtrl.New(&httpConfig{cfg: cfg}, healthGrp, authGrp, botsGrp, loyaltyGrp, posGrp, clientsGrp, dashboardGrp, campaignsGrp)
+
+	// Phase 3 groups
+	analyticsGrp := analyticsGroup.New(analyticsUsecase, jwtSecret)
+	segmentsGrp := segmentsGroup.New(segmentsUsecase, jwtSecret)
+	promotionsGrp := promotionsGroup.New(promotionsUsecase, jwtSecret)
+	integrationsGrp := integrationsGroup.New(integrationsUsecase, jwtSecret)
+
+	httpModule := httpCtrl.New(&httpConfig{cfg: cfg},
+		healthGrp, authGrp, botsGrp, loyaltyGrp, posGrp, clientsGrp,
+		dashboardGrp, campaignsGrp,
+		analyticsGrp, segmentsGrp, promotionsGrp, integrationsGrp,
+	)
+
+	// ── Scheduler ─────────────────────────────────────────────────────────────
+
+	appCtx, appCancel := context.WithCancel(context.Background())
+	defer appCancel()
+
+	sched := scheduler.New(logger)
+	sched.Register(scheduler.Task{
+		Name:     "refresh_materialized_views",
+		Interval: 6 * time.Hour,
+		Fn:       func(ctx context.Context) error { return analyticsRepo.RefreshMaterializedViews(ctx) },
+	})
+	sched.Register(scheduler.Task{
+		Name:     "rfm_recalculate",
+		Interval: 24 * time.Hour,
+		Fn:       func(ctx context.Context) error { return rfmSvc.RecalculateAll(ctx, 0) },
+	})
+	sched.Register(scheduler.Task{
+		Name:     "pos_sync",
+		Interval: 4 * time.Hour,
+		Fn:       func(ctx context.Context) error { return posSyncSvc.SyncAll(ctx) },
+	})
+	go sched.Run(appCtx)
+
+	// ── Application ───────────────────────────────────────────────────────────
 
 	app := application.New(
 		logger,
 		[]application.Repository{pg, rds},
-		[]application.Usecase{authUsecase, botsUsecase, loyaltyUsecase, posUsecase, clientsUsecase, dashboardUsecase, campaignsUsecase},
+		[]application.Usecase{
+			authUsecase, botsUsecase, loyaltyUsecase, posUsecase,
+			clientsUsecase, dashboardUsecase, campaignsUsecase,
+			analyticsUsecase, segmentsUsecase, promotionsUsecase, integrationsUsecase,
+		},
 		[]application.Controller{httpModule},
 	)
 
@@ -116,5 +184,5 @@ func (c *httpConfig) GetJWTSecret() string { return c.cfg.Auth.JWTSecret }
 
 type authConfig struct{ cfg *config.Module }
 
-func (c *authConfig) GetJWTSecret() string    { return c.cfg.Auth.JWTSecret }
+func (c *authConfig) GetJWTSecret() string       { return c.cfg.Auth.JWTSecret }
 func (c *authConfig) GetTokenTTL() time.Duration { return c.cfg.Auth.TokenTTL }

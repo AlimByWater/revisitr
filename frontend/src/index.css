@@ -106,4 +106,39 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+
+  /* iOS dark glassmorphism sidebar */
+  .sidebar-glass {
+    background-image:
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"),
+      linear-gradient(160deg, #1f1f24 0%, #181819 55%, #111113 100%);
+    background-size: 256px 256px, auto;
+    background-repeat: repeat, no-repeat;
+    border-right: 1px solid rgba(255, 255, 255, 0.055);
+  }
+
+  /* Nav active dot entrance — spring overshoot */
+  @keyframes dotScale {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  .animate-dot-in {
+    animation: dotScale 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-dot-in { animation: none; }
+    .animate-in,
+    .animate-in-delay-1,
+    .animate-in-delay-2,
+    .animate-in-delay-3,
+    .animate-in-delay-4,
+    .animate-in-delay-5 {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
 }

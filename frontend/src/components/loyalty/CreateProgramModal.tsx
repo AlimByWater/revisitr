@@ -65,15 +65,16 @@ export function CreateProgramModal({ onClose }: CreateProgramModalProps) {
               htmlFor="program-name"
               className="block text-sm font-medium text-neutral-700 mb-1.5"
             >
-              Название
+              Название программы
             </label>
             <input
               id="program-name"
               type="text"
               required
+              autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Название программы"
+              placeholder="Например: Золотой гость"
               className={cn(
                 'w-full px-4 py-2.5 rounded-lg border border-surface-border',
                 'text-sm placeholder:text-neutral-400',
@@ -88,7 +89,7 @@ export function CreateProgramModal({ onClose }: CreateProgramModalProps) {
               htmlFor="program-type"
               className="block text-sm font-medium text-neutral-700 mb-1.5"
             >
-              Тип
+              Тип программы
             </label>
             <select
               id="program-type"
@@ -108,47 +109,57 @@ export function CreateProgramModal({ onClose }: CreateProgramModalProps) {
             </select>
           </div>
 
-          <div>
-            <label
-              htmlFor="welcome-bonus"
-              className="block text-sm font-medium text-neutral-700 mb-1.5"
-            >
-              Приветственный бонус
-            </label>
-            <input
-              id="welcome-bonus"
-              type="number"
-              min={0}
-              value={welcomeBonus}
-              onChange={(e) => setWelcomeBonus(Number(e.target.value))}
-              className={cn(
-                'w-full px-4 py-2.5 rounded-lg border border-surface-border',
-                'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
-                'transition-colors',
-              )}
-            />
-          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="welcome-bonus"
+                className="block text-sm font-medium text-neutral-700 mb-1.5"
+              >
+                Приветств. бонус
+              </label>
+              <input
+                id="welcome-bonus"
+                type="number"
+                min={0}
+                value={welcomeBonus}
+                onChange={(e) => setWelcomeBonus(Number(e.target.value))}
+                aria-describedby="welcome-bonus-hint"
+                className={cn(
+                  'w-full max-w-[120px] px-4 py-2.5 rounded-lg border border-surface-border',
+                  'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
+                  'transition-colors',
+                )}
+              />
+              <p id="welcome-bonus-hint" className="mt-1.5 text-xs text-neutral-400">
+                0 — без бонуса при регистрации
+              </p>
+            </div>
 
-          <div>
-            <label
-              htmlFor="currency-name"
-              className="block text-sm font-medium text-neutral-700 mb-1.5"
-            >
-              Название валюты
-            </label>
-            <input
-              id="currency-name"
-              type="text"
-              value={currencyName}
-              onChange={(e) => setCurrencyName(e.target.value)}
-              placeholder="баллы"
-              className={cn(
-                'w-full px-4 py-2.5 rounded-lg border border-surface-border',
-                'text-sm placeholder:text-neutral-400',
-                'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
-                'transition-colors',
-              )}
-            />
+            <div>
+              <label
+                htmlFor="currency-name"
+                className="block text-sm font-medium text-neutral-700 mb-1.5"
+              >
+                Название бонусов
+              </label>
+              <input
+                id="currency-name"
+                type="text"
+                value={currencyName}
+                onChange={(e) => setCurrencyName(e.target.value)}
+                placeholder="баллы"
+                aria-describedby="currency-name-hint"
+                className={cn(
+                  'w-full px-4 py-2.5 rounded-lg border border-surface-border',
+                  'text-sm placeholder:text-neutral-400',
+                  'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
+                  'transition-colors',
+                )}
+              />
+              <p id="currency-name-hint" className="mt-1.5 text-xs text-neutral-400">
+                Напр.: «звёзды», «рубли», «бонусы»
+              </p>
+            </div>
           </div>
 
           {createMutation.isError && (

@@ -9,9 +9,9 @@ import { ArrowLeft, Plus, Trash2, Check } from 'lucide-react'
 import type { BotButton, BotSettings, FormField } from '@/features/bots/types'
 
 const statusConfig = {
-  active: { label: 'Активен', className: 'bg-green-100 text-green-700' },
-  inactive: { label: 'Неактивен', className: 'bg-neutral-100 text-neutral-500' },
-  error: { label: 'Ошибка', className: 'bg-red-100 text-red-700' },
+  active: { label: 'Активен', className: 'bg-green-500 text-white' },
+  inactive: { label: 'Неактивен', className: 'bg-neutral-200 text-neutral-500' },
+  error: { label: 'Ошибка', className: 'bg-red-500 text-white' },
 } as const
 
 function formatDate(dateStr: string): string {
@@ -33,12 +33,18 @@ const inputClassName = cn(
 export default function BotDetailPage() {
   const { botId } = useParams<{ botId: string }>()
   const id = Number(botId)
-  const { data: bot, isLoading, isError } = useBotQuery(id)
+  const { data: bot, isLoading, isError } = useBotQuery(isNaN(id) || id <= 0 ? 0 : id)
 
   const [settings, setSettings] = useState<BotSettings | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
+
+  useEffect(() => {
+    if (!saveSuccess) return
+    const timer = setTimeout(() => setSaveSuccess(false), 3000)
+    return () => clearTimeout(timer)
+  }, [saveSuccess])
 
   useEffect(() => {
     if (bot?.settings) {
@@ -60,7 +66,6 @@ export default function BotDetailPage() {
     try {
       await botsApi.updateSettings(id, settings)
       setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
     } catch {
       setSaveError('Не удалось сохранить настройки. Попробуйте снова.')
     } finally {
@@ -85,7 +90,7 @@ export default function BotDetailPage() {
     )
   }
 
-  if (isError || !bot) {
+  if (isNaN(id) || id <= 0 || isError || !bot) {
     return (
       <div className="max-w-3xl">
         <Link
@@ -103,7 +108,10 @@ export default function BotDetailPage() {
     )
   }
 
-  const status = statusConfig[bot.status]
+  const status = statusConfig[bot.status as keyof typeof statusConfig] ?? {
+    label: bot.status,
+    className: 'bg-neutral-100 text-neutral-500',
+  }
 
   // --- Button helpers ---
   const addButton = () => {
@@ -189,21 +197,22 @@ export default function BotDetailPage() {
       {/* Bot info header */}
       <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 mb-6 animate-in">
         <div className="flex items-start justify-between">
-          <div>
-            <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">{bot.name}</h1>
-            <p className="text-neutral-400 mt-1">@{bot.username}</p>
+          <div className="min-w-0 flex-1 mr-3">
+            <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight truncate">{bot.name}</h1>
+            <p className="text-neutral-400 mt-1 truncate">{bot.username ? `@${bot.username}` : '—'}</p>
           </div>
           <span
             className={cn(
-              'text-xs font-medium px-2.5 py-1 rounded-full',
+              'font-mono text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider',
               status.className,
             )}
           >
             {status.label}
           </span>
         </div>
-        <p className="text-sm text-neutral-400 mt-4">
-          Создан <span className="font-mono tabular-nums">{formatDate(bot.created_at)}</span>
+        <p className="mt-4">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Создан · </span>
+          <span className="font-mono text-[11px] tabular-nums text-neutral-400">{formatDate(bot.created_at)}</span>
         </p>
       </div>
 
@@ -212,6 +221,7 @@ export default function BotDetailPage() {
           {/* Welcome message & modules */}
           <section className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
             <h2 className="text-lg font-semibold text-neutral-900 mb-5">
+              <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">Конфигурация</span>
               Настройки бота
             </h2>
 
@@ -231,6 +241,7 @@ export default function BotDetailPage() {
                   }
                   placeholder="Привет! Добро пожаловать в нашу программу лояльности..."
                   rows={4}
+                  maxLength={500}
                   disabled={isSaving}
                   className={cn(inputClassName, 'resize-none')}
                 />
@@ -253,7 +264,7 @@ export default function BotDetailPage() {
                           'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
                           'disabled:opacity-50 disabled:cursor-not-allowed',
                           isActive
-                            ? 'bg-neutral-900 text-white'
+                            ? 'bg-green-500 text-white'
                             : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200',
                         )}
                       >
@@ -270,6 +281,7 @@ export default function BotDetailPage() {
           <section className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold text-neutral-900">
+                <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">Интерфейс</span>
                 Кнопки меню
               </h2>
               <button
@@ -323,7 +335,11 @@ export default function BotDetailPage() {
                         type="text"
                         value={button.value}
                         onChange={(e) => updateButton(index, 'value', e.target.value)}
-                        placeholder="Значение"
+                        placeholder={
+                          button.type === 'url' ? 'https://...' :
+                          button.type === 'webapp' ? 'https://...' :
+                          'callback_data'
+                        }
                         disabled={isSaving}
                         className={inputClassName}
                         aria-label={`Значение кнопки ${index + 1}`}
@@ -348,6 +364,7 @@ export default function BotDetailPage() {
           <section className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold text-neutral-900">
+                <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">Онбординг</span>
                 Анкета регистрации
               </h2>
               <button
@@ -381,10 +398,10 @@ export default function BotDetailPage() {
                         type="text"
                         value={field.name}
                         onChange={(e) => updateFormField(index, 'name', e.target.value)}
-                        placeholder="Идентификатор (name)"
+                        placeholder="Ключ поля (латиница)"
                         disabled={isSaving}
                         className={inputClassName}
-                        aria-label={`Идентификатор поля ${index + 1}`}
+                        aria-label={`Ключ поля ${index + 1}`}
                       />
                       <input
                         type="text"

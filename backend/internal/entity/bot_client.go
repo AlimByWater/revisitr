@@ -46,6 +46,13 @@ type BotClient struct {
 	BirthDate    *time.Time `db:"birth_date" json:"birth_date,omitempty"`
 	City         *string    `db:"city" json:"city,omitempty"`
 	OS           *string    `db:"os" json:"os,omitempty"`
-	Tags         Tags       `db:"tags" json:"tags"`
-	RegisteredAt time.Time  `db:"registered_at" json:"registered_at"`
+	Tags         Tags            `db:"tags" json:"tags"`
+	Data         json.RawMessage `db:"data"          json:"-"`
+	RegisteredAt time.Time       `db:"registered_at" json:"registered_at"`
+	// RFM fields (added by migration 00009)
+	RFMRecency   *int       `db:"rfm_recency"    json:"rfm_recency,omitempty"`
+	RFMFrequency *int       `db:"rfm_frequency"  json:"rfm_frequency,omitempty"`
+	RFMMonetary  *float64   `db:"rfm_monetary"   json:"rfm_monetary,omitempty"`
+	RFMSegment   *string    `db:"rfm_segment"    json:"rfm_segment,omitempty"`
+	RFMUpdatedAt *time.Time `db:"rfm_updated_at" json:"rfm_updated_at,omitempty"`
 }

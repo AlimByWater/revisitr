@@ -29,8 +29,8 @@ export function Header({ onMenuToggle }: HeaderProps) {
           <Menu className="w-5 h-5" />
         </button>
 
-        <Link to="/dashboard" className="text-xl font-bold tracking-tight">
-          revi<span className="text-accent">s</span>itr
+        <Link to="/dashboard" className="text-xl font-bold tracking-tight group/logo select-none">
+          revi<span className="text-accent transition-all duration-300 group-hover/logo:drop-shadow-[0_0_8px_rgba(232,93,58,0.55)]">s</span>itr
         </Link>
 
         <nav className="hidden md:flex items-center gap-6">

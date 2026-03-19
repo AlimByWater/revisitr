@@ -86,14 +86,14 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
       {/* Drawer */}
       <aside
         className={cn(
-          'absolute inset-y-0 left-0 w-[280px] bg-sidebar flex flex-col',
+          'absolute inset-y-0 left-0 w-[280px] sidebar-glass flex flex-col',
           isClosing ? 'drawer-exit' : 'drawer-enter',
         )}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-5">
-          <span className="text-xl font-bold text-white tracking-tight">
-            revi<span className="text-accent">s</span>itr
+          <span className="text-xl font-bold text-white tracking-tight select-none group/logo">
+            revi<span className="text-accent transition-all duration-300 group-hover/logo:drop-shadow-[0_0_10px_rgba(232,93,58,0.65)]">s</span>itr
           </span>
           <button
             onClick={handleClose}
@@ -126,7 +126,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
                 <Icon className="w-5 h-5 shrink-0" />
                 <span>{item.label}</span>
                 {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent animate-dot-in" />
                 )}
               </Link>
             )

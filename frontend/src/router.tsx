@@ -22,6 +22,9 @@ import CampaignsPage from './routes/dashboard/campaigns/index'
 import CreateCampaignPage from './routes/dashboard/campaigns/create'
 import CampaignDetailPage from './routes/dashboard/campaigns/$campaignId'
 import ScenariosPage from './routes/dashboard/campaigns/scenarios'
+import SalesAnalyticsPage from './routes/dashboard/analytics/sales'
+import LoyaltyAnalyticsPage from './routes/dashboard/analytics/loyalty'
+import MailingsAnalyticsPage from './routes/dashboard/analytics/mailings'
 
 function DashboardLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -32,7 +35,7 @@ function DashboardLayout() {
       <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
         <Header onMenuToggle={() => setMobileNavOpen(true)} />
-        <main className="flex-1 p-4 md:p-6">
+        <main className="flex-1 p-6 md:p-8">
           <Outlet />
         </main>
       </div>
@@ -71,6 +74,9 @@ export const router = createBrowserRouter(
             { path: 'campaigns', element: <CampaignsPage /> },
             { path: 'campaigns/create', element: <CreateCampaignPage /> },
             { path: 'campaigns/scenarios', element: <ScenariosPage /> },
+            { path: 'analytics/sales', element: <SalesAnalyticsPage /> },
+            { path: 'analytics/loyalty', element: <LoyaltyAnalyticsPage /> },
+            { path: 'analytics/mailings', element: <MailingsAnalyticsPage /> },
             { path: 'campaigns/:campaignId', element: <CampaignDetailPage /> },
           ],
         },

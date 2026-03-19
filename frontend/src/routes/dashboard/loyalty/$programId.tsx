@@ -101,10 +101,10 @@ export default function ProgramDetailPage() {
         <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">{program.name}</h1>
         <span
           className={cn(
-            'text-xs font-medium px-2 py-0.5 rounded-full',
+            'font-mono text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider',
             program.type === 'bonus'
-              ? 'bg-blue-50 text-blue-700'
-              : 'bg-purple-50 text-purple-700',
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-purple-100 text-purple-700',
           )}
         >
           {program.type === 'bonus' ? 'Бонусная' : 'Скидочная'}
@@ -113,7 +113,10 @@ export default function ProgramDetailPage() {
 
       {/* Config section */}
       <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 mb-6">
-        <h2 className="text-base font-semibold mb-4">Настройки</h2>
+        <h2 className="text-base font-semibold mb-4">
+          <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">Конфигурация</span>
+          Настройки
+        </h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label
@@ -145,7 +148,7 @@ export default function ProgramDetailPage() {
               htmlFor="currency_name"
               className="block text-sm font-medium text-neutral-700 mb-1.5"
             >
-              Название валюты
+              Название бонусов
             </label>
             <input
               id="currency_name"

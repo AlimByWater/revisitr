@@ -44,8 +44,8 @@ export default function DashboardHome() {
   const { data: bots } = useBotsQuery()
 
   return (
-    <div className="space-y-6">
-      <div className="animate-in">
+    <div>
+      <div className="animate-in mb-4">
         <h1 className="font-serif text-3xl font-bold text-neutral-900 mb-1 tracking-tight">Дашборд</h1>
         <p className="font-mono text-neutral-300 text-xs uppercase tracking-wider">
           Обзор ключевых показателей
@@ -53,7 +53,7 @@ export default function DashboardHome() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-3 flex-wrap mb-8">
         <div className="flex bg-white rounded-xl border border-surface-border p-1">
           {PERIODS.map((p) => (
             <button
@@ -93,7 +93,7 @@ export default function DashboardHome() {
       </div>
 
       {/* Widget cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in animate-in-delay-1">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 animate-in animate-in-delay-1">
         <MetricCard
           label="Выручка"
           metric={widgets?.revenue}
@@ -126,6 +126,7 @@ export default function DashboardHome() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in animate-in-delay-2">
+
         <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
           <h3 className="text-sm font-semibold text-neutral-700 mb-4">
             Выручка по дням
@@ -243,7 +244,7 @@ function MetricCard({
   const TrendIcon = trend > 0 ? TrendingUp : trend < 0 ? TrendingDown : Minus
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
+    <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(0,0,0,0.07)]">
       <div className="flex items-center gap-2 text-neutral-400 mb-3">
         {icon}
         <span className="text-xs font-medium uppercase tracking-wide">

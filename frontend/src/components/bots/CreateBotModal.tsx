@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { cn } from '@/lib/utils'
+import { cn, getApiErrorMessage } from '@/lib/utils'
 import { useCreateBotMutation } from '@/features/bots/queries'
 import { X } from 'lucide-react'
 
@@ -63,6 +63,8 @@ export function CreateBotModal({ onClose }: CreateBotModalProps) {
               onChange={(e) => setName(e.target.value)}
               placeholder="Мой ресторан"
               required
+              maxLength={100}
+              autoFocus
               disabled={createBot.isPending}
               className={cn(
                 'w-full px-4 py-2.5 rounded-lg border border-surface-border',
@@ -88,6 +90,7 @@ export function CreateBotModal({ onClose }: CreateBotModalProps) {
               onChange={(e) => setToken(e.target.value)}
               placeholder="Токен от @BotFather"
               required
+              maxLength={200}
               disabled={createBot.isPending}
               className={cn(
                 'w-full px-4 py-2.5 rounded-lg border border-surface-border',
@@ -104,9 +107,7 @@ export function CreateBotModal({ onClose }: CreateBotModalProps) {
 
           {createBot.isError && (
             <p className="text-sm text-red-600">
-              {createBot.error instanceof Error
-                ? createBot.error.message
-                : 'Не удалось создать бота. Попробуйте снова.'}
+              {getApiErrorMessage(createBot.error, 'Не удалось создать бота. Попробуйте снова.')}
             </p>
           )}
 

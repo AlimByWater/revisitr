@@ -60,15 +60,16 @@ export function CreatePOSModal({ onClose }: CreatePOSModalProps) {
               htmlFor="pos-create-name"
               className="block text-sm font-medium text-neutral-700 mb-1.5"
             >
-              Название
+              Название заведения
             </label>
             <input
               id="pos-create-name"
               type="text"
               required
+              autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Название точки"
+              placeholder="Кафе «Уют» — Центр"
               className={cn(
                 'w-full px-4 py-2.5 rounded-lg border border-surface-border',
                 'text-sm placeholder:text-neutral-400',
@@ -90,7 +91,7 @@ export function CreatePOSModal({ onClose }: CreatePOSModalProps) {
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="Улица, дом"
+              placeholder="Москва, ул. Ленина, д. 15"
               className={cn(
                 'w-full px-4 py-2.5 rounded-lg border border-surface-border',
                 'text-sm placeholder:text-neutral-400',
@@ -105,7 +106,8 @@ export function CreatePOSModal({ onClose }: CreatePOSModalProps) {
               htmlFor="pos-create-phone"
               className="block text-sm font-medium text-neutral-700 mb-1.5"
             >
-              Телефон
+              Телефон{' '}
+              <span className="text-neutral-400 font-normal">(необязательно)</span>
             </label>
             <input
               id="pos-create-phone"

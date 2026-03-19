@@ -210,3 +210,26 @@ func (r *Loyalty) CreateTransaction(ctx context.Context, tx *entity.LoyaltyTrans
 
 	return nil
 }
+
+// GetTxStatsPerClient returns aggregated transaction stats per client for the given org.
+// Used by the RFM service.
+func (r *Loyalty) GetTxStatsPerClient(ctx context.Context, orgID int) ([]entity.ClientTxStats, error) {
+	query := `
+		SELECT
+			lt.client_id,
+			MAX(lt.created_at)  AS last_tx_at,
+			COUNT(*)            AS tx_count,
+			SUM(lt.amount)      AS total_amount
+		FROM loyalty_transactions lt
+		JOIN bot_clients bc ON lt.client_id = bc.id
+		JOIN bots b ON bc.bot_id = b.id
+		WHERE b.org_id = $1
+		  AND lt.type = 'earn'
+		GROUP BY lt.client_id`
+
+	var rows []entity.ClientTxStats
+	if err := r.pg.DB().SelectContext(ctx, &rows, query, orgID); err != nil {
+		return nil, fmt.Errorf("loyalty.GetTxStatsPerClient: %w", err)
+	}
+	return rows, nil
+}

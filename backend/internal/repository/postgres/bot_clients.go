@@ -78,3 +78,59 @@ func (r *BotClients) CountByBotID(ctx context.Context, botID int) (int, error) {
 	}
 	return count, nil
 }
+
+// UpdateRFM sets RFM scores and segment label for a single bot client.
+func (r *BotClients) UpdateRFM(ctx context.Context, clientID, recency, frequency int, monetary float64, segment string) error {
+	query := `
+		UPDATE bot_clients
+		SET rfm_recency = $1, rfm_frequency = $2, rfm_monetary = $3,
+		    rfm_segment = $4, rfm_updated_at = NOW()
+		WHERE id = $5`
+
+	result, err := r.pg.DB().ExecContext(ctx, query, recency, frequency, monetary, segment, clientID)
+	if err != nil {
+		return fmt.Errorf("bot_clients.UpdateRFM: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("bot_clients.UpdateRFM rows: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("bot_clients.UpdateRFM: %w", sql.ErrNoRows)
+	}
+	return nil
+}
+
+// GetAllByOrgID returns all bot clients for the given org (used by RFM service).
+func (r *BotClients) GetAllByOrgID(ctx context.Context, orgID int) ([]entity.BotClient, error) {
+	var clients []entity.BotClient
+	query := `
+		SELECT bc.*
+		FROM bot_clients bc
+		JOIN bots b ON bc.bot_id = b.id
+		WHERE b.org_id = $1`
+	if err := r.pg.DB().SelectContext(ctx, &clients, query, orgID); err != nil {
+		return nil, fmt.Errorf("bot_clients.GetAllByOrgID: %w", err)
+	}
+	return clients, nil
+}
+
+// GetByPhone finds a bot client by phone number within the given org.
+func (r *BotClients) GetByPhone(ctx context.Context, orgID int, phone string) (*entity.BotClient, error) {
+	var client entity.BotClient
+	query := `
+		SELECT bc.*
+		FROM bot_clients bc
+		JOIN bots b ON bc.bot_id = b.id
+		WHERE b.org_id = $1 AND bc.phone = $2
+		LIMIT 1`
+	err := r.pg.DB().GetContext(ctx, &client, query, orgID, phone)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("bot_clients.GetByPhone: %w", sql.ErrNoRows)
+		}
+		return nil, fmt.Errorf("bot_clients.GetByPhone: %w", err)
+	}
+	return &client, nil
+}
