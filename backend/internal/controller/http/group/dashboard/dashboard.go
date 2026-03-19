@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -51,6 +52,7 @@ func (g *Group) handleWidgets() (string, string, gin.HandlerFunc) {
 
 		widgets, err := g.uc.GetWidgets(c.Request.Context(), orgID.(int), filter)
 		if err != nil {
+			slog.Error("get dashboard widgets", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -71,6 +73,7 @@ func (g *Group) handleCharts() (string, string, gin.HandlerFunc) {
 
 		charts, err := g.uc.GetCharts(c.Request.Context(), orgID.(int), filter)
 		if err != nil {
+			slog.Error("get dashboard charts", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}

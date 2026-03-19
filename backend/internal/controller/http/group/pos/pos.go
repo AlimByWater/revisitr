@@ -3,6 +3,7 @@ package pos
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -60,6 +61,7 @@ func (g *Group) handleCreate() (string, string, gin.HandlerFunc) {
 
 		pos, err := g.uc.Create(c.Request.Context(), orgID, &req)
 		if err != nil {
+			slog.Error("create pos location", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -74,6 +76,7 @@ func (g *Group) handleList() (string, string, gin.HandlerFunc) {
 
 		locations, err := g.uc.GetByOrgID(c.Request.Context(), orgID)
 		if err != nil {
+			slog.Error("list pos locations", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -154,6 +157,7 @@ func handleError(c *gin.Context, err error) {
 	case errors.Is(err, posUC.ErrNotPOSOwner):
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	default:
+		slog.Error("pos handler error", "error", err, "path", c.FullPath())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 	}
 }

@@ -151,7 +151,7 @@ func (m *Manager) Shutdown() {
 }
 
 func (m *Manager) startBot(parentCtx context.Context, b entity.Bot) error {
-	tBot, err := telego.NewBot(b.Token, telego.WithDefaultDebugLogger())
+	tBot, err := telego.NewBot(b.Token)
 	if err != nil {
 		return fmt.Errorf("create telego bot %q: %w", b.Name, err)
 	}

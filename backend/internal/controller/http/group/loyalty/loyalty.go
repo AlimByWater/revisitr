@@ -3,6 +3,7 @@ package loyalty
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -64,6 +65,7 @@ func (g *Group) handleCreateProgram() (string, string, gin.HandlerFunc) {
 
 		program, err := g.uc.CreateProgram(c.Request.Context(), orgID, &req)
 		if err != nil {
+			slog.Error("create loyalty program", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -78,6 +80,7 @@ func (g *Group) handleListPrograms() (string, string, gin.HandlerFunc) {
 
 		programs, err := g.uc.GetPrograms(c.Request.Context(), orgID)
 		if err != nil {
+			slog.Error("list loyalty programs", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -218,6 +221,7 @@ func handleError(c *gin.Context, err error) {
 	case errors.Is(err, loyaltyUC.ErrInsufficientPoints):
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	default:
+		slog.Error("loyalty handler error", "error", err, "path", c.FullPath())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 	}
 }

@@ -3,6 +3,7 @@ package campaigns
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -76,6 +77,7 @@ func (g *Group) handleCreate() (string, string, gin.HandlerFunc) {
 
 		campaign, err := g.uc.Create(c.Request.Context(), orgID.(int), &req)
 		if err != nil {
+			slog.Error("create campaign", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -93,6 +95,7 @@ func (g *Group) handleList() (string, string, gin.HandlerFunc) {
 
 		campaigns, total, err := g.uc.List(c.Request.Context(), orgID.(int), limit, offset)
 		if err != nil {
+			slog.Error("list campaigns", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -116,6 +119,7 @@ func (g *Group) handlePreviewAudience() (string, string, gin.HandlerFunc) {
 
 		count, err := g.uc.PreviewAudience(c.Request.Context(), orgID.(int), filter)
 		if err != nil {
+			slog.Error("preview audience", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -213,6 +217,7 @@ func (g *Group) handleListScenarios() (string, string, gin.HandlerFunc) {
 
 		scenarios, err := g.uc.ListScenarios(c.Request.Context(), orgID.(int))
 		if err != nil {
+			slog.Error("list scenarios", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -233,6 +238,7 @@ func (g *Group) handleCreateScenario() (string, string, gin.HandlerFunc) {
 
 		scenario, err := g.uc.CreateScenario(c.Request.Context(), orgID.(int), &req)
 		if err != nil {
+			slog.Error("create scenario", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -298,6 +304,7 @@ func handleError(c *gin.Context, err error) {
 	case errors.Is(err, campaignsUC.ErrNotScenarioOwner):
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	default:
+		slog.Error("campaign handler error", "error", err, "path", c.FullPath())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 	}
 }

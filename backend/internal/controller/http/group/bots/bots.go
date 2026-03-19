@@ -3,6 +3,7 @@ package bots
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -64,6 +65,7 @@ func (g *Group) handleCreate() (string, string, gin.HandlerFunc) {
 
 		bot, err := g.uc.Create(c.Request.Context(), orgID.(int), &req)
 		if err != nil {
+			slog.Error("create bot", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -78,6 +80,7 @@ func (g *Group) handleList() (string, string, gin.HandlerFunc) {
 
 		bots, err := g.uc.GetByOrgID(c.Request.Context(), orgID.(int))
 		if err != nil {
+			slog.Error("list bots", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -203,6 +206,7 @@ func handleError(c *gin.Context, err error) {
 	case errors.Is(err, botsUC.ErrNotBotOwner):
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	default:
+		slog.Error("bot handler error", "error", err, "path", c.FullPath())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 	}
 }

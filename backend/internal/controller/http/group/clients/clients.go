@@ -3,6 +3,7 @@ package clients
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -60,6 +61,7 @@ func (g *Group) handleList() (string, string, gin.HandlerFunc) {
 
 		result, err := g.uc.List(c.Request.Context(), orgID.(int), filter)
 		if err != nil {
+			slog.Error("list clients", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -74,6 +76,7 @@ func (g *Group) handleStats() (string, string, gin.HandlerFunc) {
 
 		stats, err := g.uc.GetStats(c.Request.Context(), orgID.(int))
 		if err != nil {
+			slog.Error("get client stats", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -94,6 +97,7 @@ func (g *Group) handleCount() (string, string, gin.HandlerFunc) {
 
 		count, err := g.uc.CountByFilter(c.Request.Context(), orgID.(int), filter)
 		if err != nil {
+			slog.Error("count clients", "error", err, "org_id", orgID)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
@@ -152,6 +156,7 @@ func handleError(c *gin.Context, err error) {
 	case errors.Is(err, clientsUC.ErrClientNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	default:
+		slog.Error("client handler error", "error", err, "path", c.FullPath())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 	}
 }

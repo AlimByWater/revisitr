@@ -2,8 +2,8 @@ package campaign
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"revisitr/internal/entity"
@@ -193,12 +193,11 @@ func (s *Scheduler) getAllBotClients(ctx context.Context, botID int) []entity.Bo
 }
 
 func (s *Scheduler) personalizeMessage(template string, client entity.BotClient) string {
-	msg := template
 	name := client.FirstName
 	if name == "" {
 		name = "клиент"
 	}
-	msg = fmt.Sprintf("%s", msg)
-	// Simple replacement — can be extended
+	msg := strings.ReplaceAll(template, "{name}", name)
+	msg = strings.ReplaceAll(msg, "{first_name}", name)
 	return msg
 }
