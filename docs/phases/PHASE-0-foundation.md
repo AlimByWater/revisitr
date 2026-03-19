@@ -65,7 +65,7 @@
 - [x] `.github/workflows/bot.yml` — lint, test, build, deploy
 - [x] `.github/workflows/frontend.yml` — lint, build, deploy
 - [x] `.github/workflows/infrastructure.yml` — migrations
-- [x] `scripts/deploy.sh` — deploy backend|bot|frontend|infra
+- [x] `infra/scripts/deploy.sh` — deploy backend|bot|frontend|infra
 - [x] Self-hosted runner настроен и работает
 
 ### 0.8 Nginx routing (вместо Traefik)

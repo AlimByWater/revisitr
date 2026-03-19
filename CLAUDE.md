@@ -44,9 +44,19 @@ cd backend && go build -o bin/server ./cmd/server
 cd backend && go build -o bin/bot ./cmd/bot
 cd frontend && npm run build
 
-# Test
-cd backend && go test ./...
-cd frontend && npm run test
+# Test — unit (быстро, без инфры)
+cd backend && go test -race ./internal/usecase/...     # backend unit
+cd frontend && npx vitest run                          # frontend unit
+
+# Test — integration (требует docker compose up)
+cd backend && go test -race -tags=integration ./tests/integration/...
+
+# Test — E2E (требует full stack: docker + backend + frontend)
+cd e2e && npx playwright test
+
+# Test — all
+make test-all                                          # unit + integration + e2e
+make test-quick                                        # unit only
 
 # Migrations
 cd backend && goose -dir migrations postgres "$DATABASE_URL" up
@@ -62,7 +72,7 @@ make dev-down                                              # stop
 
 # Docker (production) — на сервере в /opt/revisitr/infra/
 docker compose -f docker-compose.prod.yml up -d            # all services
-scripts/deploy.sh backend|bot|frontend|infra               # independent deploy
+infra/scripts/deploy.sh backend|bot|frontend|infra               # independent deploy
 ```
 
 ## Ports
@@ -85,11 +95,42 @@ Production nginx routes: `/revisitr/api/*` → `:8090`, `/revisitr/*` → `:3340
 - **Коммиты**: conventional commits (feat/fix/refactor/docs/chore)
 - **Ветки**: feature branches → PR → main
 
+## Testing
+
+Полная спецификация: `docs/testing.md`
+
+### Уровни тестирования
+
+| Уровень       | Инструмент          | Scope                              | Требует инфру |
+|---------------|---------------------|------------------------------------|---------------|
+| Backend unit  | Go `testing`        | usecase-слой, ручные моки          | Нет           |
+| Frontend unit | Vitest + MSW        | компоненты, stores, API hooks      | Нет           |
+| Integration   | Go `httptest` + DB  | API handlers + real DB             | Docker        |
+| E2E           | Playwright          | полные user flows через браузер    | Full stack    |
+| Bot unit      | Go `testing`        | bot handlers, mock telego          | Нет           |
+| Bot integ.    | Go `httptest` + DB  | webhook → usecase → DB             | Docker        |
+
+### Паттерны
+
+- **Backend unit**: ручные моки через struct с function fields (установленный паттерн)
+- **Integration**: build tag `//go:build integration`, тестовая БД `revisitr_test`
+- **Frontend**: Vitest + @testing-library/react + MSW для API-моков
+- **E2E**: Playwright, `e2e/` директория в корне проекта
+- **Тесты бота**: отдельно от server, mock telego.Bot через интерфейс
+
+### Claude Code MCP для тестирования
+
+- **Playwright MCP**: exploratory E2E, UI snapshot, accessibility проверки
+- **Claude Preview**: `preview_start` → `preview_screenshot` → visual verification
+- **Postgres MCP**: прямые SQL-запросы для проверки данных после тестов
+- **Bash**: `go test`, `npx vitest`, `npx playwright test`
+
 ## Project Docs
 
 - `userdocs/` — дизайн-документ, презентация, Figma-анализ
 - `docs/phases/` — план разработки по фазам
 - `docs/architecture.md` — архитектурные решения
+- `docs/testing.md` — стратегия и спецификация тестирования
 
 ## Figma
 

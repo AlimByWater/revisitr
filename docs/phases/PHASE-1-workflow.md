@@ -756,7 +756,7 @@ cd frontend && npm run lint && npm run build
 
 ```bash
 # Через CI/CD или вручную
-scripts/migrate.sh up
+infra/scripts/migrate.sh up
 ```
 
 ### 5.4 — Deploy

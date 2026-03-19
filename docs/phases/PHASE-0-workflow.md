@@ -228,8 +228,8 @@ infra/traefik/traefik.yml         # Entrypoints, Let's Encrypt, Docker provider
 
 #### 2C.4 — Deploy Scripts
 ```
-scripts/deploy.sh                 # deploy backend|bot|frontend|infra
-scripts/migrate.sh                # goose up|down|status
+infra/scripts/deploy.sh                 # deploy backend|bot|frontend|infra
+infra/scripts/migrate.sh                # goose up|down|status
 ```
 
 #### Порядок внутри 2C
@@ -396,8 +396,8 @@ frontend/Dockerfile
 frontend/nginx.conf
 infra/docker-compose.prod.yml
 infra/traefik/traefik.yml
-scripts/deploy.sh
-scripts/migrate.sh
+infra/scripts/deploy.sh
+infra/scripts/migrate.sh
 
 # CI/CD (~4 файла)
 .github/workflows/backend.yml

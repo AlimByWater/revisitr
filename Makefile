@@ -47,6 +47,16 @@ test-backend:
 test-frontend:
 	cd frontend && npm run test -- --run
 
+# Integration tests — requires: cd infra && docker compose up -d
+test-integration:
+	cd backend && go test -race -tags=integration -v ./tests/integration/...
+
+# All tests (unit + integration). Integration requires docker compose.
+test-all: test-backend test-frontend test-integration
+
+# Quick check — unit only, no infra needed
+test-quick: test-backend test-frontend
+
 # ─── Build ───────────────────────────────────────────────────
 
 build-backend:
