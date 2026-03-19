@@ -11,9 +11,14 @@ fi
 
 DSN="host=postgres port=5432 user=${POSTGRES_USER:-revisitr} password=${POSTGRES_PASSWORD} dbname=${POSTGRES_DB:-revisitr} sslmode=disable"
 
+BACKEND_IMAGE="ghcr.io/${GITHUB_REPO:-alimbywater/revisitr}/backend:${BACKEND_TAG:-latest}"
+
 case "$ACTION" in
   up|down|status)
-    docker compose -f "$COMPOSE_FILE" --profile migrate run --rm migrator \
+    docker run --rm \
+      --network infra_revisitr \
+      --entrypoint /usr/local/bin/goose \
+      "$BACKEND_IMAGE" \
       -dir /migrations postgres "$DSN" "$ACTION"
     ;;
   *)
