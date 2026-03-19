@@ -3,6 +3,9 @@ import { createBrowserRouter, redirect, Outlet } from 'react-router-dom'
 import { Sidebar } from './components/layout/Sidebar'
 import { Header } from './components/layout/Header'
 import { MobileNav } from './components/layout/MobileNav'
+import { AuroraSidebar } from './components/layout/AuroraSidebar'
+import { AuroraHeader } from './components/layout/AuroraHeader'
+import { useTheme } from './contexts/ThemeContext'
 
 // Auth pages
 import LoginPage from './routes/auth/login'
@@ -34,6 +37,22 @@ import PromotionsArchivePage from './routes/dashboard/promotions/archive'
 
 function DashboardLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const { theme } = useTheme()
+
+  if (theme === 'aurora') {
+    return (
+      <div className="flex min-h-screen">
+        <AuroraSidebar />
+        <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+        <div className="flex-1 flex flex-col min-w-0">
+          <AuroraHeader />
+          <main className="flex-1 p-6 md:p-10 max-w-7xl">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen">
