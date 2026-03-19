@@ -27,6 +27,7 @@ import LoyaltyAnalyticsPage from './routes/dashboard/analytics/loyalty'
 import MailingsAnalyticsPage from './routes/dashboard/analytics/mailings'
 import IntegrationsPage from './routes/dashboard/integrations/index'
 import IntegrationDetailPage from './routes/dashboard/integrations/$integrationId'
+import SegmentsPage from './routes/dashboard/clients/segments'
 
 function DashboardLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -68,6 +69,7 @@ export const router = createBrowserRouter(
             { path: 'bots', element: <BotsPage /> },
             { path: 'bots/:botId', element: <BotDetailPage /> },
             { path: 'clients', element: <ClientsPage /> },
+            { path: 'clients/segments', element: <SegmentsPage /> },
             { path: 'clients/:clientId', element: <ClientDetailPage /> },
             { path: 'loyalty', element: <LoyaltyProgramsPage /> },
             { path: 'loyalty/:programId', element: <ProgramDetailPage /> },
