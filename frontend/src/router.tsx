@@ -28,6 +28,9 @@ import MailingsAnalyticsPage from './routes/dashboard/analytics/mailings'
 import IntegrationsPage from './routes/dashboard/integrations/index'
 import IntegrationDetailPage from './routes/dashboard/integrations/$integrationId'
 import SegmentsPage from './routes/dashboard/clients/segments'
+import PromotionsPage from './routes/dashboard/promotions/index'
+import PromoCodesPage from './routes/dashboard/promotions/codes'
+import PromotionsArchivePage from './routes/dashboard/promotions/archive'
 
 function DashboardLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -82,6 +85,9 @@ export const router = createBrowserRouter(
             { path: 'analytics/loyalty', element: <LoyaltyAnalyticsPage /> },
             { path: 'analytics/mailings', element: <MailingsAnalyticsPage /> },
             { path: 'campaigns/:campaignId', element: <CampaignDetailPage /> },
+            { path: 'promotions', element: <PromotionsPage /> },
+            { path: 'promotions/codes', element: <PromoCodesPage /> },
+            { path: 'promotions/archive', element: <PromotionsArchivePage /> },
             { path: 'integrations', element: <IntegrationsPage /> },
             { path: 'integrations/:integrationId', element: <IntegrationDetailPage /> },
           ],
