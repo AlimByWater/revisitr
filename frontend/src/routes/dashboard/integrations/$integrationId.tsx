@@ -24,6 +24,7 @@ import {
   useUpdateIntegrationMutation,
 } from '@/features/integrations/queries'
 import { ErrorState } from '@/components/common/ErrorState'
+import type { Integration } from '@/features/integrations/types'
 
 const TYPE_LABELS: Record<string, string> = {
   iiko: 'iiko',
@@ -506,12 +507,7 @@ function SettingsTab({
   integration,
   onDeleted,
 }: {
-  integration: {
-    id: number
-    type: string
-    config: Record<string, string | number | undefined>
-    status: string
-  }
+  integration: Integration
   onDeleted: () => void
 }) {
   const deleteMutation = useDeleteIntegrationMutation()
