@@ -142,7 +142,10 @@ func (r *AutoScenarios) Delete(ctx context.Context, id int) error {
 func (r *AutoScenarios) GetTemplates(ctx context.Context) ([]entity.AutoScenario, error) {
 	var scenarios []entity.AutoScenario
 	err := r.pg.DB().SelectContext(ctx, &scenarios,
-		"SELECT * FROM auto_scenarios WHERE is_template = true ORDER BY name")
+		`SELECT id, COALESCE(org_id, 0) AS org_id, COALESCE(bot_id, 0) AS bot_id,
+		        name, trigger_type, trigger_config, message, actions, timing,
+		        conditions, is_template, template_key, is_active, created_at, updated_at
+		 FROM auto_scenarios WHERE is_template = true ORDER BY name`)
 	if err != nil {
 		return nil, fmt.Errorf("autoScenarios.GetTemplates: %w", err)
 	}

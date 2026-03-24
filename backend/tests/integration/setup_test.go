@@ -131,12 +131,13 @@ func TestMain(m *testing.M) {
 	analyticsUsecase := analyticsUC.New(analyticsRepo)
 	segmentsUsecase := segmentsUC.New(segmentsRepo, clientsRepo)
 	promotionsUsecase := promotionsUC.New(promotionsRepo)
-	posSyncSvc := posService.NewSyncService(integrationsRepo)
+	posSyncSvc := posService.NewSyncService(integrationsRepo, botClientsRepo, logger)
 	integrationsUsecase := integrationsUC.New(integrationsRepo, posSyncSvc)
 
 	for _, uc := range []interface{ Init(context.Context, *slog.Logger) error }{
 		authUsecase, botsUsecase, loyaltyUsecase,
 		clientsUsecase, dashboardUsecase, campaignsUsecase, posUsecase,
+		integrationsUsecase, promotionsUsecase, analyticsUsecase, segmentsUsecase,
 	} {
 		if err := uc.Init(ctx, logger); err != nil {
 			log.Fatalf("usecase init: %v", err)
@@ -150,7 +151,7 @@ func TestMain(m *testing.M) {
 		botsGroup.New(botsUsecase, testJWTSecret),
 		loyaltyGroup.New(loyaltyUsecase, testJWTSecret),
 		clientsGroup.New(clientsUsecase, testJWTSecret),
-		dashboardGroup.New(dashboardUsecase, testJWTSecret),
+		dashboardGroup.New(dashboardUsecase, testJWTSecret, dashboardGroup.WithSalesUsecase(integrationsUsecase)),
 		campaignsGroup.New(campaignsUsecase, testJWTSecret),
 		posGroup.New(posUsecase, testJWTSecret),
 		analyticsGroup.New(analyticsUsecase, testJWTSecret),
