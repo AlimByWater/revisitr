@@ -1,6 +1,6 @@
 module revisitr
 
-go 1.25
+go 1.26
 
 require (
 	github.com/gin-gonic/gin v1.10.0
