@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -21,12 +22,19 @@ type campaignsUsecase interface {
 	Update(ctx context.Context, orgID, id int, req *entity.UpdateCampaignRequest) error
 	Delete(ctx context.Context, orgID, id int) error
 	Send(ctx context.Context, orgID, id int) error
+	Schedule(ctx context.Context, orgID, id int, at time.Time) error
+	CancelScheduled(ctx context.Context, orgID, id int) error
+	RecordClick(ctx context.Context, campaignID, clientID int, buttonIdx *int, url *string) error
+	GetAnalytics(ctx context.Context, orgID, id int) (*entity.CampaignAnalyticsDetail, error)
 	PreviewAudience(ctx context.Context, orgID int, filter entity.AudienceFilter) (int, error)
 	CreateScenario(ctx context.Context, orgID int, req *entity.CreateScenarioRequest) (*entity.AutoScenario, error)
 	ListScenarios(ctx context.Context, orgID int) ([]entity.AutoScenario, error)
 	UpdateScenario(ctx context.Context, orgID, id int, req *entity.UpdateScenarioRequest) error
 	DeleteScenario(ctx context.Context, orgID, id int) error
 	ToggleScenario(ctx context.Context, orgID, id int, active bool) error
+	GetTemplates(ctx context.Context) ([]entity.AutoScenario, error)
+	CloneTemplate(ctx context.Context, orgID int, templateKey string, botID int) (*entity.AutoScenario, error)
+	GetActionLog(ctx context.Context, orgID, scenarioID, limit, offset int) ([]entity.AutoActionLog, int, error)
 }
 
 type Group struct {
@@ -54,14 +62,21 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handlePreviewAudience,
 		g.handleListScenarios,
 		g.handleCreateScenario,
+		g.handleGetTemplates,
 		// Parameterized scenario routes
+		g.handleCloneTemplate,
 		g.handleUpdateScenario,
 		g.handleDeleteScenario,
+		g.handleGetActionLog,
 		// Parameterized campaign routes
 		g.handleGet,
 		g.handleUpdate,
 		g.handleDelete,
 		g.handleSend,
+		g.handleSchedule,
+		g.handleCancelSchedule,
+		g.handleGetAnalytics,
+		g.handleRecordClick,
 	}
 }
 
@@ -291,6 +306,162 @@ func (g *Group) handleDeleteScenario() (string, string, gin.HandlerFunc) {
 	}
 }
 
+func (g *Group) handleSchedule() (string, string, gin.HandlerFunc) {
+	return http.MethodPost, "/:id/schedule", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid campaign id"})
+			return
+		}
+
+		var req struct {
+			ScheduledAt time.Time `json:"scheduled_at" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if err := g.uc.Schedule(c.Request.Context(), orgID.(int), id, req.ScheduledAt); err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "campaign scheduled"})
+	}
+}
+
+func (g *Group) handleCancelSchedule() (string, string, gin.HandlerFunc) {
+	return http.MethodDelete, "/:id/schedule", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid campaign id"})
+			return
+		}
+
+		if err := g.uc.CancelScheduled(c.Request.Context(), orgID.(int), id); err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "campaign schedule cancelled"})
+	}
+}
+
+func (g *Group) handleGetAnalytics() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/:id/analytics", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid campaign id"})
+			return
+		}
+
+		analytics, err := g.uc.GetAnalytics(c.Request.Context(), orgID.(int), id)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, analytics)
+	}
+}
+
+func (g *Group) handleRecordClick() (string, string, gin.HandlerFunc) {
+	return http.MethodPost, "/:id/click", func(c *gin.Context) {
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid campaign id"})
+			return
+		}
+
+		var req struct {
+			ClientID  int    `json:"client_id" binding:"required"`
+			ButtonIdx *int   `json:"button_idx"`
+			URL       *string `json:"url"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if err := g.uc.RecordClick(c.Request.Context(), id, req.ClientID, req.ButtonIdx, req.URL); err != nil {
+			slog.Error("record click", "error", err, "campaign_id", id)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"message": "click recorded"})
+	}
+}
+
+func (g *Group) handleGetTemplates() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/scenarios/templates", func(c *gin.Context) {
+		templates, err := g.uc.GetTemplates(c.Request.Context())
+		if err != nil {
+			slog.Error("get templates", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, templates)
+	}
+}
+
+func (g *Group) handleCloneTemplate() (string, string, gin.HandlerFunc) {
+	return http.MethodPost, "/scenarios/templates/:key/clone", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+		key := c.Param("key")
+
+		var req struct {
+			BotID int `json:"bot_id" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		scenario, err := g.uc.CloneTemplate(c.Request.Context(), orgID.(int), key, req.BotID)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusCreated, scenario)
+	}
+}
+
+func (g *Group) handleGetActionLog() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/scenarios/:id/log", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid scenario id"})
+			return
+		}
+
+		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+		logs, total, err := g.uc.GetActionLog(c.Request.Context(), orgID.(int), id, limit, offset)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, entity.PaginatedResponse[entity.AutoActionLog]{
+			Items: logs,
+			Total: total,
+		})
+	}
+}
+
 func handleError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, campaignsUC.ErrCampaignNotFound):
@@ -298,6 +469,12 @@ func handleError(c *gin.Context, err error) {
 	case errors.Is(err, campaignsUC.ErrNotCampaignOwner):
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	case errors.Is(err, campaignsUC.ErrCampaignAlreadySent):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case errors.Is(err, campaignsUC.ErrCampaignNotDraft):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case errors.Is(err, campaignsUC.ErrCampaignNotScheduled):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case errors.Is(err, campaignsUC.ErrCampaignNotSendable):
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 	case errors.Is(err, campaignsUC.ErrScenarioNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})

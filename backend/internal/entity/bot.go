@@ -52,6 +52,7 @@ type FormField struct {
 type Bot struct {
 	ID        int         `db:"id" json:"id"`
 	OrgID     int         `db:"org_id" json:"org_id"`
+	ProgramID *int        `db:"program_id" json:"program_id"`
 	Name      string      `db:"name" json:"name"`
 	Token     string      `db:"token" json:"-"`
 	Username  string      `db:"username" json:"username"`
@@ -62,13 +63,15 @@ type Bot struct {
 }
 
 type CreateBotRequest struct {
-	Name  string `json:"name" binding:"required"`
-	Token string `json:"token" binding:"required"`
+	Name      string `json:"name" binding:"required"`
+	Token     string `json:"token" binding:"required"`
+	ProgramID *int   `json:"program_id"`
 }
 
 type UpdateBotRequest struct {
-	Name   *string `json:"name,omitempty"`
-	Status *string `json:"status,omitempty"`
+	Name      *string `json:"name,omitempty"`
+	Status    *string `json:"status,omitempty"`
+	ProgramID *int    `json:"program_id,omitempty"`
 }
 
 type UpdateBotSettingsRequest struct {

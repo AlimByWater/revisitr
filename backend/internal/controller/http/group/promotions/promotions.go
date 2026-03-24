@@ -23,6 +23,11 @@ type promotionsUsecase interface {
 	CreatePromoCode(ctx context.Context, orgID int, req *entity.CreatePromoCodeRequest) (*entity.PromoCode, error)
 	ListPromoCodes(ctx context.Context, orgID int) ([]entity.PromoCode, error)
 	DeactivatePromoCode(ctx context.Context, id, orgID int) error
+	ValidatePromoCode(ctx context.Context, orgID int, code string, clientID int, orderAmount float64) (*entity.PromoCodeValidation, error)
+	ActivatePromoCode(ctx context.Context, orgID int, code string, clientID int) (*entity.PromoResult, error)
+	GetChannelAnalytics(ctx context.Context, orgID int) ([]entity.PromoChannelAnalytics, error)
+	GenerateCode(ctx context.Context, orgID int) (string, error)
+	GetPromoCodesByPromotion(ctx context.Context, promotionID, orgID int) ([]entity.PromoCode, error)
 }
 
 type Group struct {
@@ -49,11 +54,16 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handleList,
 		g.handleListPromoCodes,
 		g.handleCreatePromoCode,
+		g.handleValidatePromoCode,
+		g.handleActivatePromoCode,
+		g.handleGeneratePromoCode,
+		g.handleChannelAnalytics,
 		// Parameterized routes
 		g.handleGet,
 		g.handleUpdate,
 		g.handleDelete,
 		g.handleDeactivatePromoCode,
+		g.handleGetPromoCodesByPromotion,
 	}
 }
 
@@ -213,6 +223,104 @@ func (g *Group) handleDeactivatePromoCode() (string, string, gin.HandlerFunc) {
 	}
 }
 
+func (g *Group) handleValidatePromoCode() (string, string, gin.HandlerFunc) {
+	return http.MethodPost, "/promo-codes/validate", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		var req struct {
+			Code        string  `json:"code"         binding:"required"`
+			ClientID    int     `json:"client_id"    binding:"required"`
+			OrderAmount float64 `json:"order_amount"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		result, err := g.uc.ValidatePromoCode(c.Request.Context(), orgID.(int), req.Code, req.ClientID, req.OrderAmount)
+		if err != nil {
+			slog.Error("validate promo code", "error", err, "org_id", orgID)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, result)
+	}
+}
+
+func (g *Group) handleActivatePromoCode() (string, string, gin.HandlerFunc) {
+	return http.MethodPost, "/promo-codes/activate", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		var req struct {
+			Code     string `json:"code"      binding:"required"`
+			ClientID int    `json:"client_id" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		result, err := g.uc.ActivatePromoCode(c.Request.Context(), orgID.(int), req.Code, req.ClientID)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, result)
+	}
+}
+
+func (g *Group) handleGeneratePromoCode() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/promo-codes/generate", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		code, err := g.uc.GenerateCode(c.Request.Context(), orgID.(int))
+		if err != nil {
+			slog.Error("generate promo code", "error", err, "org_id", orgID)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"code": code})
+	}
+}
+
+func (g *Group) handleChannelAnalytics() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/promo-codes/analytics", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		analytics, err := g.uc.GetChannelAnalytics(c.Request.Context(), orgID.(int))
+		if err != nil {
+			slog.Error("get channel analytics", "error", err, "org_id", orgID)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, analytics)
+	}
+}
+
+func (g *Group) handleGetPromoCodesByPromotion() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/:id/codes", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid promotion id"})
+			return
+		}
+
+		codes, err := g.uc.GetPromoCodesByPromotion(c.Request.Context(), id, orgID.(int))
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, codes)
+	}
+}
+
 func handleError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, promotionsUC.ErrPromotionNotFound):
@@ -224,7 +332,9 @@ func handleError(c *gin.Context, err error) {
 	case errors.Is(err, promotionsUC.ErrPromoCodeInactive),
 		errors.Is(err, promotionsUC.ErrPromoCodeNotActive),
 		errors.Is(err, promotionsUC.ErrPromoCodeExpired),
-		errors.Is(err, promotionsUC.ErrPromoCodeLimitReached):
+		errors.Is(err, promotionsUC.ErrPromoCodeLimitReached),
+		errors.Is(err, promotionsUC.ErrPerUserLimitExceeded),
+		errors.Is(err, promotionsUC.ErrMinAmountNotMet):
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 	default:
 		slog.Error("promotion handler error", "error", err, "path", c.FullPath())

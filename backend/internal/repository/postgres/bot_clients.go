@@ -18,8 +18,8 @@ func NewBotClients(pg *Module) *BotClients {
 
 func (r *BotClients) Create(ctx context.Context, client *entity.BotClient) error {
 	query := `
-		INSERT INTO bot_clients (bot_id, telegram_id, username, first_name, last_name, phone)
-		VALUES (:bot_id, :telegram_id, :username, :first_name, :last_name, :phone)
+		INSERT INTO bot_clients (bot_id, telegram_id, username, first_name, last_name, phone, phone_normalized, qr_code)
+		VALUES (:bot_id, :telegram_id, :username, :first_name, :last_name, :phone, :phone_normalized, :qr_code)
 		RETURNING id, registered_at`
 
 	rows, err := r.pg.DB().NamedQueryContext(ctx, query, client)
@@ -117,20 +117,40 @@ func (r *BotClients) GetAllByOrgID(ctx context.Context, orgID int) ([]entity.Bot
 }
 
 // GetByPhone finds a bot client by phone number within the given org.
+// Uses phone_normalized for reliable matching, falls back to raw phone.
 func (r *BotClients) GetByPhone(ctx context.Context, orgID int, phone string) (*entity.BotClient, error) {
+	normalized := entity.NormalizePhone(phone)
+	if normalized == "" {
+		normalized = phone
+	}
+
 	var client entity.BotClient
 	query := `
 		SELECT bc.*
 		FROM bot_clients bc
 		JOIN bots b ON bc.bot_id = b.id
-		WHERE b.org_id = $1 AND bc.phone = $2
+		WHERE b.org_id = $1 AND (bc.phone_normalized = $2 OR bc.phone = $3)
 		LIMIT 1`
-	err := r.pg.DB().GetContext(ctx, &client, query, orgID, phone)
+	err := r.pg.DB().GetContext(ctx, &client, query, orgID, normalized, phone)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("bot_clients.GetByPhone: %w", sql.ErrNoRows)
 		}
 		return nil, fmt.Errorf("bot_clients.GetByPhone: %w", err)
+	}
+	return &client, nil
+}
+
+// GetByQRCode finds a bot client by their unique QR code identifier.
+func (r *BotClients) GetByQRCode(ctx context.Context, qrCode string) (*entity.BotClient, error) {
+	var client entity.BotClient
+	err := r.pg.DB().GetContext(ctx, &client,
+		"SELECT * FROM bot_clients WHERE qr_code = $1", qrCode)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("bot_clients.GetByQRCode: %w", sql.ErrNoRows)
+		}
+		return nil, fmt.Errorf("bot_clients.GetByQRCode: %w", err)
 	}
 	return &client, nil
 }

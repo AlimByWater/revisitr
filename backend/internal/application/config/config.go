@@ -34,12 +34,21 @@ type Bot struct {
 	Token string
 }
 
+type MinIO struct {
+	Endpoint  string
+	AccessKey string
+	SecretKey string
+	UseSSL    bool
+	Bucket    string
+}
+
 type Module struct {
 	Http     Http
 	Postgres Postgres
 	Redis    Redis
 	Auth     Auth
 	Bot      Bot
+	MinIO    MinIO
 }
 
 func NewFromEnv() *Module {
@@ -68,6 +77,13 @@ func NewFromEnv() *Module {
 		},
 		Bot: Bot{
 			Token: env.GetString("BOT_TOKEN", ""),
+		},
+		MinIO: MinIO{
+			Endpoint:  env.GetString("MINIO_ENDPOINT", "localhost:9000"),
+			AccessKey: env.GetString("MINIO_ACCESS_KEY", "revisitr"),
+			SecretKey: env.GetString("MINIO_SECRET_KEY", "devpassword"),
+			UseSSL:    env.GetBool("MINIO_USE_SSL", false),
+			Bucket:    env.GetString("MINIO_BUCKET", "revisitr"),
 		},
 	}
 }

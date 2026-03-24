@@ -42,3 +42,7 @@ func (p *RKeeperProvider) GetOrders(_ context.Context, _, _ time.Time) ([]POSOrd
 func (p *RKeeperProvider) GetMenu(_ context.Context) (*POSMenu, error) {
 	return nil, fmt.Errorf("r-keeper provider not yet implemented")
 }
+
+func (p *RKeeperProvider) GetDailyAggregates(_ context.Context, _, _ time.Time) ([]POSDailyAggregate, error) {
+	return nil, fmt.Errorf("r-keeper provider not yet implemented")
+}

@@ -96,17 +96,17 @@ func (r *Loyalty) UpdateProgram(ctx context.Context, program *entity.LoyaltyProg
 
 func (r *Loyalty) CreateLevel(ctx context.Context, level *entity.LoyaltyLevel) error {
 	query := `
-		INSERT INTO loyalty_levels (program_id, name, threshold, reward_percent, sort_order)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO loyalty_levels (program_id, name, threshold, reward_percent, reward_type, reward_amount, sort_order)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id`
 
 	err := r.pg.DB().QueryRowContext(ctx, query,
-		level.ProgramID, level.Name, level.Threshold, level.RewardPercent, level.SortOrder,
+		level.ProgramID, level.Name, level.Threshold, level.RewardPercent,
+		level.RewardType, level.RewardAmount, level.SortOrder,
 	).Scan(&level.ID)
 	if err != nil {
 		return fmt.Errorf("loyalty.CreateLevel: %w", err)
 	}
-
 	return nil
 }
 
@@ -123,11 +123,12 @@ func (r *Loyalty) GetLevelsByProgramID(ctx context.Context, programID int) ([]en
 func (r *Loyalty) UpdateLevel(ctx context.Context, level *entity.LoyaltyLevel) error {
 	query := `
 		UPDATE loyalty_levels
-		SET name = $1, threshold = $2, reward_percent = $3, sort_order = $4
-		WHERE id = $5`
+		SET name = $1, threshold = $2, reward_percent = $3, reward_type = $4, reward_amount = $5, sort_order = $6
+		WHERE id = $7`
 
 	result, err := r.pg.DB().ExecContext(ctx, query,
-		level.Name, level.Threshold, level.RewardPercent, level.SortOrder, level.ID)
+		level.Name, level.Threshold, level.RewardPercent,
+		level.RewardType, level.RewardAmount, level.SortOrder, level.ID)
 	if err != nil {
 		return fmt.Errorf("loyalty.UpdateLevel: %w", err)
 	}
@@ -139,8 +140,17 @@ func (r *Loyalty) UpdateLevel(ctx context.Context, level *entity.LoyaltyLevel) e
 	if rows == 0 {
 		return fmt.Errorf("loyalty.UpdateLevel: %w", sql.ErrNoRows)
 	}
-
 	return nil
+}
+
+func (r *Loyalty) GetClientsWithLevels(ctx context.Context) ([]entity.ClientLoyalty, error) {
+	var clients []entity.ClientLoyalty
+	err := r.pg.DB().SelectContext(ctx, &clients,
+		"SELECT * FROM client_loyalty WHERE level_id IS NOT NULL")
+	if err != nil {
+		return nil, fmt.Errorf("loyalty.GetClientsWithLevels: %w", err)
+	}
+	return clients, nil
 }
 
 func (r *Loyalty) DeleteLevel(ctx context.Context, id int) error {
@@ -232,4 +242,73 @@ func (r *Loyalty) GetTxStatsPerClient(ctx context.Context, orgID int) ([]entity.
 		return nil, fmt.Errorf("loyalty.GetTxStatsPerClient: %w", err)
 	}
 	return rows, nil
+}
+
+func (r *Loyalty) CreateReserve(ctx context.Context, reserve *entity.BalanceReserve) error {
+	query := `
+		INSERT INTO balance_reserves (client_id, program_id, amount, status, expires_at)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, created_at`
+
+	err := r.pg.DB().QueryRowContext(ctx, query,
+		reserve.ClientID, reserve.ProgramID, reserve.Amount, reserve.Status, reserve.ExpiresAt,
+	).Scan(&reserve.ID, &reserve.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("loyalty.CreateReserve: %w", err)
+	}
+	return nil
+}
+
+func (r *Loyalty) GetReserve(ctx context.Context, id int) (*entity.BalanceReserve, error) {
+	var reserve entity.BalanceReserve
+	err := r.pg.DB().GetContext(ctx, &reserve, "SELECT * FROM balance_reserves WHERE id = $1", id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("loyalty.GetReserve: %w", sql.ErrNoRows)
+		}
+		return nil, fmt.Errorf("loyalty.GetReserve: %w", err)
+	}
+	return &reserve, nil
+}
+
+func (r *Loyalty) UpdateReserve(ctx context.Context, reserve *entity.BalanceReserve) error {
+	query := `UPDATE balance_reserves SET status = $1 WHERE id = $2`
+	result, err := r.pg.DB().ExecContext(ctx, query, reserve.Status, reserve.ID)
+	if err != nil {
+		return fmt.Errorf("loyalty.UpdateReserve: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("loyalty.UpdateReserve rows: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("loyalty.UpdateReserve: %w", sql.ErrNoRows)
+	}
+	return nil
+}
+
+func (r *Loyalty) GetPendingReserves(ctx context.Context, clientID, programID int) ([]entity.BalanceReserve, error) {
+	var reserves []entity.BalanceReserve
+	query := `
+		SELECT * FROM balance_reserves
+		WHERE client_id = $1 AND program_id = $2 AND status = 'pending' AND expires_at > NOW()
+		ORDER BY created_at`
+	err := r.pg.DB().SelectContext(ctx, &reserves, query, clientID, programID)
+	if err != nil {
+		return nil, fmt.Errorf("loyalty.GetPendingReserves: %w", err)
+	}
+	return reserves, nil
+}
+
+func (r *Loyalty) ExpireOldReserves(ctx context.Context) (int, error) {
+	query := `UPDATE balance_reserves SET status = 'expired' WHERE status = 'pending' AND expires_at <= NOW()`
+	result, err := r.pg.DB().ExecContext(ctx, query)
+	if err != nil {
+		return 0, fmt.Errorf("loyalty.ExpireOldReserves: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("loyalty.ExpireOldReserves rows: %w", err)
+	}
+	return int(rows), nil
 }

@@ -27,3 +27,11 @@ export interface DashboardCharts {
   revenue: ChartPoint[]
   new_clients: ChartPoint[]
 }
+
+export interface DashboardSalesData {
+  revenue: number
+  avg_check: number
+  tx_count: number
+  loyalty_avg: number
+  non_loyalty_avg: number
+}

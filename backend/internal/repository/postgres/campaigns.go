@@ -251,3 +251,82 @@ func (r *Campaigns) GetMessageStats(ctx context.Context, campaignID int) (*entit
 
 	return &stats, nil
 }
+
+func (r *Campaigns) CreateClick(ctx context.Context, click *entity.CampaignClick) error {
+	query := `
+		INSERT INTO campaign_clicks (campaign_id, client_id, button_idx, url)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, clicked_at`
+
+	err := r.pg.DB().QueryRowContext(ctx, query,
+		click.CampaignID, click.ClientID, click.ButtonIdx, click.URL,
+	).Scan(&click.ID, &click.ClickedAt)
+	if err != nil {
+		return fmt.Errorf("campaigns.CreateClick: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Campaigns) GetClicksByCampaign(ctx context.Context, campaignID int) ([]entity.CampaignClick, error) {
+	var clicks []entity.CampaignClick
+	query := `SELECT * FROM campaign_clicks WHERE campaign_id = $1 ORDER BY clicked_at DESC`
+	err := r.pg.DB().SelectContext(ctx, &clicks, query, campaignID)
+	if err != nil {
+		return nil, fmt.Errorf("campaigns.GetClicksByCampaign: %w", err)
+	}
+
+	return clicks, nil
+}
+
+func (r *Campaigns) GetCampaignAnalytics(ctx context.Context, campaignID int) (*entity.CampaignAnalyticsDetail, error) {
+	var msgStats struct {
+		Total  int `db:"total"`
+		Sent   int `db:"sent"`
+		Failed int `db:"failed"`
+	}
+
+	msgQuery := `
+		SELECT
+			COUNT(*) as total,
+			COUNT(*) FILTER (WHERE status = 'sent') as sent,
+			COUNT(*) FILTER (WHERE status = 'failed') as failed
+		FROM campaign_messages
+		WHERE campaign_id = $1`
+
+	err := r.pg.DB().GetContext(ctx, &msgStats, msgQuery, campaignID)
+	if err != nil {
+		return nil, fmt.Errorf("campaigns.GetCampaignAnalytics messages: %w", err)
+	}
+
+	var clicked int
+	clickQuery := `SELECT COUNT(DISTINCT client_id) FROM campaign_clicks WHERE campaign_id = $1`
+	err = r.pg.DB().GetContext(ctx, &clicked, clickQuery, campaignID)
+	if err != nil {
+		return nil, fmt.Errorf("campaigns.GetCampaignAnalytics clicks: %w", err)
+	}
+
+	var clickRate float64
+	if msgStats.Sent > 0 {
+		clickRate = float64(clicked) / float64(msgStats.Sent)
+	}
+
+	return &entity.CampaignAnalyticsDetail{
+		Total:     msgStats.Total,
+		Sent:      msgStats.Sent,
+		Failed:    msgStats.Failed,
+		Clicked:   clicked,
+		ClickRate: clickRate,
+	}, nil
+}
+
+func (r *Campaigns) GetScheduledCampaigns(ctx context.Context, before time.Time) ([]entity.Campaign, error) {
+	var campaigns []entity.Campaign
+	query := `SELECT * FROM campaigns WHERE status = 'scheduled' AND scheduled_at <= $1`
+	err := r.pg.DB().SelectContext(ctx, &campaigns, query, before)
+	if err != nil {
+		return nil, fmt.Errorf("campaigns.GetScheduledCampaigns: %w", err)
+	}
+
+	return campaigns, nil
+}

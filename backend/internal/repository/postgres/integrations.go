@@ -160,6 +160,111 @@ func (r *Integrations) UpdateLastSync(ctx context.Context, id int, status string
 	return nil
 }
 
+func (r *Integrations) UpsertAggregate(ctx context.Context, agg *entity.IntegrationAggregate) error {
+	query := `
+		INSERT INTO integration_aggregates (integration_id, date, revenue, avg_check, tx_count, guest_count, matched_count)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (integration_id, date) DO UPDATE
+		SET revenue       = EXCLUDED.revenue,
+		    avg_check      = EXCLUDED.avg_check,
+		    tx_count       = EXCLUDED.tx_count,
+		    guest_count    = EXCLUDED.guest_count,
+		    matched_count  = EXCLUDED.matched_count,
+		    synced_at      = NOW()
+		RETURNING id, synced_at`
+
+	return r.pg.DB().QueryRowContext(ctx, query,
+		agg.IntegrationID, agg.Date, agg.Revenue, agg.AvgCheck, agg.TxCount, agg.GuestCount, agg.MatchedCount,
+	).Scan(&agg.ID, &agg.SyncedAt)
+}
+
+func (r *Integrations) GetAggregates(ctx context.Context, integrationID int, from, to time.Time) ([]entity.IntegrationAggregate, error) {
+	var aggs []entity.IntegrationAggregate
+	err := r.pg.DB().SelectContext(ctx, &aggs,
+		"SELECT * FROM integration_aggregates WHERE integration_id = $1 AND date BETWEEN $2 AND $3 ORDER BY date",
+		integrationID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("integrations.GetAggregates: %w", err)
+	}
+	return aggs, nil
+}
+
+func (r *Integrations) GetDashboardAggregates(ctx context.Context, orgID int, from, to time.Time) (*entity.DashboardAggregates, error) {
+	result := &entity.DashboardAggregates{}
+	query := `
+		SELECT
+			COALESCE(SUM(ia.revenue), 0) AS revenue,
+			CASE WHEN SUM(ia.tx_count) > 0
+				THEN SUM(ia.revenue) / SUM(ia.tx_count)
+				ELSE 0
+			END AS avg_check,
+			COALESCE(SUM(ia.tx_count), 0) AS tx_count,
+			COALESCE((
+				SELECT CASE WHEN SUM(ia2.tx_count) > 0
+					THEN SUM(ia2.revenue) / SUM(ia2.tx_count)
+					ELSE 0
+				END
+				FROM integration_aggregates ia2
+				JOIN integrations i2 ON i2.id = ia2.integration_id
+				WHERE i2.org_id = $1 AND ia2.date BETWEEN $2 AND $3
+				AND ia2.matched_count > 0
+			), 0) AS loyalty_avg,
+			COALESCE((
+				SELECT CASE WHEN SUM(ia3.tx_count - ia3.matched_count) > 0
+					THEN SUM(ia3.revenue * (1.0 - CAST(ia3.matched_count AS FLOAT) / NULLIF(ia3.tx_count, 0))) / SUM(ia3.tx_count - ia3.matched_count)
+					ELSE 0
+				END
+				FROM integration_aggregates ia3
+				JOIN integrations i3 ON i3.id = ia3.integration_id
+				WHERE i3.org_id = $1 AND ia3.date BETWEEN $2 AND $3
+				AND ia3.tx_count > ia3.matched_count
+			), 0) AS non_loyalty_avg
+		FROM integration_aggregates ia
+		JOIN integrations i ON i.id = ia.integration_id
+		WHERE i.org_id = $1 AND ia.date BETWEEN $2 AND $3`
+
+	err := r.pg.DB().GetContext(ctx, result, query, orgID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("integrations.GetDashboardAggregates: %w", err)
+	}
+	return result, nil
+}
+
+func (r *Integrations) UpsertClientMap(ctx context.Context, mapping *entity.IntegrationClientMap) error {
+	query := `
+		INSERT INTO integration_client_map (integration_id, external_phone, client_id, matched_at)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (integration_id, external_phone) DO UPDATE
+		SET client_id   = EXCLUDED.client_id,
+		    matched_at  = EXCLUDED.matched_at
+		RETURNING id, created_at`
+
+	return r.pg.DB().QueryRowContext(ctx, query,
+		mapping.IntegrationID, mapping.ExternalPhone, mapping.ClientID, mapping.MatchedAt,
+	).Scan(&mapping.ID, &mapping.CreatedAt)
+}
+
+func (r *Integrations) MatchClients(ctx context.Context, integrationID int) (int, error) {
+	query := `
+		UPDATE integration_client_map icm
+		SET client_id = bc.id, matched_at = NOW()
+		FROM bot_clients bc
+		WHERE bc.phone_normalized = icm.external_phone
+		  AND icm.integration_id = $1
+		  AND icm.client_id IS NULL`
+
+	result, err := r.pg.DB().ExecContext(ctx, query, integrationID)
+	if err != nil {
+		return 0, fmt.Errorf("integrations.MatchClients: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("integrations.MatchClients rows: %w", err)
+	}
+	return int(rows), nil
+}
+
 func (r *Integrations) UpsertOrder(ctx context.Context, order *entity.ExternalOrder) error {
 	itemsVal, err := order.Items.Value()
 	if err != nil {

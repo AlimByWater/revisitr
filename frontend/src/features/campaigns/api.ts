@@ -2,6 +2,8 @@ import { api } from '@/lib/api'
 import type {
   Campaign,
   AutoScenario,
+  AutoActionLog,
+  CampaignAnalyticsDetail,
   CreateCampaignRequest,
   UpdateCampaignRequest,
   CreateScenarioRequest,
@@ -76,5 +78,65 @@ export const campaignsApi = {
 
   deleteScenario: async (id: number): Promise<void> => {
     await api.delete(`/campaigns/scenarios/${id}`)
+  },
+
+  // Campaign scheduling & analytics
+  schedule: async (id: number, scheduledAt: string): Promise<void> => {
+    await api.post(`/campaigns/${id}/schedule`, { scheduled_at: scheduledAt })
+  },
+
+  cancelSchedule: async (id: number): Promise<void> => {
+    await api.delete(`/campaigns/${id}/schedule`)
+  },
+
+  getAnalytics: async (id: number): Promise<CampaignAnalyticsDetail> => {
+    const response = await api.get<CampaignAnalyticsDetail>(
+      `/campaigns/${id}/analytics`,
+    )
+    return response.data
+  },
+
+  recordClick: async (
+    id: number,
+    clientId: number,
+    buttonIdx?: number,
+    url?: string,
+  ): Promise<void> => {
+    await api.post(`/campaigns/${id}/click`, {
+      client_id: clientId,
+      button_idx: buttonIdx,
+      url,
+    })
+  },
+
+  // Auto-action templates
+  getTemplates: async (): Promise<AutoScenario[]> => {
+    const response = await api.get<AutoScenario[]>(
+      '/campaigns/scenarios/templates',
+    )
+    return response.data
+  },
+
+  cloneTemplate: async (
+    key: string,
+    botId: number,
+  ): Promise<AutoScenario> => {
+    const response = await api.post<AutoScenario>(
+      `/campaigns/scenarios/templates/${key}/clone`,
+      { bot_id: botId },
+    )
+    return response.data
+  },
+
+  getActionLog: async (
+    scenarioId: number,
+    limit = 20,
+    offset = 0,
+  ): Promise<PaginatedResponse<AutoActionLog>> => {
+    const response = await api.get<PaginatedResponse<AutoActionLog>>(
+      `/campaigns/scenarios/${scenarioId}/log`,
+      { params: { limit, offset } },
+    )
+    return response.data
   },
 }

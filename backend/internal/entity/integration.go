@@ -103,6 +103,35 @@ type IntegrationStats struct {
 	UnmatchedOrders  int     `json:"unmatched_orders" db:"unmatched_orders"`
 }
 
+type IntegrationAggregate struct {
+	ID            int       `json:"id"             db:"id"`
+	IntegrationID int       `json:"integration_id" db:"integration_id"`
+	Date          time.Time `json:"date"           db:"date"`
+	Revenue       float64   `json:"revenue"        db:"revenue"`
+	AvgCheck      float64   `json:"avg_check"      db:"avg_check"`
+	TxCount       int       `json:"tx_count"       db:"tx_count"`
+	GuestCount    int       `json:"guest_count"    db:"guest_count"`
+	MatchedCount  int       `json:"matched_count"  db:"matched_count"`
+	SyncedAt      time.Time `json:"synced_at"      db:"synced_at"`
+}
+
+type IntegrationClientMap struct {
+	ID            int        `json:"id"              db:"id"`
+	IntegrationID int        `json:"integration_id"  db:"integration_id"`
+	ExternalPhone string     `json:"external_phone"  db:"external_phone"`
+	ClientID      *int       `json:"client_id"       db:"client_id"`
+	MatchedAt     *time.Time `json:"matched_at"      db:"matched_at"`
+	CreatedAt     time.Time  `json:"created_at"      db:"created_at"`
+}
+
+type DashboardAggregates struct {
+	Revenue       float64 `json:"revenue"         db:"revenue"`
+	AvgCheck      float64 `json:"avg_check"       db:"avg_check"`
+	TxCount       int     `json:"tx_count"        db:"tx_count"`
+	LoyaltyAvg    float64 `json:"loyalty_avg"     db:"loyalty_avg"`
+	NonLoyaltyAvg float64 `json:"non_loyalty_avg" db:"non_loyalty_avg"`
+}
+
 type ExternalOrder struct {
 	ID            int        `json:"id"             db:"id"`
 	IntegrationID int        `json:"integration_id" db:"integration_id"`

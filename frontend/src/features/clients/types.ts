@@ -10,6 +10,8 @@ export interface ClientProfile {
   birth_date?: string
   city?: string
   os?: string
+  phone_normalized?: string
+  qr_code?: string
   tags: string[]
   registered_at: string
   bot_name: string

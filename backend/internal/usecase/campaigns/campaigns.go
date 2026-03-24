@@ -21,6 +21,10 @@ type campaignsRepo interface {
 	UpdateMessageStatus(ctx context.Context, id int, status string, errorMsg *string) error
 	GetMessagesByCampaignID(ctx context.Context, campaignID, limit, offset int) ([]entity.CampaignMessage, int, error)
 	GetMessageStats(ctx context.Context, campaignID int) (*entity.CampaignStats, error)
+	CreateClick(ctx context.Context, click *entity.CampaignClick) error
+	GetClicksByCampaign(ctx context.Context, campaignID int) ([]entity.CampaignClick, error)
+	GetCampaignAnalytics(ctx context.Context, campaignID int) (*entity.CampaignAnalyticsDetail, error)
+	GetScheduledCampaigns(ctx context.Context, before time.Time) ([]entity.Campaign, error)
 }
 
 type scenariosRepo interface {
@@ -29,6 +33,8 @@ type scenariosRepo interface {
 	GetByID(ctx context.Context, id int) (*entity.AutoScenario, error)
 	Update(ctx context.Context, scenario *entity.AutoScenario) error
 	Delete(ctx context.Context, id int) error
+	GetTemplates(ctx context.Context) ([]entity.AutoScenario, error)
+	GetActionLog(ctx context.Context, scenarioID, limit, offset int) ([]entity.AutoActionLog, int, error)
 }
 
 type clientsRepo interface {
@@ -168,22 +174,103 @@ func (uc *Usecase) Send(ctx context.Context, orgID, id int) error {
 		return ErrNotCampaignOwner
 	}
 
-	if campaign.Status != "draft" {
-		return ErrCampaignAlreadySent
+	if campaign.Status != "draft" && campaign.Status != "scheduled" {
+		return ErrCampaignNotSendable
 	}
 
-	// MVP: just update status to "sent" and set sent_at
-	now := time.Now()
-	if err := uc.campaigns.UpdateStatus(ctx, id, "sent"); err != nil {
+	if err := uc.campaigns.UpdateStatus(ctx, id, "sending"); err != nil {
 		return fmt.Errorf("send campaign update status: %w", err)
 	}
 
-	campaign.SentAt = &now
+	return nil
+}
+
+func (uc *Usecase) Schedule(ctx context.Context, orgID, id int, at time.Time) error {
+	campaign, err := uc.campaigns.GetByID(ctx, id)
+	if err != nil {
+		return ErrCampaignNotFound
+	}
+
+	if campaign.OrgID != orgID {
+		return ErrNotCampaignOwner
+	}
+
+	if campaign.Status != "draft" {
+		return ErrCampaignNotDraft
+	}
+
+	campaign.Status = "scheduled"
+	campaign.ScheduledAt = &at
+
+	if err := uc.campaigns.UpdateStatus(ctx, id, "scheduled"); err != nil {
+		return fmt.Errorf("schedule campaign update status: %w", err)
+	}
+
+	campaign.ScheduledAt = &at
 	if err := uc.campaigns.Update(ctx, campaign); err != nil {
-		uc.logger.Error("send campaign update sent_at", "error", err, "campaign_id", id)
+		return fmt.Errorf("schedule campaign update scheduled_at: %w", err)
 	}
 
 	return nil
+}
+
+func (uc *Usecase) CancelScheduled(ctx context.Context, orgID, id int) error {
+	campaign, err := uc.campaigns.GetByID(ctx, id)
+	if err != nil {
+		return ErrCampaignNotFound
+	}
+
+	if campaign.OrgID != orgID {
+		return ErrNotCampaignOwner
+	}
+
+	if campaign.Status != "scheduled" {
+		return ErrCampaignNotScheduled
+	}
+
+	if err := uc.campaigns.UpdateStatus(ctx, id, "draft"); err != nil {
+		return fmt.Errorf("cancel scheduled campaign update status: %w", err)
+	}
+
+	campaign.ScheduledAt = nil
+	if err := uc.campaigns.Update(ctx, campaign); err != nil {
+		return fmt.Errorf("cancel scheduled campaign clear scheduled_at: %w", err)
+	}
+
+	return nil
+}
+
+func (uc *Usecase) RecordClick(ctx context.Context, campaignID, clientID int, buttonIdx *int, url *string) error {
+	click := &entity.CampaignClick{
+		CampaignID: campaignID,
+		ClientID:   clientID,
+		ButtonIdx:  buttonIdx,
+		URL:        url,
+	}
+
+	if err := uc.campaigns.CreateClick(ctx, click); err != nil {
+		return fmt.Errorf("record click: %w", err)
+	}
+
+	return nil
+}
+
+func (uc *Usecase) GetAnalytics(ctx context.Context, orgID, id int) (*entity.CampaignAnalyticsDetail, error) {
+	campaign, err := uc.campaigns.GetByID(ctx, id)
+	if err != nil {
+		return nil, ErrCampaignNotFound
+	}
+
+	if campaign.OrgID != orgID {
+		return nil, ErrNotCampaignOwner
+	}
+
+	analytics, err := uc.campaigns.GetCampaignAnalytics(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get analytics: %w", err)
+	}
+
+	return analytics, nil
 }
 
 func (uc *Usecase) PreviewAudience(ctx context.Context, orgID int, filter entity.AudienceFilter) (int, error) {
@@ -209,6 +296,9 @@ func (uc *Usecase) CreateScenario(ctx context.Context, orgID int, req *entity.Cr
 		TriggerType:   req.TriggerType,
 		TriggerConfig: req.TriggerConfig,
 		Message:       req.Message,
+		Actions:       req.Actions,
+		Timing:        req.Timing,
+		Conditions:    req.Conditions,
 		IsActive:      false,
 	}
 
@@ -249,6 +339,15 @@ func (uc *Usecase) UpdateScenario(ctx context.Context, orgID, id int, req *entit
 	}
 	if req.IsActive != nil {
 		scenario.IsActive = *req.IsActive
+	}
+	if req.Actions != nil {
+		scenario.Actions = *req.Actions
+	}
+	if req.Timing != nil {
+		scenario.Timing = *req.Timing
+	}
+	if req.Conditions != nil {
+		scenario.Conditions = *req.Conditions
 	}
 
 	if err := uc.scenarios.Update(ctx, scenario); err != nil {
@@ -292,4 +391,68 @@ func (uc *Usecase) ToggleScenario(ctx context.Context, orgID, id int, active boo
 	}
 
 	return nil
+}
+
+func (uc *Usecase) GetTemplates(ctx context.Context) ([]entity.AutoScenario, error) {
+	templates, err := uc.scenarios.GetTemplates(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get templates: %w", err)
+	}
+	return templates, nil
+}
+
+func (uc *Usecase) CloneTemplate(ctx context.Context, orgID int, templateKey string, botID int) (*entity.AutoScenario, error) {
+	templates, err := uc.scenarios.GetTemplates(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("clone template get templates: %w", err)
+	}
+
+	var template *entity.AutoScenario
+	for i := range templates {
+		if templates[i].TemplateKey != nil && *templates[i].TemplateKey == templateKey {
+			template = &templates[i]
+			break
+		}
+	}
+	if template == nil {
+		return nil, ErrScenarioNotFound
+	}
+
+	scenario := &entity.AutoScenario{
+		OrgID:         orgID,
+		BotID:         botID,
+		Name:          template.Name,
+		TriggerType:   template.TriggerType,
+		TriggerConfig: template.TriggerConfig,
+		Message:       template.Message,
+		Actions:       template.Actions,
+		Timing:        template.Timing,
+		Conditions:    template.Conditions,
+		IsTemplate:    false,
+		IsActive:      false,
+	}
+
+	if err := uc.scenarios.Create(ctx, scenario); err != nil {
+		return nil, fmt.Errorf("clone template create: %w", err)
+	}
+
+	return scenario, nil
+}
+
+func (uc *Usecase) GetActionLog(ctx context.Context, orgID, scenarioID, limit, offset int) ([]entity.AutoActionLog, int, error) {
+	scenario, err := uc.scenarios.GetByID(ctx, scenarioID)
+	if err != nil {
+		return nil, 0, ErrScenarioNotFound
+	}
+
+	if scenario.OrgID != orgID {
+		return nil, 0, ErrNotScenarioOwner
+	}
+
+	logs, total, err := uc.scenarios.GetActionLog(ctx, scenarioID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get action log: %w", err)
+	}
+
+	return logs, total, nil
 }

@@ -3,6 +3,7 @@ import type {
   DashboardWidgets,
   DashboardCharts,
   DashboardFilter,
+  DashboardSalesData,
 } from './types'
 
 export const dashboardApi = {
@@ -16,6 +17,13 @@ export const dashboardApi = {
   getCharts: async (filter: DashboardFilter): Promise<DashboardCharts> => {
     const response = await api.get<DashboardCharts>('/dashboard/charts', {
       params: filter,
+    })
+    return response.data
+  },
+
+  getSalesData: async (from: string, to: string): Promise<DashboardSalesData> => {
+    const response = await api.get<DashboardSalesData>('/dashboard/sales', {
+      params: { from, to },
     })
     return response.data
   },

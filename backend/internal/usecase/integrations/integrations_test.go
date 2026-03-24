@@ -50,6 +50,12 @@ func (m *mockIntegrationsRepo) GetOrdersByIntegration(_ context.Context, _ int, 
 func (m *mockIntegrationsRepo) GetSyncStats(_ context.Context, _ int) (*entity.IntegrationStats, error) {
 	return &entity.IntegrationStats{}, nil
 }
+func (m *mockIntegrationsRepo) GetAggregates(_ context.Context, _ int, _, _ time.Time) ([]entity.IntegrationAggregate, error) {
+	return nil, nil
+}
+func (m *mockIntegrationsRepo) GetDashboardAggregates(_ context.Context, _ int, _, _ time.Time) (*entity.DashboardAggregates, error) {
+	return &entity.DashboardAggregates{}, nil
+}
 
 type mockSyncService struct {
 	syncFn func(ctx context.Context, integration *entity.Integration) error

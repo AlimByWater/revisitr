@@ -14,6 +14,9 @@ type integrationsRepo interface {
 	UpsertOrder(ctx context.Context, order *entity.ExternalOrder) error
 	GetByID(ctx context.Context, id int) (*entity.Integration, error)
 	GetActive(ctx context.Context) ([]entity.Integration, error)
+	UpsertAggregate(ctx context.Context, agg *entity.IntegrationAggregate) error
+	UpsertClientMap(ctx context.Context, mapping *entity.IntegrationClientMap) error
+	MatchClients(ctx context.Context, integrationID int) (int, error)
 }
 
 type clientsRepo interface {
@@ -107,6 +110,62 @@ func (s *SyncService) Sync(ctx context.Context, integration *entity.Integration)
 
 	s.integrations.UpdateLastSync(ctx, integration.ID, "active")
 	s.logger.Info("sync completed", "integration_id", integration.ID, "orders_synced", len(orders))
+	return nil
+}
+
+// SyncAggregates syncs daily aggregates and client phone mappings from a POS provider.
+func (s *SyncService) SyncAggregates(ctx context.Context, integration *entity.Integration) error {
+	provider, err := NewProvider(integration)
+	if err != nil {
+		return fmt.Errorf("create provider: %w", err)
+	}
+
+	since := time.Now().Add(-30 * 24 * time.Hour)
+	if integration.LastSyncAt != nil {
+		since = *integration.LastSyncAt
+	}
+
+	aggregates, err := provider.GetDailyAggregates(ctx, since, time.Now())
+	if err != nil {
+		s.integrations.UpdateLastSync(ctx, integration.ID, "error")
+		return fmt.Errorf("get daily aggregates: %w", err)
+	}
+
+	for _, agg := range aggregates {
+		intAgg := &entity.IntegrationAggregate{
+			IntegrationID: integration.ID,
+			Date:          agg.Date,
+			Revenue:       agg.Revenue,
+			AvgCheck:      agg.AvgCheck,
+			TxCount:       agg.TxCount,
+			GuestCount:    agg.GuestCount,
+		}
+		if err := s.integrations.UpsertAggregate(ctx, intAgg); err != nil {
+			s.logger.Error("upsert aggregate", "error", err, "date", agg.Date, "integration_id", integration.ID)
+		}
+
+		// Insert phone mappings for client matching
+		for _, phone := range agg.Phones {
+			mapping := &entity.IntegrationClientMap{
+				IntegrationID: integration.ID,
+				ExternalPhone: phone,
+			}
+			if err := s.integrations.UpsertClientMap(ctx, mapping); err != nil {
+				s.logger.Error("upsert client map", "error", err, "phone", phone)
+			}
+		}
+	}
+
+	// Match phones to existing bot_clients
+	matched, err := s.integrations.MatchClients(ctx, integration.ID)
+	if err != nil {
+		s.logger.Error("match clients", "error", err, "integration_id", integration.ID)
+	} else if matched > 0 {
+		s.logger.Info("matched clients", "integration_id", integration.ID, "count", matched)
+	}
+
+	s.integrations.UpdateLastSync(ctx, integration.ID, "active")
+	s.logger.Info("aggregate sync completed", "integration_id", integration.ID, "days_synced", len(aggregates))
 	return nil
 }
 

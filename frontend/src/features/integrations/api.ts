@@ -1,6 +1,8 @@
 import { api } from '@/lib/api'
 import type {
   Integration,
+  IntegrationAggregate,
+  DashboardAggregates,
   CreateIntegrationRequest,
   UpdateIntegrationRequest,
   ExternalOrder,
@@ -80,6 +82,28 @@ export const integrationsApi = {
     const response = await api.get<IntegrationStats>(
       `/integrations/${id}/stats`,
     )
+    return response.data
+  },
+
+  getAggregates: async (
+    id: number,
+    from: string,
+    to: string,
+  ): Promise<IntegrationAggregate[]> => {
+    const response = await api.get<IntegrationAggregate[]>(
+      `/integrations/${id}/aggregates`,
+      { params: { from, to } },
+    )
+    return response.data
+  },
+
+  getSalesData: async (
+    from: string,
+    to: string,
+  ): Promise<DashboardAggregates> => {
+    const response = await api.get<DashboardAggregates>('/dashboard/sales', {
+      params: { from, to },
+    })
     return response.data
   },
 }

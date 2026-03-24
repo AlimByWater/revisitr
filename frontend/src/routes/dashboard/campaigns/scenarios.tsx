@@ -16,6 +16,9 @@ const triggerLabels: Record<AutoScenario['trigger_type'], string> = {
   bonus_threshold: 'Порог бонусов',
   level_up: 'Новый уровень',
   birthday: 'День рождения',
+  holiday: 'Праздник',
+  registration: 'Регистрация',
+  level_change: 'Смена уровня',
 }
 
 export default function ScenariosPage() {

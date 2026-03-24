@@ -8,8 +8,11 @@ import (
 )
 
 type AudienceFilter struct {
-	BotID *int     `json:"bot_id,omitempty"`
-	Tags  []string `json:"tags,omitempty"`
+	BotID     *int     `json:"bot_id,omitempty"`
+	Tags      []string `json:"tags,omitempty"`
+	SegmentID *int     `json:"segment_id,omitempty"`
+	LevelID   *int     `json:"level_id,omitempty"`
+	ClientIDs []int    `json:"client_ids,omitempty"`
 }
 
 func (f *AudienceFilter) Scan(src interface{}) error {
@@ -62,21 +65,72 @@ func (s CampaignStats) Value() (driver.Value, error) {
 	return b, nil
 }
 
+type CampaignButton struct {
+	Text string `json:"text"`
+	URL  string `json:"url"`
+}
+
+type CampaignButtons []CampaignButton
+
+func (b *CampaignButtons) Scan(src interface{}) error {
+	switch v := src.(type) {
+	case []byte:
+		return json.Unmarshal(v, b)
+	case string:
+		return json.Unmarshal([]byte(v), b)
+	case nil:
+		*b = CampaignButtons{}
+		return nil
+	default:
+		return fmt.Errorf("CampaignButtons.Scan: unsupported type %T", src)
+	}
+}
+
+func (b CampaignButtons) Value() (driver.Value, error) {
+	if b == nil {
+		return []byte("[]"), nil
+	}
+	data, err := json.Marshal(b)
+	if err != nil {
+		return nil, fmt.Errorf("CampaignButtons.Value: %w", err)
+	}
+	return data, nil
+}
+
+type CampaignClick struct {
+	ID         int       `db:"id" json:"id"`
+	CampaignID int       `db:"campaign_id" json:"campaign_id"`
+	ClientID   int       `db:"client_id" json:"client_id"`
+	ButtonIdx  *int      `db:"button_idx" json:"button_idx,omitempty"`
+	URL        *string   `db:"url" json:"url,omitempty"`
+	ClickedAt  time.Time `db:"clicked_at" json:"clicked_at"`
+}
+
+type CampaignAnalyticsDetail struct {
+	Total     int     `json:"total"`
+	Sent      int     `json:"sent"`
+	Failed    int     `json:"failed"`
+	Clicked   int     `json:"clicked"`
+	ClickRate float64 `json:"click_rate"`
+}
+
 type Campaign struct {
-	ID             int            `db:"id" json:"id"`
-	OrgID          int            `db:"org_id" json:"org_id"`
-	BotID          int            `db:"bot_id" json:"bot_id"`
-	Name           string         `db:"name" json:"name"`
-	Type           string         `db:"type" json:"type"`
-	Status         string         `db:"status" json:"status"`
-	AudienceFilter AudienceFilter `db:"audience_filter" json:"audience_filter"`
-	Message        string         `db:"message" json:"message"`
-	MediaURL       *string        `db:"media_url" json:"media_url,omitempty"`
-	ScheduledAt    *time.Time     `db:"scheduled_at" json:"scheduled_at,omitempty"`
-	SentAt         *time.Time     `db:"sent_at" json:"sent_at,omitempty"`
-	Stats          CampaignStats  `db:"stats" json:"stats"`
-	CreatedAt      time.Time      `db:"created_at" json:"created_at"`
-	UpdatedAt      time.Time      `db:"updated_at" json:"updated_at"`
+	ID             int             `db:"id" json:"id"`
+	OrgID          int             `db:"org_id" json:"org_id"`
+	BotID          int             `db:"bot_id" json:"bot_id"`
+	Name           string          `db:"name" json:"name"`
+	Type           string          `db:"type" json:"type"`
+	Status         string          `db:"status" json:"status"`
+	AudienceFilter AudienceFilter  `db:"audience_filter" json:"audience_filter"`
+	Message        string          `db:"message" json:"message"`
+	MediaURL       *string         `db:"media_url" json:"media_url,omitempty"`
+	Buttons        CampaignButtons `db:"buttons" json:"buttons"`
+	TrackingMode   string          `db:"tracking_mode" json:"tracking_mode"`
+	ScheduledAt    *time.Time      `db:"scheduled_at" json:"scheduled_at,omitempty"`
+	SentAt         *time.Time      `db:"sent_at" json:"sent_at,omitempty"`
+	Stats          CampaignStats   `db:"stats" json:"stats"`
+	CreatedAt      time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt      time.Time       `db:"updated_at" json:"updated_at"`
 }
 
 type CampaignMessage struct {

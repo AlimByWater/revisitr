@@ -16,6 +16,7 @@ export interface POSLocation {
   is_active: boolean
   created_at: string
   updated_at: string
+  bot_id?: number
 }
 
 export interface CreatePOSRequest {
@@ -23,4 +24,5 @@ export interface CreatePOSRequest {
   address: string
   phone: string
   schedule: Schedule
+  bot_id?: number
 }

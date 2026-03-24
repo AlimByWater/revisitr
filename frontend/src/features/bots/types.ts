@@ -8,6 +8,7 @@ export interface Bot {
   created_at: string
   updated_at: string
   client_count?: number
+  program_id?: number
 }
 
 export interface BotSettings {
@@ -33,4 +34,5 @@ export interface FormField {
 export interface CreateBotRequest {
   name: string
   token: string
+  program_id?: number
 }

@@ -78,6 +78,26 @@ export interface POSMenuItem {
   description?: string
 }
 
+export interface IntegrationAggregate {
+  id: number
+  integration_id: number
+  date: string
+  revenue: number
+  avg_check: number
+  tx_count: number
+  guest_count: number
+  matched_count: number
+  synced_at: string
+}
+
+export interface DashboardAggregates {
+  revenue: number
+  avg_check: number
+  tx_count: number
+  loyalty_avg: number
+  non_loyalty_avg: number
+}
+
 export interface PaginatedResponse<T> {
   items: T[]
   total: number

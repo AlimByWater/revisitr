@@ -20,6 +20,7 @@ type clientsUsecase interface {
 	UpdateTags(ctx context.Context, orgID, clientID int, req *entity.UpdateClientRequest) error
 	GetStats(ctx context.Context, orgID int) (*entity.ClientStats, error)
 	CountByFilter(ctx context.Context, orgID int, filter entity.ClientFilter) (int, error)
+	IdentifyClient(ctx context.Context, orgID int, phone, qrCode string) (*entity.BotClient, error)
 }
 
 type Group struct {
@@ -44,6 +45,7 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handleList,
 		g.handleStats,
 		g.handleCount,
+		g.handleIdentify,
 		g.handleGet,
 		g.handleUpdate,
 	}
@@ -103,6 +105,28 @@ func (g *Group) handleCount() (string, string, gin.HandlerFunc) {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"count": count})
+	}
+}
+
+func (g *Group) handleIdentify() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/identify", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		phone := c.Query("phone")
+		qrCode := c.Query("qr_code")
+
+		if phone == "" && qrCode == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "phone or qr_code query parameter required"})
+			return
+		}
+
+		client, err := g.uc.IdentifyClient(c.Request.Context(), orgID.(int), phone, qrCode)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, client)
 	}
 }
 

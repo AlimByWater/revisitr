@@ -55,6 +55,8 @@ export default function ProgramDetailPage() {
         name: '',
         threshold: 0,
         reward_percent: 0,
+        reward_type: 'percent' as const,
+        reward_amount: 0,
         sort_order: nextOrder,
       },
     ])

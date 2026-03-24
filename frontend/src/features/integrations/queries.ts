@@ -88,3 +88,23 @@ export function useTestConnectionMutation() {
     [],
   )
 }
+
+export function useIntegrationAggregatesQuery(
+  id: number,
+  from: string,
+  to: string,
+) {
+  return useApiQuery(
+    id && from && to
+      ? `integrations-${id}-aggregates-${from}-${to}`
+      : null,
+    () => integrationsApi.getAggregates(id, from, to),
+  )
+}
+
+export function useSalesDataQuery(from: string, to: string) {
+  return useApiQuery(
+    from && to ? `dashboard-sales-${from}-${to}` : null,
+    () => integrationsApi.getSalesData(from, to),
+  )
+}

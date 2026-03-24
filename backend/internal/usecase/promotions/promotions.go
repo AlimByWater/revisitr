@@ -25,6 +25,10 @@ type promotionsRepo interface {
 	ListPromoCodes(ctx context.Context, orgID int) ([]entity.PromoCode, error)
 	IncrementPromoCodeUsage(ctx context.Context, id int) error
 	DeactivatePromoCode(ctx context.Context, id int) error
+	GetChannelAnalytics(ctx context.Context, orgID int) ([]entity.PromoChannelAnalytics, error)
+	CountUsagesByClient(ctx context.Context, promoCodeID, clientID int) (int, error)
+	GenerateUniqueCode(ctx context.Context, orgID int) (string, error)
+	GetPromoCodesByPromotion(ctx context.Context, promotionID int) ([]entity.PromoCode, error)
 }
 
 type Usecase struct {
@@ -44,6 +48,11 @@ func (uc *Usecase) Init(_ context.Context, logger *slog.Logger) error {
 // --- Promotions CRUD ---
 
 func (uc *Usecase) Create(ctx context.Context, orgID int, req *entity.CreatePromotionRequest) (*entity.Promotion, error) {
+	recurrence := req.Recurrence
+	if recurrence == "" {
+		recurrence = "one_time"
+	}
+
 	p := &entity.Promotion{
 		OrgID:      orgID,
 		Name:       req.Name,
@@ -53,6 +62,7 @@ func (uc *Usecase) Create(ctx context.Context, orgID int, req *entity.CreateProm
 		StartsAt:   req.StartsAt,
 		EndsAt:     req.EndsAt,
 		UsageLimit: req.UsageLimit,
+		Recurrence: recurrence,
 		Combinable: req.Combinable,
 		Active:     true,
 	}
@@ -147,6 +157,9 @@ func (uc *Usecase) CreatePromoCode(ctx context.Context, orgID int, req *entity.C
 		Code:            req.Code,
 		DiscountPercent: req.DiscountPercent,
 		BonusAmount:     req.BonusAmount,
+		Channel:         req.Channel,
+		PerUserLimit:    req.PerUserLimit,
+		Description:     req.Description,
 		StartsAt:        req.StartsAt,
 		EndsAt:          req.EndsAt,
 		Conditions:      req.Conditions,
@@ -236,4 +249,136 @@ func (uc *Usecase) GetApplicable(ctx context.Context, orgID, clientID int) ([]en
 		return nil, fmt.Errorf("get applicable promotions: %w", err)
 	}
 	return promos, nil
+}
+
+// ValidatePromoCode checks if a promo code is valid for the given client and order.
+func (uc *Usecase) ValidatePromoCode(ctx context.Context, orgID int, code string, clientID int, orderAmount float64) (*entity.PromoCodeValidation, error) {
+	pc, err := uc.promotions.GetPromoCodeByCode(ctx, orgID, code)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return &entity.PromoCodeValidation{Valid: false, Reason: ErrPromoCodeNotFound.Error()}, nil
+		}
+		return nil, fmt.Errorf("validate promo code: %w", err)
+	}
+
+	if !pc.Active {
+		return &entity.PromoCodeValidation{Valid: false, Reason: ErrPromoCodeInactive.Error()}, nil
+	}
+
+	now := time.Now()
+	if pc.StartsAt != nil && now.Before(*pc.StartsAt) {
+		return &entity.PromoCodeValidation{Valid: false, Reason: ErrPromoCodeNotActive.Error()}, nil
+	}
+	if pc.EndsAt != nil && now.After(*pc.EndsAt) {
+		return &entity.PromoCodeValidation{Valid: false, Reason: ErrPromoCodeExpired.Error()}, nil
+	}
+
+	if pc.UsageLimit != nil && pc.UsageCount >= *pc.UsageLimit {
+		return &entity.PromoCodeValidation{Valid: false, Reason: ErrPromoCodeLimitReached.Error()}, nil
+	}
+
+	if pc.PerUserLimit != nil {
+		count, err := uc.promotions.CountUsagesByClient(ctx, pc.ID, clientID)
+		if err != nil {
+			return nil, fmt.Errorf("validate promo code count usages: %w", err)
+		}
+		if count >= *pc.PerUserLimit {
+			return &entity.PromoCodeValidation{Valid: false, Reason: ErrPerUserLimitExceeded.Error()}, nil
+		}
+	}
+
+	if pc.Conditions.MinAmount != nil && orderAmount < *pc.Conditions.MinAmount {
+		return &entity.PromoCodeValidation{Valid: false, Reason: ErrMinAmountNotMet.Error()}, nil
+	}
+
+	return &entity.PromoCodeValidation{
+		Valid: true,
+		Promo: &entity.PromoResult{
+			Code:            pc.Code,
+			DiscountPercent: pc.DiscountPercent,
+			BonusAmount:     pc.BonusAmount,
+		},
+	}, nil
+}
+
+// ActivatePromoCode validates and applies a promo code, recording usage.
+func (uc *Usecase) ActivatePromoCode(ctx context.Context, orgID int, code string, clientID int) (*entity.PromoResult, error) {
+	pc, err := uc.promotions.GetPromoCodeByCode(ctx, orgID, code)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrPromoCodeNotFound
+		}
+		return nil, fmt.Errorf("activate promo code: %w", err)
+	}
+
+	if !pc.Active {
+		return nil, ErrPromoCodeInactive
+	}
+
+	now := time.Now()
+	if pc.StartsAt != nil && now.Before(*pc.StartsAt) {
+		return nil, ErrPromoCodeNotActive
+	}
+	if pc.EndsAt != nil && now.After(*pc.EndsAt) {
+		return nil, ErrPromoCodeExpired
+	}
+	if pc.UsageLimit != nil && pc.UsageCount >= *pc.UsageLimit {
+		return nil, ErrPromoCodeLimitReached
+	}
+
+	if pc.PerUserLimit != nil {
+		count, err := uc.promotions.CountUsagesByClient(ctx, pc.ID, clientID)
+		if err != nil {
+			return nil, fmt.Errorf("activate promo code count usages: %w", err)
+		}
+		if count >= *pc.PerUserLimit {
+			return nil, ErrPerUserLimitExceeded
+		}
+	}
+
+	if err := uc.promotions.IncrementPromoCodeUsage(ctx, pc.ID); err != nil {
+		return nil, fmt.Errorf("activate promo code increment: %w", err)
+	}
+
+	if err := uc.promotions.RecordUsage(ctx, 0, clientID, &pc.ID); err != nil {
+		uc.logger.Error("record promo code usage", "error", err, "promo_code_id", pc.ID)
+	}
+
+	return &entity.PromoResult{
+		Code:            pc.Code,
+		DiscountPercent: pc.DiscountPercent,
+		BonusAmount:     pc.BonusAmount,
+	}, nil
+}
+
+// GetChannelAnalytics returns promo code analytics grouped by channel.
+func (uc *Usecase) GetChannelAnalytics(ctx context.Context, orgID int) ([]entity.PromoChannelAnalytics, error) {
+	analytics, err := uc.promotions.GetChannelAnalytics(ctx, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get channel analytics: %w", err)
+	}
+	return analytics, nil
+}
+
+// GenerateCode generates a unique promo code for the organization.
+func (uc *Usecase) GenerateCode(ctx context.Context, orgID int) (string, error) {
+	code, err := uc.promotions.GenerateUniqueCode(ctx, orgID)
+	if err != nil {
+		return "", fmt.Errorf("generate code: %w", err)
+	}
+	return code, nil
+}
+
+// GetPromoCodesByPromotion returns all promo codes for a specific promotion.
+func (uc *Usecase) GetPromoCodesByPromotion(ctx context.Context, promotionID, orgID int) ([]entity.PromoCode, error) {
+	// Verify promotion belongs to org
+	if _, err := uc.GetByID(ctx, promotionID, orgID); err != nil {
+		return nil, err
+	}
+
+	codes, err := uc.promotions.GetPromoCodesByPromotion(ctx, promotionID)
+	if err != nil {
+		return nil, fmt.Errorf("get promo codes by promotion: %w", err)
+	}
+	return codes, nil
 }

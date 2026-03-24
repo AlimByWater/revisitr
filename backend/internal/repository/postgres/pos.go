@@ -18,8 +18,8 @@ func NewPOS(pg *Module) *POS {
 
 func (r *POS) Create(ctx context.Context, pos *entity.POSLocation) error {
 	query := `
-		INSERT INTO pos_locations (org_id, name, address, phone, schedule, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO pos_locations (org_id, bot_id, name, address, phone, schedule, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at, updated_at`
 
 	scheduleVal, err := pos.Schedule.Value()
@@ -28,7 +28,7 @@ func (r *POS) Create(ctx context.Context, pos *entity.POSLocation) error {
 	}
 
 	err = r.pg.DB().QueryRowContext(ctx, query,
-		pos.OrgID, pos.Name, pos.Address, pos.Phone, scheduleVal, pos.IsActive,
+		pos.OrgID, pos.BotID, pos.Name, pos.Address, pos.Phone, scheduleVal, pos.IsActive,
 	).Scan(&pos.ID, &pos.CreatedAt, &pos.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("pos.Create: %w", err)
@@ -62,8 +62,8 @@ func (r *POS) GetByOrgID(ctx context.Context, orgID int) ([]entity.POSLocation, 
 func (r *POS) Update(ctx context.Context, pos *entity.POSLocation) error {
 	query := `
 		UPDATE pos_locations
-		SET name = $1, address = $2, phone = $3, schedule = $4, is_active = $5, updated_at = NOW()
-		WHERE id = $6`
+		SET name = $1, address = $2, phone = $3, schedule = $4, is_active = $5, bot_id = $6, updated_at = NOW()
+		WHERE id = $7`
 
 	scheduleVal, err := pos.Schedule.Value()
 	if err != nil {
@@ -71,7 +71,7 @@ func (r *POS) Update(ctx context.Context, pos *entity.POSLocation) error {
 	}
 
 	result, err := r.pg.DB().ExecContext(ctx, query,
-		pos.Name, pos.Address, pos.Phone, scheduleVal, pos.IsActive, pos.ID)
+		pos.Name, pos.Address, pos.Phone, scheduleVal, pos.IsActive, pos.BotID, pos.ID)
 	if err != nil {
 		return fmt.Errorf("pos.Update: %w", err)
 	}
@@ -85,6 +85,16 @@ func (r *POS) Update(ctx context.Context, pos *entity.POSLocation) error {
 	}
 
 	return nil
+}
+
+func (r *POS) GetByBotID(ctx context.Context, botID int) ([]entity.POSLocation, error) {
+	var locations []entity.POSLocation
+	err := r.pg.DB().SelectContext(ctx, &locations,
+		"SELECT * FROM pos_locations WHERE bot_id = $1 ORDER BY created_at DESC", botID)
+	if err != nil {
+		return nil, fmt.Errorf("pos.GetByBotID: %w", err)
+	}
+	return locations, nil
 }
 
 func (r *POS) Delete(ctx context.Context, id int) error {

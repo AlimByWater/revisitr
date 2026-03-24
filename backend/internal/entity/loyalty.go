@@ -52,6 +52,8 @@ type LoyaltyLevel struct {
 	Name          string  `db:"name" json:"name"`
 	Threshold     int     `db:"threshold" json:"threshold"`
 	RewardPercent float64 `db:"reward_percent" json:"reward_percent"`
+	RewardType    string  `db:"reward_type" json:"reward_type"`
+	RewardAmount  float64 `db:"reward_amount" json:"reward_amount"`
 	SortOrder     int     `db:"sort_order" json:"sort_order"`
 }
 
@@ -82,6 +84,8 @@ type CreateLevelRequest struct {
 	Name          string  `json:"name" binding:"required"`
 	Threshold     int     `json:"threshold" binding:"min=0"`
 	RewardPercent float64 `json:"reward_percent" binding:"min=0,max=100"`
+	RewardType    string  `json:"reward_type"`
+	RewardAmount  float64 `json:"reward_amount" binding:"min=0"`
 	SortOrder     int     `json:"sort_order"`
 }
 

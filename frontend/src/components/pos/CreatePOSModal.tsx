@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCreatePOSMutation } from '@/features/pos/queries'
+import { useBotsQuery } from '@/features/bots/queries'
 
 interface CreatePOSModalProps {
   onClose: () => void
@@ -13,6 +14,8 @@ export function CreatePOSModal({ onClose }: CreatePOSModalProps) {
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
+  const [botId, setBotId] = useState<number | undefined>(undefined)
+  const { data: bots } = useBotsQuery()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -22,6 +25,7 @@ export function CreatePOSModal({ onClose }: CreatePOSModalProps) {
         address,
         phone,
         schedule: {},
+        bot_id: botId,
       })
       onClose()
     } catch {
@@ -122,6 +126,36 @@ export function CreatePOSModal({ onClose }: CreatePOSModalProps) {
                 'transition-colors',
               )}
             />
+          </div>
+
+          <div>
+            <label
+              htmlFor="pos-create-bot"
+              className="block text-sm font-medium text-neutral-700 mb-1.5"
+            >
+              Привязать к боту{' '}
+              <span className="text-neutral-400 font-normal">(необязательно)</span>
+            </label>
+            <select
+              id="pos-create-bot"
+              value={botId ?? ''}
+              onChange={(e) =>
+                setBotId(e.target.value ? Number(e.target.value) : undefined)
+              }
+              className={cn(
+                'w-full px-4 py-2.5 rounded-lg border border-surface-border',
+                'text-sm placeholder:text-neutral-400',
+                'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
+                'transition-colors',
+              )}
+            >
+              <option value="">Не привязывать</option>
+              {bots?.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {createMutation.isError && (

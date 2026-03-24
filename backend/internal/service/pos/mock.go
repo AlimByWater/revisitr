@@ -73,6 +73,44 @@ func (p *MockProvider) GetMenu(_ context.Context) (*POSMenu, error) {
 	return p.menu, nil
 }
 
+func (p *MockProvider) GetDailyAggregates(_ context.Context, from, to time.Time) ([]POSDailyAggregate, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	// Aggregate orders by date
+	daily := make(map[string]*POSDailyAggregate)
+	for _, o := range p.orders {
+		if o.Status == "cancelled" {
+			continue
+		}
+		if o.OrderedAt.Before(from) || o.OrderedAt.After(to) {
+			continue
+		}
+		dateKey := o.OrderedAt.Format("2006-01-02")
+		agg, ok := daily[dateKey]
+		if !ok {
+			d, _ := time.Parse("2006-01-02", dateKey)
+			agg = &POSDailyAggregate{Date: d}
+			daily[dateKey] = agg
+		}
+		agg.Revenue += o.Total
+		agg.TxCount++
+		agg.GuestCount++ // 1 guest per order in mock
+		if o.CustomerPhone != "" {
+			agg.Phones = append(agg.Phones, o.CustomerPhone)
+		}
+	}
+
+	result := make([]POSDailyAggregate, 0, len(daily))
+	for _, agg := range daily {
+		if agg.TxCount > 0 {
+			agg.AvgCheck = agg.Revenue / float64(agg.TxCount)
+		}
+		result = append(result, *agg)
+	}
+	return result, nil
+}
+
 // --- Seed data generation ---
 
 var (

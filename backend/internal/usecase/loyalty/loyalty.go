@@ -14,6 +14,8 @@ var (
 	ErrProgramNotFound    = fmt.Errorf("loyalty program not found")
 	ErrNotProgramOwner    = fmt.Errorf("not authorized to manage this program")
 	ErrInsufficientPoints = fmt.Errorf("insufficient points")
+	ErrReserveExpired     = fmt.Errorf("reserve expired")
+	ErrReserveNotPending  = fmt.Errorf("reserve is not pending")
 )
 
 type repository interface {
@@ -28,6 +30,12 @@ type repository interface {
 	GetClientLoyalty(ctx context.Context, clientID, programID int) (*entity.ClientLoyalty, error)
 	UpsertClientLoyalty(ctx context.Context, cl *entity.ClientLoyalty) error
 	CreateTransaction(ctx context.Context, tx *entity.LoyaltyTransaction) error
+	GetClientsWithLevels(ctx context.Context) ([]entity.ClientLoyalty, error)
+	CreateReserve(ctx context.Context, reserve *entity.BalanceReserve) error
+	GetReserve(ctx context.Context, id int) (*entity.BalanceReserve, error)
+	UpdateReserve(ctx context.Context, reserve *entity.BalanceReserve) error
+	GetPendingReserves(ctx context.Context, clientID, programID int) ([]entity.BalanceReserve, error)
+	ExpireOldReserves(ctx context.Context) (int, error)
 }
 
 type Usecase struct {
@@ -118,6 +126,8 @@ func (uc *Usecase) CreateLevel(ctx context.Context, programID, orgID int, req *e
 		Name:          req.Name,
 		Threshold:     req.Threshold,
 		RewardPercent: req.RewardPercent,
+		RewardType:    req.RewardType,
+		RewardAmount:  req.RewardAmount,
 		SortOrder:     req.SortOrder,
 	}
 
@@ -247,6 +257,46 @@ func (uc *Usecase) getOrCreateClientLoyalty(ctx context.Context, clientID, progr
 		return nil, fmt.Errorf("usecase.getOrCreateClientLoyalty: %w", err)
 	}
 	return cl, nil
+}
+
+func (uc *Usecase) CalculateBonus(ctx context.Context, clientID, programID int, checkAmount float64) (float64, error) {
+	cl, err := uc.getOrCreateClientLoyalty(ctx, clientID, programID)
+	if err != nil {
+		return 0, err
+	}
+	if cl.LevelID == nil {
+		return 0, nil
+	}
+
+	levels, err := uc.repo.GetLevelsByProgramID(ctx, programID)
+	if err != nil {
+		return 0, fmt.Errorf("CalculateBonus: %w", err)
+	}
+
+	for _, level := range levels {
+		if level.ID == *cl.LevelID {
+			switch level.RewardType {
+			case "fixed":
+				return level.RewardAmount, nil
+			default:
+				return checkAmount * level.RewardPercent / 100, nil
+			}
+		}
+	}
+	return 0, nil
+}
+
+func (uc *Usecase) EarnFromCheck(ctx context.Context, clientID, programID int, checkAmount float64) (*entity.ClientLoyalty, error) {
+	bonus, err := uc.CalculateBonus(ctx, clientID, programID, checkAmount)
+	if err != nil {
+		return nil, err
+	}
+	if bonus <= 0 {
+		return uc.GetBalance(ctx, clientID, programID)
+	}
+
+	desc := fmt.Sprintf("Бонус %.2f с чека %.2f", bonus, checkAmount)
+	return uc.EarnPoints(ctx, clientID, programID, bonus, desc)
 }
 
 func (uc *Usecase) determineLevelID(ctx context.Context, programID int, totalEarned float64) *int {

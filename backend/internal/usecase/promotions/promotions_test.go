@@ -13,19 +13,23 @@ import (
 // ── Mock ──────────────────────────────────────────────────────────────────────
 
 type mockPromotionsRepo struct {
-	createFn                  func(ctx context.Context, p *entity.Promotion) error
-	getByIDFn                 func(ctx context.Context, id int) (*entity.Promotion, error)
-	getByOrgIDFn              func(ctx context.Context, orgID int) ([]entity.Promotion, error)
-	updateFn                  func(ctx context.Context, p *entity.Promotion) error
-	deleteFn                  func(ctx context.Context, id int) error
-	getApplicableFn           func(ctx context.Context, orgID, clientID int) ([]entity.Promotion, error)
-	recordUsageFn             func(ctx context.Context, promotionID, clientID int, promoCodeID *int) error
-	createPromoCodeFn         func(ctx context.Context, pc *entity.PromoCode) error
-	getPromoCodeByCodeFn      func(ctx context.Context, orgID int, code string) (*entity.PromoCode, error)
-	getPromoCodeByIDFn        func(ctx context.Context, id int) (*entity.PromoCode, error)
-	listPromoCodesFn          func(ctx context.Context, orgID int) ([]entity.PromoCode, error)
-	incrementPromoCodeUsageFn func(ctx context.Context, id int) error
-	deactivatePromoCodeFn     func(ctx context.Context, id int) error
+	createFn                    func(ctx context.Context, p *entity.Promotion) error
+	getByIDFn                   func(ctx context.Context, id int) (*entity.Promotion, error)
+	getByOrgIDFn                func(ctx context.Context, orgID int) ([]entity.Promotion, error)
+	updateFn                    func(ctx context.Context, p *entity.Promotion) error
+	deleteFn                    func(ctx context.Context, id int) error
+	getApplicableFn             func(ctx context.Context, orgID, clientID int) ([]entity.Promotion, error)
+	recordUsageFn               func(ctx context.Context, promotionID, clientID int, promoCodeID *int) error
+	createPromoCodeFn           func(ctx context.Context, pc *entity.PromoCode) error
+	getPromoCodeByCodeFn        func(ctx context.Context, orgID int, code string) (*entity.PromoCode, error)
+	getPromoCodeByIDFn          func(ctx context.Context, id int) (*entity.PromoCode, error)
+	listPromoCodesFn            func(ctx context.Context, orgID int) ([]entity.PromoCode, error)
+	incrementPromoCodeUsageFn   func(ctx context.Context, id int) error
+	deactivatePromoCodeFn       func(ctx context.Context, id int) error
+	getChannelAnalyticsFn       func(ctx context.Context, orgID int) ([]entity.PromoChannelAnalytics, error)
+	countUsagesByClientFn       func(ctx context.Context, promoCodeID, clientID int) (int, error)
+	generateUniqueCodeFn        func(ctx context.Context, orgID int) (string, error)
+	getPromoCodesByPromotionFn  func(ctx context.Context, promotionID int) ([]entity.PromoCode, error)
 }
 
 func (m *mockPromotionsRepo) Create(ctx context.Context, p *entity.Promotion) error {
@@ -66,6 +70,18 @@ func (m *mockPromotionsRepo) IncrementPromoCodeUsage(ctx context.Context, id int
 }
 func (m *mockPromotionsRepo) DeactivatePromoCode(ctx context.Context, id int) error {
 	return m.deactivatePromoCodeFn(ctx, id)
+}
+func (m *mockPromotionsRepo) GetChannelAnalytics(ctx context.Context, orgID int) ([]entity.PromoChannelAnalytics, error) {
+	return m.getChannelAnalyticsFn(ctx, orgID)
+}
+func (m *mockPromotionsRepo) CountUsagesByClient(ctx context.Context, promoCodeID, clientID int) (int, error) {
+	return m.countUsagesByClientFn(ctx, promoCodeID, clientID)
+}
+func (m *mockPromotionsRepo) GenerateUniqueCode(ctx context.Context, orgID int) (string, error) {
+	return m.generateUniqueCodeFn(ctx, orgID)
+}
+func (m *mockPromotionsRepo) GetPromoCodesByPromotion(ctx context.Context, promotionID int) ([]entity.PromoCode, error) {
+	return m.getPromoCodesByPromotionFn(ctx, promotionID)
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

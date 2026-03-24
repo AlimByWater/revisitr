@@ -2,8 +2,10 @@ package postgres
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"fmt"
+	"math/big"
 	"time"
 
 	"revisitr/internal/entity"
@@ -28,13 +30,13 @@ func (r *Promotions) Create(ctx context.Context, p *entity.Promotion) error {
 	}
 
 	query := `
-		INSERT INTO promotions (org_id, name, type, conditions, result, starts_at, ends_at, usage_limit, combinable, active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO promotions (org_id, name, type, conditions, result, starts_at, ends_at, usage_limit, recurrence, combinable, active)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id, created_at`
 
 	return r.pg.DB().QueryRowContext(ctx, query,
 		p.OrgID, p.Name, p.Type, condVal, resultVal,
-		p.StartsAt, p.EndsAt, p.UsageLimit, p.Combinable, p.Active,
+		p.StartsAt, p.EndsAt, p.UsageLimit, p.Recurrence, p.Combinable, p.Active,
 	).Scan(&p.ID, &p.CreatedAt)
 }
 
@@ -145,12 +147,14 @@ func (r *Promotions) CreatePromoCode(ctx context.Context, pc *entity.PromoCode) 
 
 	query := `
 		INSERT INTO promo_codes (org_id, promotion_id, code, discount_percent, bonus_amount,
+		                         channel, per_user_limit, description,
 		                         starts_at, ends_at, conditions, usage_limit, active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING id, usage_count, created_at`
 
 	return r.pg.DB().QueryRowContext(ctx, query,
 		pc.OrgID, pc.PromotionID, pc.Code, pc.DiscountPercent, pc.BonusAmount,
+		pc.Channel, pc.PerUserLimit, pc.Description,
 		pc.StartsAt, pc.EndsAt, condVal, pc.UsageLimit, pc.Active,
 	).Scan(&pc.ID, &pc.UsageCount, &pc.CreatedAt)
 }
@@ -222,4 +226,65 @@ func (r *Promotions) DeactivatePromoCode(ctx context.Context, id int) error {
 		return fmt.Errorf("promotions.DeactivatePromoCode: %w", sql.ErrNoRows)
 	}
 	return nil
+}
+
+func (r *Promotions) GetChannelAnalytics(ctx context.Context, orgID int) ([]entity.PromoChannelAnalytics, error) {
+	var analytics []entity.PromoChannelAnalytics
+	err := r.pg.DB().SelectContext(ctx, &analytics,
+		"SELECT channel, code_count, total_usages, unique_clients FROM promo_channel_analytics WHERE org_id = $1", orgID)
+	if err != nil {
+		return nil, fmt.Errorf("promotions.GetChannelAnalytics: %w", err)
+	}
+	return analytics, nil
+}
+
+func (r *Promotions) CountUsagesByClient(ctx context.Context, promoCodeID, clientID int) (int, error) {
+	var count int
+	err := r.pg.DB().GetContext(ctx, &count,
+		"SELECT COUNT(*) FROM promotion_usages WHERE promo_code_id = $1 AND client_id = $2",
+		promoCodeID, clientID)
+	if err != nil {
+		return 0, fmt.Errorf("promotions.CountUsagesByClient: %w", err)
+	}
+	return count, nil
+}
+
+func (r *Promotions) GenerateUniqueCode(ctx context.Context, orgID int) (string, error) {
+	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const codeLen = 6
+	const maxRetries = 10
+
+	for i := 0; i < maxRetries; i++ {
+		code := make([]byte, codeLen)
+		for j := 0; j < codeLen; j++ {
+			n, err := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
+			if err != nil {
+				return "", fmt.Errorf("promotions.GenerateUniqueCode: %w", err)
+			}
+			code[j] = chars[n.Int64()]
+		}
+
+		var exists bool
+		err := r.pg.DB().GetContext(ctx, &exists,
+			"SELECT EXISTS(SELECT 1 FROM promo_codes WHERE org_id = $1 AND code = $2)",
+			orgID, string(code))
+		if err != nil {
+			return "", fmt.Errorf("promotions.GenerateUniqueCode: %w", err)
+		}
+		if !exists {
+			return string(code), nil
+		}
+	}
+
+	return "", fmt.Errorf("promotions.GenerateUniqueCode: failed to generate unique code after %d retries", maxRetries)
+}
+
+func (r *Promotions) GetPromoCodesByPromotion(ctx context.Context, promotionID int) ([]entity.PromoCode, error) {
+	var codes []entity.PromoCode
+	err := r.pg.DB().SelectContext(ctx, &codes,
+		"SELECT * FROM promo_codes WHERE promotion_id = $1 ORDER BY created_at DESC", promotionID)
+	if err != nil {
+		return nil, fmt.Errorf("promotions.GetPromoCodesByPromotion: %w", err)
+	}
+	return codes, nil
 }

@@ -74,6 +74,7 @@ type Promotion struct {
 	StartsAt   *time.Time          `json:"starts_at,omitempty"   db:"starts_at"`
 	EndsAt     *time.Time          `json:"ends_at,omitempty"     db:"ends_at"`
 	UsageLimit *int                `json:"usage_limit,omitempty" db:"usage_limit"`
+	Recurrence string              `json:"recurrence"  db:"recurrence"` // "one_time"|"daily"|"weekly"|"monthly"
 	Combinable bool                `json:"combinable"  db:"combinable"`
 	Active     bool                `json:"active"      db:"active"`
 	CreatedAt  time.Time           `json:"created_at"  db:"created_at"`
@@ -87,6 +88,7 @@ type CreatePromotionRequest struct {
 	StartsAt   *time.Time          `json:"starts_at,omitempty"`
 	EndsAt     *time.Time          `json:"ends_at,omitempty"`
 	UsageLimit *int                `json:"usage_limit,omitempty"`
+	Recurrence string              `json:"recurrence" binding:"omitempty,oneof=one_time daily weekly monthly"`
 	Combinable bool                `json:"combinable"`
 }
 
@@ -135,6 +137,9 @@ type PromoCode struct {
 	Code            string              `json:"code"             db:"code"`
 	DiscountPercent *float64            `json:"discount_percent" db:"discount_percent"`
 	BonusAmount     *int                `json:"bonus_amount"     db:"bonus_amount"`
+	Channel         *string             `json:"channel"          db:"channel"`
+	PerUserLimit    *int                `json:"per_user_limit"   db:"per_user_limit"`
+	Description     *string             `json:"description"      db:"description"`
 	StartsAt        *time.Time          `json:"starts_at,omitempty" db:"starts_at"`
 	EndsAt          *time.Time          `json:"ends_at,omitempty"   db:"ends_at"`
 	Conditions      PromoCodeConditions `json:"conditions"       db:"conditions"`
@@ -149,6 +154,9 @@ type CreatePromoCodeRequest struct {
 	Code            string              `json:"code"             binding:"required"`
 	DiscountPercent *float64            `json:"discount_percent,omitempty"`
 	BonusAmount     *int                `json:"bonus_amount,omitempty"`
+	Channel         *string             `json:"channel,omitempty"`
+	PerUserLimit    *int                `json:"per_user_limit,omitempty"`
+	Description     *string             `json:"description,omitempty"`
 	StartsAt        *time.Time          `json:"starts_at,omitempty"`
 	EndsAt          *time.Time          `json:"ends_at,omitempty"`
 	Conditions      PromoCodeConditions `json:"conditions"`
@@ -160,4 +168,19 @@ type PromoResult struct {
 	Code            string   `json:"code"`
 	DiscountPercent *float64 `json:"discount_percent,omitempty"`
 	BonusAmount     *int     `json:"bonus_amount,omitempty"`
+}
+
+// PromoChannelAnalytics — analytics from promo_channel_analytics view.
+type PromoChannelAnalytics struct {
+	Channel       string `json:"channel"        db:"channel"`
+	CodeCount     int    `json:"code_count"     db:"code_count"`
+	TotalUsages   int    `json:"total_usages"   db:"total_usages"`
+	UniqueClients int    `json:"unique_clients" db:"unique_clients"`
+}
+
+// PromoCodeValidation — result of promo code validation.
+type PromoCodeValidation struct {
+	Valid  bool         `json:"valid"`
+	Reason string      `json:"reason,omitempty"`
+	Promo  *PromoResult `json:"promo,omitempty"`
 }

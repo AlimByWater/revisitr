@@ -34,6 +34,7 @@ func (s Schedule) Value() (driver.Value, error) {
 type POSLocation struct {
 	ID        int       `db:"id" json:"id"`
 	OrgID     int       `db:"org_id" json:"org_id"`
+	BotID     *int      `db:"bot_id" json:"bot_id"`
 	Name      string    `db:"name" json:"name"`
 	Address   string    `db:"address" json:"address,omitempty"`
 	Phone     string    `db:"phone" json:"phone,omitempty"`
@@ -48,6 +49,7 @@ type CreatePOSRequest struct {
 	Address  string   `json:"address"`
 	Phone    string   `json:"phone"`
 	Schedule Schedule `json:"schedule"`
+	BotID    *int     `json:"bot_id"`
 }
 
 type UpdatePOSRequest struct {
@@ -56,4 +58,5 @@ type UpdatePOSRequest struct {
 	Phone    *string   `json:"phone,omitempty"`
 	Schedule *Schedule `json:"schedule,omitempty"`
 	IsActive *bool     `json:"is_active,omitempty"`
+	BotID    *int      `json:"bot_id,omitempty"`
 }

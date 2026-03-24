@@ -11,6 +11,16 @@ type POSProvider interface {
 	GetCustomers(ctx context.Context, opts CustomerListOpts) ([]POSCustomer, error)
 	GetOrders(ctx context.Context, from, to time.Time) ([]POSOrder, error)
 	GetMenu(ctx context.Context) (*POSMenu, error)
+	GetDailyAggregates(ctx context.Context, from, to time.Time) ([]POSDailyAggregate, error)
+}
+
+type POSDailyAggregate struct {
+	Date       time.Time `json:"date"`
+	Revenue    float64   `json:"revenue"`
+	AvgCheck   float64   `json:"avg_check"`
+	TxCount    int       `json:"tx_count"`
+	GuestCount int       `json:"guest_count"`
+	Phones     []string  `json:"phones,omitempty"` // customer phones seen that day
 }
 
 type POSCustomer struct {

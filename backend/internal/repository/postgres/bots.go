@@ -18,8 +18,8 @@ func NewBots(pg *Module) *Bots {
 
 func (r *Bots) Create(ctx context.Context, bot *entity.Bot) error {
 	query := `
-		INSERT INTO bots (org_id, name, token, username, status, settings)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO bots (org_id, program_id, name, token, username, status, settings)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at, updated_at`
 
 	settingsVal, err := bot.Settings.Value()
@@ -28,7 +28,7 @@ func (r *Bots) Create(ctx context.Context, bot *entity.Bot) error {
 	}
 
 	err = r.pg.DB().QueryRowContext(ctx, query,
-		bot.OrgID, bot.Name, bot.Token, bot.Username, bot.Status, settingsVal,
+		bot.OrgID, bot.ProgramID, bot.Name, bot.Token, bot.Username, bot.Status, settingsVal,
 	).Scan(&bot.ID, &bot.CreatedAt, &bot.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("bots.Create: %w", err)
@@ -59,12 +59,11 @@ func (r *Bots) GetByOrgID(ctx context.Context, orgID int) ([]entity.Bot, error) 
 }
 
 func (r *Bots) Update(ctx context.Context, bot *entity.Bot) error {
-	query := `UPDATE bots SET name = $1, status = $2, updated_at = NOW() WHERE id = $3`
-	result, err := r.pg.DB().ExecContext(ctx, query, bot.Name, bot.Status, bot.ID)
+	query := `UPDATE bots SET name = $1, status = $2, program_id = $3, updated_at = NOW() WHERE id = $4`
+	result, err := r.pg.DB().ExecContext(ctx, query, bot.Name, bot.Status, bot.ProgramID, bot.ID)
 	if err != nil {
 		return fmt.Errorf("bots.Update: %w", err)
 	}
-
 	rows, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("bots.Update rows affected: %w", err)
@@ -72,8 +71,17 @@ func (r *Bots) Update(ctx context.Context, bot *entity.Bot) error {
 	if rows == 0 {
 		return fmt.Errorf("bots.Update: %w", sql.ErrNoRows)
 	}
-
 	return nil
+}
+
+func (r *Bots) GetByProgramID(ctx context.Context, programID int) ([]entity.Bot, error) {
+	var bots []entity.Bot
+	err := r.pg.DB().SelectContext(ctx, &bots,
+		"SELECT * FROM bots WHERE program_id = $1 ORDER BY created_at DESC", programID)
+	if err != nil {
+		return nil, fmt.Errorf("bots.GetByProgramID: %w", err)
+	}
+	return bots, nil
 }
 
 func (r *Bots) UpdateSettings(ctx context.Context, id int, settings entity.BotSettings) error {

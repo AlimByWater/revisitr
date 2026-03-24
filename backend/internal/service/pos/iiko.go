@@ -46,3 +46,7 @@ func (p *IikoProvider) GetOrders(_ context.Context, _, _ time.Time) ([]POSOrder,
 func (p *IikoProvider) GetMenu(_ context.Context) (*POSMenu, error) {
 	return nil, fmt.Errorf("iiko provider not yet implemented")
 }
+
+func (p *IikoProvider) GetDailyAggregates(_ context.Context, _, _ time.Time) ([]POSDailyAggregate, error) {
+	return nil, fmt.Errorf("iiko provider not yet implemented")
+}

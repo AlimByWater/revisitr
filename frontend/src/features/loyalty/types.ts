@@ -21,6 +21,8 @@ export interface LoyaltyLevel {
   name: string
   threshold: number
   reward_percent: number
+  reward_type: 'percent' | 'fixed'
+  reward_amount: number
   sort_order: number
 }
 

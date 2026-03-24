@@ -16,6 +16,7 @@ import (
 	campaignsGroup "revisitr/internal/controller/http/group/campaigns"
 	clientsGroup "revisitr/internal/controller/http/group/clients"
 	dashboardGroup "revisitr/internal/controller/http/group/dashboard"
+	filesGroup "revisitr/internal/controller/http/group/files"
 	"revisitr/internal/controller/http/group/health"
 	integrationsGroup "revisitr/internal/controller/http/group/integrations"
 	loyaltyGroup "revisitr/internal/controller/http/group/loyalty"
@@ -23,8 +24,10 @@ import (
 	promotionsGroup "revisitr/internal/controller/http/group/promotions"
 	segmentsGroup "revisitr/internal/controller/http/group/segments"
 	"revisitr/internal/controller/scheduler"
+	minioRepo "revisitr/internal/repository/minio"
 	pgRepo "revisitr/internal/repository/postgres"
 	redisRepo "revisitr/internal/repository/redis"
+	autoactionService "revisitr/internal/service/autoaction"
 	posService "revisitr/internal/service/pos"
 	rfmService "revisitr/internal/service/rfm"
 	analyticsUC "revisitr/internal/usecase/analytics"
@@ -79,12 +82,16 @@ func main() {
 	posSyncSvc := posService.NewSyncService(integrationsRepo, botClientsRepo, logger)
 	rfmSvc := rfmService.New(botClientsRepo, loyaltyRepo, logger)
 
+	// Auto-action services
+	actionExecutor := autoactionService.NewActionExecutor(scenariosRepo, logger)
+	autoActionScheduler := autoactionService.NewAutoActionScheduler(scenariosRepo, actionExecutor, botClientsRepo, logger)
+
 	// ── Usecases ──────────────────────────────────────────────────────────────
 
 	authUsecase := authUC.New(&authConfig{cfg: cfg}, usersRepo, sessionsRepo)
 	botsUsecase := botsUC.New(botsRepo, botClientsRepo)
 	loyaltyUsecase := loyaltyUC.New(loyaltyRepo)
-	clientsUsecase := clientsUC.New(clientsRepo)
+	clientsUsecase := clientsUC.New(clientsRepo, clientsUC.WithBotClients(botClientsRepo))
 	dashboardUsecase := dashboardUC.New(dashboardRepo)
 	campaignsUsecase := campaignsUC.New(campaignsRepo, scenariosRepo, clientsRepo)
 	posUsecase := posUC.New(posRepo)
@@ -95,6 +102,19 @@ func main() {
 	promotionsUsecase := promotionsUC.New(promotionsRepo)
 	integrationsUsecase := integrationsUC.New(integrationsRepo, posSyncSvc)
 
+	// ── MinIO ─────────────────────────────────────────────────────────────
+
+	minioClient, err := minioRepo.New(
+		cfg.MinIO.Endpoint,
+		cfg.MinIO.AccessKey,
+		cfg.MinIO.SecretKey,
+		cfg.MinIO.UseSSL,
+	)
+	if err != nil {
+		logger.Error("minio init failed", "error", err)
+		os.Exit(1)
+	}
+
 	jwtSecret := cfg.Auth.JWTSecret
 
 	// ── Controller groups ─────────────────────────────────────────────────────
@@ -104,9 +124,13 @@ func main() {
 	botsGrp := botsGroup.New(botsUsecase, jwtSecret)
 	loyaltyGrp := loyaltyGroup.New(loyaltyUsecase, jwtSecret)
 	clientsGrp := clientsGroup.New(clientsUsecase, jwtSecret)
-	dashboardGrp := dashboardGroup.New(dashboardUsecase, jwtSecret)
+	dashboardGrp := dashboardGroup.New(dashboardUsecase, jwtSecret,
+		dashboardGroup.WithSalesUsecase(integrationsUsecase),
+	)
 	campaignsGrp := campaignsGroup.New(campaignsUsecase, jwtSecret)
 	posGrp := posGroup.New(posUsecase, jwtSecret)
+
+	filesGrp := filesGroup.New(minioClient, cfg.MinIO.Bucket, jwtSecret)
 
 	// Phase 3 groups
 	analyticsGrp := analyticsGroup.New(analyticsUsecase, jwtSecret)
@@ -118,6 +142,7 @@ func main() {
 		healthGrp, authGrp, botsGrp, loyaltyGrp, posGrp, clientsGrp,
 		dashboardGrp, campaignsGrp,
 		analyticsGrp, segmentsGrp, promotionsGrp, integrationsGrp,
+		filesGrp,
 	)
 
 	// ── Scheduler ─────────────────────────────────────────────────────────────
@@ -140,6 +165,30 @@ func main() {
 		Name:     "pos_sync",
 		Interval: 4 * time.Hour,
 		Fn:       func(ctx context.Context) error { return posSyncSvc.SyncAll(ctx) },
+	})
+	sched.Register(scheduler.Task{
+		Name:     "loyalty_demotion",
+		Interval: 24 * time.Hour,
+		Fn:       func(ctx context.Context) error { return loyaltyUsecase.DemoteClients(ctx) },
+	})
+	sched.Register(scheduler.Task{
+		Name:     "expire_reserves",
+		Interval: 5 * time.Minute,
+		Fn: func(ctx context.Context) error {
+			n, err := loyaltyRepo.ExpireOldReserves(ctx)
+			if err != nil {
+				return err
+			}
+			if n > 0 {
+				logger.Info("expired reserves", "count", n)
+			}
+			return nil
+		},
+	})
+	sched.Register(scheduler.Task{
+		Name:     "auto_actions_evaluate",
+		Interval: 1 * time.Hour,
+		Fn:       func(ctx context.Context) error { return autoActionScheduler.Evaluate(ctx) },
 	})
 	go sched.Run(appCtx)
 

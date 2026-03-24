@@ -19,13 +19,29 @@ type clientsRepo interface {
 	GetTransactionsByClientID(ctx context.Context, clientID int, limit, offset int) ([]entity.LoyaltyTransaction, error)
 }
 
-type Usecase struct {
-	logger *slog.Logger
-	repo   clientsRepo
+type botClientsRepo interface {
+	GetByPhone(ctx context.Context, orgID int, phone string) (*entity.BotClient, error)
+	GetByQRCode(ctx context.Context, qrCode string) (*entity.BotClient, error)
 }
 
-func New(repo clientsRepo) *Usecase {
-	return &Usecase{repo: repo}
+type Usecase struct {
+	logger     *slog.Logger
+	repo       clientsRepo
+	botClients botClientsRepo
+}
+
+func New(repo clientsRepo, opts ...Option) *Usecase {
+	uc := &Usecase{repo: repo}
+	for _, o := range opts {
+		o(uc)
+	}
+	return uc
+}
+
+type Option func(*Usecase)
+
+func WithBotClients(r botClientsRepo) Option {
+	return func(uc *Usecase) { uc.botClients = r }
 }
 
 func (uc *Usecase) Init(_ context.Context, logger *slog.Logger) error {
@@ -90,4 +106,35 @@ func (uc *Usecase) CountByFilter(ctx context.Context, orgID int, filter entity.C
 	}
 
 	return count, nil
+}
+
+// IdentifyClient finds a client by phone number or QR code within the org.
+func (uc *Usecase) IdentifyClient(ctx context.Context, orgID int, phone, qrCode string) (*entity.BotClient, error) {
+	if uc.botClients == nil {
+		return nil, fmt.Errorf("identify client: bot clients repo not configured")
+	}
+
+	if qrCode != "" {
+		client, err := uc.botClients.GetByQRCode(ctx, qrCode)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, ErrClientNotFound
+			}
+			return nil, fmt.Errorf("identify by qr: %w", err)
+		}
+		return client, nil
+	}
+
+	if phone != "" {
+		client, err := uc.botClients.GetByPhone(ctx, orgID, phone)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, ErrClientNotFound
+			}
+			return nil, fmt.Errorf("identify by phone: %w", err)
+		}
+		return client, nil
+	}
+
+	return nil, fmt.Errorf("identify client: phone or qr_code required")
 }

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -27,6 +28,8 @@ type integrationsUsecase interface {
 	GetCustomers(ctx context.Context, id, orgID int, opts posService.CustomerListOpts) ([]posService.POSCustomer, error)
 	GetMenu(ctx context.Context, id, orgID int) (*posService.POSMenu, error)
 	GetStats(ctx context.Context, id, orgID int) (*entity.IntegrationStats, error)
+	GetAggregates(ctx context.Context, id, orgID int, from, to time.Time) ([]entity.IntegrationAggregate, error)
+	GetDashboardData(ctx context.Context, orgID int, from, to time.Time) (*entity.DashboardAggregates, error)
 }
 
 type Group struct {
@@ -59,6 +62,7 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handleGetCustomers,
 		g.handleGetMenu,
 		g.handleGetStats,
+		g.handleGetAggregates,
 	}
 }
 
@@ -295,6 +299,38 @@ func (g *Group) handleGetStats() (string, string, gin.HandlerFunc) {
 		}
 
 		c.JSON(http.StatusOK, stats)
+	}
+}
+
+func (g *Group) handleGetAggregates() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/:id/aggregates", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid integration id"})
+			return
+		}
+
+		from, err := time.Parse("2006-01-02", c.DefaultQuery("from", time.Now().AddDate(0, -1, 0).Format("2006-01-02")))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid 'from' date format, use YYYY-MM-DD"})
+			return
+		}
+
+		to, err := time.Parse("2006-01-02", c.DefaultQuery("to", time.Now().Format("2006-01-02")))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid 'to' date format, use YYYY-MM-DD"})
+			return
+		}
+
+		aggs, err := g.uc.GetAggregates(c.Request.Context(), id, orgID.(int), from, to)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, aggs)
 	}
 }
 

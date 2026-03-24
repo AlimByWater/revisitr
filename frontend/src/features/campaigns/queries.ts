@@ -88,3 +88,46 @@ export function useDeleteScenarioMutation() {
     ['scenarios'],
   )
 }
+
+export function useScheduleCampaignMutation() {
+  return useApiMutation(
+    'campaigns/schedule',
+    ({ id, scheduledAt }: { id: number; scheduledAt: string }) =>
+      campaignsApi.schedule(id, scheduledAt),
+    ['campaigns'],
+  )
+}
+
+export function useCancelScheduleMutation() {
+  return useApiMutation(
+    'campaigns/cancel-schedule',
+    (id: number) => campaignsApi.cancelSchedule(id),
+    ['campaigns'],
+  )
+}
+
+export function useCampaignAnalyticsQuery(id: number) {
+  return useApiQuery(id ? `campaigns-${id}-analytics` : null, () =>
+    campaignsApi.getAnalytics(id),
+  )
+}
+
+export function useTemplatesQuery() {
+  return useApiQuery('scenario-templates', campaignsApi.getTemplates)
+}
+
+export function useCloneTemplateMutation() {
+  return useApiMutation(
+    'scenarios/clone-template',
+    ({ key, botId }: { key: string; botId: number }) =>
+      campaignsApi.cloneTemplate(key, botId),
+    ['scenarios'],
+  )
+}
+
+export function useActionLogQuery(scenarioId: number, limit = 20, offset = 0) {
+  return useApiQuery(
+    scenarioId ? `scenarios-${scenarioId}-log-${limit}-${offset}` : null,
+    () => campaignsApi.getActionLog(scenarioId, limit, offset),
+  )
+}

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"revisitr/internal/entity"
 	posService "revisitr/internal/service/pos"
@@ -21,6 +22,8 @@ type integrationsRepo interface {
 	UpsertOrder(ctx context.Context, order *entity.ExternalOrder) error
 	GetOrdersByIntegration(ctx context.Context, integrationID, limit, offset int) ([]entity.ExternalOrder, int, error)
 	GetSyncStats(ctx context.Context, integrationID int) (*entity.IntegrationStats, error)
+	GetAggregates(ctx context.Context, integrationID int, from, to time.Time) ([]entity.IntegrationAggregate, error)
+	GetDashboardAggregates(ctx context.Context, orgID int, from, to time.Time) (*entity.DashboardAggregates, error)
 }
 
 type syncService interface {
@@ -170,4 +173,24 @@ func (uc *Usecase) GetStats(ctx context.Context, id, orgID int) (*entity.Integra
 		return nil, err
 	}
 	return uc.integrations.GetSyncStats(ctx, intg.ID)
+}
+
+func (uc *Usecase) GetAggregates(ctx context.Context, id, orgID int, from, to time.Time) ([]entity.IntegrationAggregate, error) {
+	intg, err := uc.GetByID(ctx, id, orgID)
+	if err != nil {
+		return nil, err
+	}
+	aggs, err := uc.integrations.GetAggregates(ctx, intg.ID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("get aggregates: %w", err)
+	}
+	return aggs, nil
+}
+
+func (uc *Usecase) GetDashboardData(ctx context.Context, orgID int, from, to time.Time) (*entity.DashboardAggregates, error) {
+	data, err := uc.integrations.GetDashboardAggregates(ctx, orgID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("get dashboard aggregates: %w", err)
+	}
+	return data, nil
 }

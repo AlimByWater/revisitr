@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"revisitr/internal/entity"
 	"revisitr/internal/usecase/campaigns"
@@ -12,17 +13,21 @@ import (
 // --- mocks ---
 
 type mockCampaignsRepo struct {
-	createFn              func(ctx context.Context, c *entity.Campaign) error
-	getByIDFn             func(ctx context.Context, id int) (*entity.Campaign, error)
-	getByOrgIDFn          func(ctx context.Context, orgID, limit, offset int) ([]entity.Campaign, int, error)
-	updateFn              func(ctx context.Context, c *entity.Campaign) error
-	updateStatusFn        func(ctx context.Context, id int, status string) error
-	updateStatsFn         func(ctx context.Context, id int, stats *entity.CampaignStats) error
-	deleteFn              func(ctx context.Context, id int) error
-	createMessagesBatchFn func(ctx context.Context, msgs []entity.CampaignMessage) error
-	updateMessageStatusFn func(ctx context.Context, id int, status string, errMsg *string) error
-	getMessagesByCampaign func(ctx context.Context, campaignID, limit, offset int) ([]entity.CampaignMessage, int, error)
-	getMessageStatsFn     func(ctx context.Context, campaignID int) (*entity.CampaignStats, error)
+	createFn               func(ctx context.Context, c *entity.Campaign) error
+	getByIDFn              func(ctx context.Context, id int) (*entity.Campaign, error)
+	getByOrgIDFn           func(ctx context.Context, orgID, limit, offset int) ([]entity.Campaign, int, error)
+	updateFn               func(ctx context.Context, c *entity.Campaign) error
+	updateStatusFn         func(ctx context.Context, id int, status string) error
+	updateStatsFn          func(ctx context.Context, id int, stats *entity.CampaignStats) error
+	deleteFn               func(ctx context.Context, id int) error
+	createMessagesBatchFn  func(ctx context.Context, msgs []entity.CampaignMessage) error
+	updateMessageStatusFn  func(ctx context.Context, id int, status string, errMsg *string) error
+	getMessagesByCampaign  func(ctx context.Context, campaignID, limit, offset int) ([]entity.CampaignMessage, int, error)
+	getMessageStatsFn      func(ctx context.Context, campaignID int) (*entity.CampaignStats, error)
+	createClickFn          func(ctx context.Context, click *entity.CampaignClick) error
+	getClicksByCampaignFn  func(ctx context.Context, campaignID int) ([]entity.CampaignClick, error)
+	getCampaignAnalyticsFn func(ctx context.Context, campaignID int) (*entity.CampaignAnalyticsDetail, error)
+	getScheduledCampaignsFn func(ctx context.Context, before time.Time) ([]entity.Campaign, error)
 }
 
 func (m *mockCampaignsRepo) Create(ctx context.Context, c *entity.Campaign) error {
@@ -58,13 +63,27 @@ func (m *mockCampaignsRepo) GetMessagesByCampaignID(ctx context.Context, campaig
 func (m *mockCampaignsRepo) GetMessageStats(ctx context.Context, campaignID int) (*entity.CampaignStats, error) {
 	return m.getMessageStatsFn(ctx, campaignID)
 }
+func (m *mockCampaignsRepo) CreateClick(ctx context.Context, click *entity.CampaignClick) error {
+	return m.createClickFn(ctx, click)
+}
+func (m *mockCampaignsRepo) GetClicksByCampaign(ctx context.Context, campaignID int) ([]entity.CampaignClick, error) {
+	return m.getClicksByCampaignFn(ctx, campaignID)
+}
+func (m *mockCampaignsRepo) GetCampaignAnalytics(ctx context.Context, campaignID int) (*entity.CampaignAnalyticsDetail, error) {
+	return m.getCampaignAnalyticsFn(ctx, campaignID)
+}
+func (m *mockCampaignsRepo) GetScheduledCampaigns(ctx context.Context, before time.Time) ([]entity.Campaign, error) {
+	return m.getScheduledCampaignsFn(ctx, before)
+}
 
 type mockScenariosRepo struct {
-	createFn     func(ctx context.Context, s *entity.AutoScenario) error
-	getByOrgIDFn func(ctx context.Context, orgID int) ([]entity.AutoScenario, error)
-	getByIDFn    func(ctx context.Context, id int) (*entity.AutoScenario, error)
-	updateFn     func(ctx context.Context, s *entity.AutoScenario) error
-	deleteFn     func(ctx context.Context, id int) error
+	createFn       func(ctx context.Context, s *entity.AutoScenario) error
+	getByOrgIDFn   func(ctx context.Context, orgID int) ([]entity.AutoScenario, error)
+	getByIDFn      func(ctx context.Context, id int) (*entity.AutoScenario, error)
+	updateFn       func(ctx context.Context, s *entity.AutoScenario) error
+	deleteFn       func(ctx context.Context, id int) error
+	getTemplatesFn func(ctx context.Context) ([]entity.AutoScenario, error)
+	getActionLogFn func(ctx context.Context, scenarioID, limit, offset int) ([]entity.AutoActionLog, int, error)
 }
 
 func (m *mockScenariosRepo) Create(ctx context.Context, s *entity.AutoScenario) error {
@@ -81,6 +100,18 @@ func (m *mockScenariosRepo) Update(ctx context.Context, s *entity.AutoScenario) 
 }
 func (m *mockScenariosRepo) Delete(ctx context.Context, id int) error {
 	return m.deleteFn(ctx, id)
+}
+func (m *mockScenariosRepo) GetTemplates(ctx context.Context) ([]entity.AutoScenario, error) {
+	if m.getTemplatesFn != nil {
+		return m.getTemplatesFn(ctx)
+	}
+	return nil, nil
+}
+func (m *mockScenariosRepo) GetActionLog(ctx context.Context, scenarioID, limit, offset int) ([]entity.AutoActionLog, int, error) {
+	if m.getActionLogFn != nil {
+		return m.getActionLogFn(ctx, scenarioID, limit, offset)
+	}
+	return nil, 0, nil
 }
 
 type mockClientsRepo struct {

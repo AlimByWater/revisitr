@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { cn, getApiErrorMessage } from '@/lib/utils'
 import { useCreateBotMutation } from '@/features/bots/queries'
+import { useProgramsQuery } from '@/features/loyalty/queries'
 import { X } from 'lucide-react'
 
 interface CreateBotModalProps {
@@ -10,13 +11,15 @@ interface CreateBotModalProps {
 export function CreateBotModal({ onClose }: CreateBotModalProps) {
   const [name, setName] = useState('')
   const [token, setToken] = useState('')
+  const [programId, setProgramId] = useState<number | undefined>(undefined)
   const createBot = useCreateBotMutation()
+  const { data: programs } = useProgramsQuery()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     try {
-      await createBot.mutateAsync({ name, token })
+      await createBot.mutateAsync({ name, token, program_id: programId })
       onClose()
     } catch {
       // error is available via createBot.error
@@ -103,6 +106,38 @@ export function CreateBotModal({ onClose }: CreateBotModalProps) {
             <p className="mt-1.5 text-xs text-neutral-400">
               Получите токен у @BotFather в Telegram
             </p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="bot-program"
+              className="block text-sm font-medium text-neutral-700 mb-1.5"
+            >
+              Программа лояльности{' '}
+              <span className="text-neutral-400 font-normal">(необязательно)</span>
+            </label>
+            <select
+              id="bot-program"
+              value={programId ?? ''}
+              onChange={(e) =>
+                setProgramId(e.target.value ? Number(e.target.value) : undefined)
+              }
+              disabled={createBot.isPending}
+              className={cn(
+                'w-full px-4 py-2.5 rounded-lg border border-surface-border',
+                'text-sm placeholder:text-neutral-400',
+                'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
+                'transition-colors',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+              )}
+            >
+              <option value="">Без программы</option>
+              {programs?.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {createBot.isError && (
