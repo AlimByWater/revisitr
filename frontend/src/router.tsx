@@ -77,7 +77,7 @@ function DashboardLayout() {
   )
 }
 
-async function authLoader() {
+async function authLoader({ request }: { request: Request }) {
   const token = localStorage.getItem('token')
   if (!token) return redirect('/auth/login')
 
@@ -91,7 +91,8 @@ async function authLoader() {
       const data = await response.json()
       if (!data.onboarding_completed) {
         // Only redirect if not already on onboarding page
-        if (!window.location.pathname.includes('/onboarding')) {
+        const url = new URL(request.url)
+        if (!url.pathname.includes('/onboarding')) {
           return redirect('/dashboard/onboarding')
         }
       }
