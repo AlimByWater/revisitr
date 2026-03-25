@@ -28,15 +28,22 @@ func (s OnboardingState) Value() (driver.Value, error) {
 func (s *OnboardingState) Scan(src interface{}) error {
 	switch v := src.(type) {
 	case []byte:
-		return json.Unmarshal(v, s)
+		if err := json.Unmarshal(v, s); err != nil {
+			return err
+		}
 	case string:
-		return json.Unmarshal([]byte(v), s)
+		if err := json.Unmarshal([]byte(v), s); err != nil {
+			return err
+		}
 	case nil:
 		*s = OnboardingState{}
-		return nil
 	default:
 		return fmt.Errorf("OnboardingState.Scan: unsupported type %T", src)
 	}
+	if s.Steps == nil {
+		s.Steps = make(map[string]OnboardingStep)
+	}
+	return nil
 }
 
 type UpdateOnboardingRequest struct {
