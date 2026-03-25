@@ -199,8 +199,8 @@ func (g *Group) handleGetStats() (string, string, gin.HandlerFunc) {
 // ── Public (Apple/Google callback) ───────────────────────────────────────────
 
 func (g *Group) handleRegisterPushToken() (string, string, gin.HandlerFunc) {
-	return http.MethodPost, "/passes/:serial/push", func(c *gin.Context) {
-		serial := c.Param("serial")
+	return http.MethodPost, "/passes/:id/push", func(c *gin.Context) {
+		serial := c.Param("id")
 		authToken := c.GetHeader("Authorization")
 
 		var req entity.RegisterPushTokenRequest

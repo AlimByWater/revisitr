@@ -215,10 +215,10 @@ func (g *Group) handleBatchUpdateLevels() (string, string, gin.HandlerFunc) {
 }
 
 func (g *Group) handleDeleteLevel() (string, string, gin.HandlerFunc) {
-	return http.MethodDelete, "/programs/:programId/levels/:levelId", func(c *gin.Context) {
+	return http.MethodDelete, "/programs/:id/levels/:levelId", func(c *gin.Context) {
 		orgID := c.GetInt("org_id")
 
-		programID, err := strconv.Atoi(c.Param("programId"))
+		programID, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid program id"})
 			return
