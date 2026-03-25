@@ -47,8 +47,8 @@ func (s *OnboardingState) Scan(src interface{}) error {
 }
 
 type UpdateOnboardingRequest struct {
-	Step      int  `json:"step" binding:"required,min=1,max=6"`
-	Completed bool `json:"completed"`
-	Skipped   bool `json:"skipped"`
-	EntityID  *int `json:"entity_id,omitempty"`
+	Step      string `json:"step" binding:"required"`
+	Completed bool   `json:"completed"`
+	Skipped   bool   `json:"skipped"`
+	EntityID  *int   `json:"entity_id,omitempty"`
 }

@@ -114,29 +114,29 @@ func TestUpdateStep(t *testing.T) {
 
 	entityID := 42
 	result, err := uc.UpdateStep(context.Background(), 1, entity.UpdateOnboardingRequest{
-		Step:      1,
+		Step:      "info",
 		Completed: true,
 		EntityID:  &entityID,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.CurrentStep != 2 {
-		t.Errorf("expected current_step advanced to 2, got %d", result.CurrentStep)
+	if result.CurrentStep != 1 {
+		t.Errorf("expected current_step=1, got %d", result.CurrentStep)
 	}
-	step, ok := result.Steps["1"]
+	step, ok := result.Steps["info"]
 	if !ok {
-		t.Fatal("expected step '1' to exist")
+		t.Fatal("expected step 'info' to exist")
 	}
 	if !step.Completed {
-		t.Error("expected step 1 to be completed")
+		t.Error("expected step info to be completed")
 	}
 	if step.EntityID == nil || *step.EntityID != 42 {
 		t.Errorf("expected entity_id=42, got %v", step.EntityID)
 	}
 	// verify the state was saved
-	if savedState.CurrentStep != 2 {
-		t.Errorf("expected saved state current_step=2, got %d", savedState.CurrentStep)
+	if savedState.CurrentStep != 1 {
+		t.Errorf("expected saved state current_step=1, got %d", savedState.CurrentStep)
 	}
 }
 

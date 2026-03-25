@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strconv"
 
 	"revisitr/internal/entity"
 )
@@ -44,18 +43,21 @@ func (uc *Usecase) UpdateStep(ctx context.Context, orgID int, req entity.UpdateO
 		state.Steps = make(map[string]OnboardingStep)
 	}
 
-	key := strconv.Itoa(req.Step)
 	step := entity.OnboardingStep{
 		Completed: req.Completed,
 		Skipped:   req.Skipped,
 		EntityID:  req.EntityID,
 	}
-	state.Steps[key] = step
+	state.Steps[req.Step] = step
 
-	// Advance current step if completing/skipping current
-	if req.Step >= state.CurrentStep {
-		state.CurrentStep = req.Step + 1
+	// Advance current step
+	completedCount := 0
+	for _, s := range state.Steps {
+		if s.Completed || s.Skipped {
+			completedCount++
+		}
 	}
+	state.CurrentStep = completedCount
 
 	if err := uc.repo.UpdateState(ctx, orgID, state); err != nil {
 		return nil, fmt.Errorf("update onboarding state: %w", err)
