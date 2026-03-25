@@ -185,10 +185,10 @@ func (g *Group) handleAddCategory() (string, string, gin.HandlerFunc) {
 }
 
 func (g *Group) handleAddItem() (string, string, gin.HandlerFunc) {
-	return http.MethodPost, "/:menuId/categories/:catId/items", func(c *gin.Context) {
+	return http.MethodPost, "/:id/categories/:catId/items", func(c *gin.Context) {
 		orgID, _ := c.Get("org_id")
 
-		menuID, err := strconv.Atoi(c.Param("menuId"))
+		menuID, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid menu id"})
 			return
