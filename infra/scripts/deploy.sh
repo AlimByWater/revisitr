@@ -13,6 +13,20 @@ case "$COMPONENT" in
     log "Deploying backend: ${BACKEND_TAG:-latest}"
     docker compose -f "$COMPOSE_FILE" pull backend
     docker compose -f "$COMPOSE_FILE" up -d --no-deps backend
+
+    # Run database migrations on the running backend container
+    log "Running database migrations..."
+    ENV_FILE="$COMPOSE_DIR/.env"
+    if [ -f "$ENV_FILE" ]; then
+      set -a; source "$ENV_FILE"; set +a
+    fi
+    DSN="host=postgres port=5432 user=${POSTGRES_USER:-revisitr} password=${POSTGRES_PASSWORD} dbname=${POSTGRES_DB:-revisitr} sslmode=disable"
+    if docker compose -f "$COMPOSE_FILE" exec -T backend /usr/local/bin/goose -dir /migrations postgres "$DSN" up; then
+      log "Migrations completed successfully"
+    else
+      log "WARNING: Migration failed, continuing with existing schema"
+    fi
+
     for i in $(seq 1 30); do
       if docker compose -f "$COMPOSE_FILE" exec -T backend wget -qO- http://localhost:8080/healthz >/dev/null 2>&1; then
         log "Backend healthy"; break
