@@ -37,7 +37,8 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (data?.onboarding_state?.current_step !== undefined) {
-      setCurrentStep(data.onboarding_state.current_step)
+      const maxIndex = ONBOARDING_STEPS.length - 1
+      setCurrentStep(Math.min(data.onboarding_state.current_step, maxIndex))
     }
   }, [data])
 
