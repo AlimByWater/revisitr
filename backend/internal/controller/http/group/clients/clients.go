@@ -23,13 +23,28 @@ type clientsUsecase interface {
 	IdentifyClient(ctx context.Context, orgID int, phone, qrCode string) (*entity.BotClient, error)
 }
 
-type Group struct {
-	uc        clientsUsecase
-	jwtSecret string
+type orderStatsUsecase interface {
+	GetClientOrderStats(ctx context.Context, clientID int) (*entity.ClientOrderStats, error)
 }
 
-func New(uc clientsUsecase, jwtSecret string) *Group {
-	return &Group{uc: uc, jwtSecret: jwtSecret}
+type Group struct {
+	uc         clientsUsecase
+	orderStats orderStatsUsecase
+	jwtSecret  string
+}
+
+type Option func(*Group)
+
+func WithOrderStats(uc orderStatsUsecase) Option {
+	return func(g *Group) { g.orderStats = uc }
+}
+
+func New(uc clientsUsecase, jwtSecret string, opts ...Option) *Group {
+	g := &Group{uc: uc, jwtSecret: jwtSecret}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g
 }
 
 func (g *Group) Path() string {
@@ -41,7 +56,7 @@ func (g *Group) Auth() gin.HandlerFunc {
 }
 
 func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
-	return []func() (string, string, gin.HandlerFunc){
+	handlers := []func() (string, string, gin.HandlerFunc){
 		g.handleList,
 		g.handleStats,
 		g.handleCount,
@@ -49,6 +64,10 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handleGet,
 		g.handleUpdate,
 	}
+	if g.orderStats != nil {
+		handlers = append(handlers, g.handleOrderStats)
+	}
+	return handlers
 }
 
 func (g *Group) handleList() (string, string, gin.HandlerFunc) {
@@ -172,6 +191,25 @@ func (g *Group) handleUpdate() (string, string, gin.HandlerFunc) {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "client updated"})
+	}
+}
+
+func (g *Group) handleOrderStats() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/:id/order-stats", func(c *gin.Context) {
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid client id"})
+			return
+		}
+
+		stats, err := g.orderStats.GetClientOrderStats(c.Request.Context(), id)
+		if err != nil {
+			slog.Error("client order stats", "error", err, "client_id", id)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, stats)
 	}
 }
 

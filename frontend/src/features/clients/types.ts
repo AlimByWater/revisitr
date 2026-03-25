@@ -19,6 +19,7 @@ export interface ClientProfile {
   loyalty_level?: string
   total_purchases: number
   purchase_count: number
+  rfm_segment?: string
   transactions?: LoyaltyTransaction[]
 }
 

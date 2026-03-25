@@ -272,17 +272,21 @@ func (r *Integrations) UpsertOrder(ctx context.Context, order *entity.ExternalOr
 	}
 
 	query := `
-		INSERT INTO external_orders (integration_id, external_id, client_id, items, total, ordered_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO external_orders (integration_id, external_id, client_id, customer_phone, customer_name, items, total, ordered_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (integration_id, external_id) DO UPDATE
-		SET client_id = EXCLUDED.client_id,
-		    items     = EXCLUDED.items,
-		    total     = EXCLUDED.total,
-		    ordered_at = EXCLUDED.ordered_at,
-		    synced_at  = NOW()
+		SET client_id       = EXCLUDED.client_id,
+		    customer_phone  = EXCLUDED.customer_phone,
+		    customer_name   = EXCLUDED.customer_name,
+		    items           = EXCLUDED.items,
+		    total           = EXCLUDED.total,
+		    ordered_at      = EXCLUDED.ordered_at,
+		    synced_at       = NOW()
 		RETURNING id, synced_at`
 
 	return r.pg.DB().QueryRowContext(ctx, query,
-		order.IntegrationID, order.ExternalID, order.ClientID, itemsVal, order.Total, order.OrderedAt,
+		order.IntegrationID, order.ExternalID, order.ClientID,
+		order.CustomerPhone, order.CustomerName,
+		itemsVal, order.Total, order.OrderedAt,
 	).Scan(&order.ID, &order.SyncedAt)
 }

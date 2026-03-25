@@ -137,6 +137,8 @@ type ExternalOrder struct {
 	IntegrationID int        `json:"integration_id" db:"integration_id"`
 	ExternalID    string     `json:"external_id"    db:"external_id"`
 	ClientID      *int       `json:"client_id,omitempty" db:"client_id"`
+	CustomerPhone *string    `json:"customer_phone,omitempty" db:"customer_phone"`
+	CustomerName  *string    `json:"customer_name,omitempty" db:"customer_name"`
 	Items         OrderItems `json:"items"          db:"items"`
 	Total         float64    `json:"total"          db:"total"`
 	OrderedAt     *time.Time `json:"ordered_at,omitempty" db:"ordered_at"`

@@ -3,6 +3,7 @@ export interface Bot {
   org_id: number
   name: string
   username: string
+  token_masked?: string
   status: 'active' | 'inactive' | 'error'
   settings: BotSettings
   created_at: string

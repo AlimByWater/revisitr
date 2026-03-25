@@ -10,6 +10,7 @@ import (
 	"revisitr/internal/application/config"
 	"revisitr/internal/application/env"
 	httpCtrl "revisitr/internal/controller/http"
+	"revisitr/internal/controller/http/middleware"
 	analyticsGroup "revisitr/internal/controller/http/group/analytics"
 	authGroup "revisitr/internal/controller/http/group/auth"
 	botsGroup "revisitr/internal/controller/http/group/bots"
@@ -20,9 +21,16 @@ import (
 	"revisitr/internal/controller/http/group/health"
 	integrationsGroup "revisitr/internal/controller/http/group/integrations"
 	loyaltyGroup "revisitr/internal/controller/http/group/loyalty"
+	adminbotGroup "revisitr/internal/controller/http/group/adminbot"
+	billingGroup "revisitr/internal/controller/http/group/billing"
+	menusGroup "revisitr/internal/controller/http/group/menus"
+	onboardingGroup "revisitr/internal/controller/http/group/onboarding"
 	posGroup "revisitr/internal/controller/http/group/pos"
 	promotionsGroup "revisitr/internal/controller/http/group/promotions"
+	rfmGroup "revisitr/internal/controller/http/group/rfm"
 	segmentsGroup "revisitr/internal/controller/http/group/segments"
+	marketplaceGroup "revisitr/internal/controller/http/group/marketplace"
+	walletGroup "revisitr/internal/controller/http/group/wallet"
 	"revisitr/internal/controller/scheduler"
 	minioRepo "revisitr/internal/repository/minio"
 	pgRepo "revisitr/internal/repository/postgres"
@@ -30,6 +38,7 @@ import (
 	autoactionService "revisitr/internal/service/autoaction"
 	posService "revisitr/internal/service/pos"
 	rfmService "revisitr/internal/service/rfm"
+	billingUC "revisitr/internal/usecase/billing"
 	analyticsUC "revisitr/internal/usecase/analytics"
 	authUC "revisitr/internal/usecase/auth"
 	botsUC "revisitr/internal/usecase/bots"
@@ -38,9 +47,14 @@ import (
 	dashboardUC "revisitr/internal/usecase/dashboard"
 	integrationsUC "revisitr/internal/usecase/integrations"
 	loyaltyUC "revisitr/internal/usecase/loyalty"
+	menusUC "revisitr/internal/usecase/menus"
+	onboardingUC "revisitr/internal/usecase/onboarding"
 	posUC "revisitr/internal/usecase/pos"
 	promotionsUC "revisitr/internal/usecase/promotions"
+	rfmUC "revisitr/internal/usecase/rfm"
 	segmentsUC "revisitr/internal/usecase/segments"
+	marketplaceUC "revisitr/internal/usecase/marketplace"
+	walletUC "revisitr/internal/usecase/wallet"
 )
 
 func main() {
@@ -71,15 +85,28 @@ func main() {
 	scenariosRepo := pgRepo.NewAutoScenarios(pg)
 	posRepo := pgRepo.NewPOS(pg)
 
-	// Phase 3 repos
+	// Phase 2 repos
 	analyticsRepo := pgRepo.NewAnalytics(pg)
 	segmentsRepo := pgRepo.NewSegments(pg)
 	promotionsRepo := pgRepo.NewPromotions(pg)
 	integrationsRepo := pgRepo.NewIntegrations(pg)
 
+	// Phase 4 repos
+	billingRepo := pgRepo.NewBilling(pg)
+	adminBotRepo := pgRepo.NewAdminBot(pg)
+	walletRepo := pgRepo.NewWallet(pg)
+	marketplaceRepo := pgRepo.NewMarketplace(pg)
+
+	// Phase 3 repos
+	menusRepo := pgRepo.NewMenus(pg)
+	rfmRepo := pgRepo.NewRFM(pg)
+	onboardingRepo := pgRepo.NewOnboarding(pg)
+
 	// ── Services ──────────────────────────────────────────────────────────────
 
-	posSyncSvc := posService.NewSyncService(integrationsRepo, botClientsRepo, logger)
+	posSyncSvc := posService.NewSyncService(integrationsRepo, botClientsRepo, logger,
+		posService.WithMenus(menusRepo),
+	)
 	rfmSvc := rfmService.New(botClientsRepo, loyaltyRepo, logger)
 
 	// Auto-action services
@@ -93,14 +120,30 @@ func main() {
 	loyaltyUsecase := loyaltyUC.New(loyaltyRepo)
 	clientsUsecase := clientsUC.New(clientsRepo, clientsUC.WithBotClients(botClientsRepo))
 	dashboardUsecase := dashboardUC.New(dashboardRepo)
-	campaignsUsecase := campaignsUC.New(campaignsRepo, scenariosRepo, clientsRepo)
+	campaignsUsecase := campaignsUC.New(campaignsRepo, scenariosRepo, clientsRepo,
+		campaignsUC.WithVariants(campaignsRepo),
+		campaignsUC.WithTemplates(campaignsRepo),
+	)
 	posUsecase := posUC.New(posRepo)
 
-	// Phase 3 usecases
+	// Phase 2 usecases
 	analyticsUsecase := analyticsUC.New(analyticsRepo)
-	segmentsUsecase := segmentsUC.New(segmentsRepo, clientsRepo)
+	segmentsUsecase := segmentsUC.New(segmentsRepo, clientsRepo,
+		segmentsUC.WithRules(segmentsRepo),
+		segmentsUC.WithPredictions(segmentsRepo),
+	)
 	promotionsUsecase := promotionsUC.New(promotionsRepo)
 	integrationsUsecase := integrationsUC.New(integrationsRepo, posSyncSvc)
+
+	// Phase 4 usecases
+	billingUsecase := billingUC.New(billingRepo)
+	walletUsecase := walletUC.New(walletRepo, walletRepo)
+	marketplaceUsecase := marketplaceUC.New(marketplaceRepo, marketplaceRepo, loyaltyUsecase)
+
+	// Phase 3 usecases
+	menusUsecase := menusUC.New(menusRepo)
+	rfmUsecase := rfmUC.New(rfmRepo, segmentsRepo, rfmSvc)
+	onboardingUsecase := onboardingUC.New(onboardingRepo)
 
 	// ── MinIO ─────────────────────────────────────────────────────────────
 
@@ -119,30 +162,64 @@ func main() {
 
 	// ── Controller groups ─────────────────────────────────────────────────────
 
+	// Feature gating middleware (uses billing usecase to check plan)
+	loyaltyGate := middleware.FeatureGate(billingUsecase, "loyalty")
+	campaignsGate := middleware.FeatureGate(billingUsecase, "campaigns")
+	integrationsGate := middleware.FeatureGate(billingUsecase, "integrations")
+	analyticsGate := middleware.FeatureGate(billingUsecase, "analytics")
+	rfmGate := middleware.FeatureGate(billingUsecase, "rfm")
+
 	healthGrp := health.New()
 	authGrp := authGroup.New(authUsecase)
-	botsGrp := botsGroup.New(botsUsecase, jwtSecret)
-	loyaltyGrp := loyaltyGroup.New(loyaltyUsecase, jwtSecret)
-	clientsGrp := clientsGroup.New(clientsUsecase, jwtSecret)
+	botsGrp := botsGroup.New(botsUsecase, jwtSecret,
+		botsGroup.WithPOSLocations(menusUsecase),
+	)
+	loyaltyGrp := loyaltyGroup.New(loyaltyUsecase, jwtSecret,
+		loyaltyGroup.WithFeatureGate(loyaltyGate),
+	)
+	clientsGrp := clientsGroup.New(clientsUsecase, jwtSecret,
+		clientsGroup.WithOrderStats(menusUsecase),
+	)
 	dashboardGrp := dashboardGroup.New(dashboardUsecase, jwtSecret,
 		dashboardGroup.WithSalesUsecase(integrationsUsecase),
 	)
-	campaignsGrp := campaignsGroup.New(campaignsUsecase, jwtSecret)
+	campaignsGrp := campaignsGroup.New(campaignsUsecase, jwtSecret,
+		campaignsGroup.WithFeatureGate(campaignsGate),
+	)
 	posGrp := posGroup.New(posUsecase, jwtSecret)
 
 	filesGrp := filesGroup.New(minioClient, cfg.MinIO.Bucket, jwtSecret)
 
-	// Phase 3 groups
-	analyticsGrp := analyticsGroup.New(analyticsUsecase, jwtSecret)
+	// Phase 2 groups
+	analyticsGrp := analyticsGroup.New(analyticsUsecase, jwtSecret,
+		analyticsGroup.WithFeatureGate(analyticsGate),
+	)
 	segmentsGrp := segmentsGroup.New(segmentsUsecase, jwtSecret)
 	promotionsGrp := promotionsGroup.New(promotionsUsecase, jwtSecret)
-	integrationsGrp := integrationsGroup.New(integrationsUsecase, jwtSecret)
+	integrationsGrp := integrationsGroup.New(integrationsUsecase, jwtSecret,
+		integrationsGroup.WithFeatureGate(integrationsGate),
+	)
+
+	// Phase 4 groups
+	billingGrp := billingGroup.New(billingUsecase, jwtSecret)
+	adminBotGrp := adminbotGroup.New(adminBotRepo, jwtSecret)
+	walletGrp := walletGroup.New(walletUsecase, jwtSecret)
+	marketplaceGrp := marketplaceGroup.New(marketplaceUsecase, jwtSecret)
+
+	// Phase 3 groups
+	menusGrp := menusGroup.New(menusUsecase, jwtSecret)
+	rfmGrp := rfmGroup.New(rfmUsecase, jwtSecret,
+		rfmGroup.WithFeatureGate(rfmGate),
+	)
+	onboardingGrp := onboardingGroup.New(onboardingUsecase, jwtSecret)
 
 	httpModule := httpCtrl.New(&httpConfig{cfg: cfg},
 		healthGrp, authGrp, botsGrp, loyaltyGrp, posGrp, clientsGrp,
 		dashboardGrp, campaignsGrp,
 		analyticsGrp, segmentsGrp, promotionsGrp, integrationsGrp,
 		filesGrp,
+		menusGrp, rfmGrp, onboardingGrp,
+		billingGrp, adminBotGrp, walletGrp, marketplaceGrp,
 	)
 
 	// ── Scheduler ─────────────────────────────────────────────────────────────
@@ -190,6 +267,11 @@ func main() {
 		Interval: 1 * time.Hour,
 		Fn:       func(ctx context.Context) error { return autoActionScheduler.Evaluate(ctx) },
 	})
+	sched.Register(scheduler.Task{
+		Name:     "billing_check_expired",
+		Interval: 24 * time.Hour,
+		Fn:       func(ctx context.Context) error { return billingUsecase.HandleExpiredSubscriptions(ctx) },
+	})
 	go sched.Run(appCtx)
 
 	// ── Application ───────────────────────────────────────────────────────────
@@ -201,6 +283,8 @@ func main() {
 			authUsecase, botsUsecase, loyaltyUsecase, posUsecase,
 			clientsUsecase, dashboardUsecase, campaignsUsecase,
 			analyticsUsecase, segmentsUsecase, promotionsUsecase, integrationsUsecase,
+			menusUsecase, rfmUsecase, onboardingUsecase,
+			billingUsecase, walletUsecase, marketplaceUsecase,
 		},
 		[]application.Controller{httpModule},
 	)

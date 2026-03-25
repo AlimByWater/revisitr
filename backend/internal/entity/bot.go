@@ -58,8 +58,22 @@ type Bot struct {
 	Username  string      `db:"username" json:"username"`
 	Status    string      `db:"status" json:"status"`
 	Settings  BotSettings `db:"settings" json:"settings"`
-	CreatedAt time.Time   `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time   `db:"updated_at" json:"updated_at"`
+	CreatedAt   time.Time   `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time   `db:"updated_at" json:"updated_at"`
+	TokenMasked string      `db:"-" json:"token_masked,omitempty"`
+}
+
+// MaskToken returns a partially masked token for safe display.
+// For tokens longer than 10 characters, it shows the first 5 and last 5 characters.
+// For shorter non-empty tokens, it shows the first 2 characters followed by "...".
+func MaskToken(token string) string {
+	if len(token) > 10 {
+		return token[:5] + "..." + token[len(token)-5:]
+	}
+	if len(token) > 0 {
+		return token[:2] + "..."
+	}
+	return ""
 }
 
 type CreateBotRequest struct {

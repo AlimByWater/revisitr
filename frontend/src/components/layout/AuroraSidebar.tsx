@@ -11,7 +11,10 @@ import {
   Tag,
   Bot,
   Store,
+  UtensilsCrossed,
+  ShoppingBag,
   Workflow,
+  CreditCard,
   ChevronRight,
   type LucideIcon,
 } from 'lucide-react'
@@ -44,6 +47,7 @@ const navigation: NavItem[] = [
     children: [
       { label: 'Клиенты', href: '/dashboard/clients' },
       { label: 'Сегментация', href: '/dashboard/clients/segments' },
+      { label: 'Прогнозы', href: '/dashboard/clients/predictions' },
     ],
   },
   {
@@ -58,6 +62,7 @@ const navigation: NavItem[] = [
     children: [
       { label: 'Все рассылки', href: '/dashboard/campaigns' },
       { label: 'Создать', href: '/dashboard/campaigns/create' },
+      { label: 'Шаблоны', href: '/dashboard/campaigns/templates' },
       { label: 'Авто-сценарии', href: '/dashboard/campaigns/scenarios' },
     ],
   },
@@ -73,8 +78,17 @@ const navigation: NavItem[] = [
     label: 'Боты', icon: Bot, badgeKey: 'bots',
     children: [{ label: 'Список ботов', href: '/dashboard/bots' }],
   },
+  { label: 'Маркетплейс', icon: ShoppingBag, href: '/dashboard/marketplace' },
   { label: 'Точки продаж', icon: Store, href: '/dashboard/pos' },
+  { label: 'Меню', icon: UtensilsCrossed, href: '/dashboard/menus' },
   { label: 'Интеграции', icon: Workflow, href: '/dashboard/integrations' },
+  {
+    label: 'Биллинг', icon: CreditCard,
+    children: [
+      { label: 'Тариф', href: '/dashboard/billing' },
+      { label: 'Счета', href: '/dashboard/billing/invoices' },
+    ],
+  },
 ]
 
 function AuroraNavItem({ item, badges, expanded }: { item: NavItem; badges: Record<string, number>; expanded: boolean }) {
@@ -236,6 +250,25 @@ export function AuroraSidebar() {
       {/* Footer */}
       {expanded && (
         <div className="p-4 border-t border-white/[0.04]">
+          <button
+            type="button"
+            onClick={async () => {
+              const token = localStorage.getItem('token')
+              if (!token) return
+              try {
+                const baseURL = import.meta.env.VITE_API_URL || '/api/v1'
+                await fetch(`${baseURL}/onboarding/reset`, {
+                  method: 'POST',
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+                const basePath = import.meta.env.BASE_URL?.replace(/\/$/, '') || ''
+                window.location.href = `${basePath}/dashboard/onboarding`
+              } catch { /* ignore */ }
+            }}
+            className="block w-full text-[11px] text-white/15 hover:text-white/35 transition-colors text-center mb-2"
+          >
+            Пройти настройку заново
+          </button>
           <p className="text-[10px] font-mono text-white/15 text-center uppercase tracking-wider">
             &copy; 2026 Revisitr
           </p>

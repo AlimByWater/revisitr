@@ -25,14 +25,40 @@ type clientsRepo interface {
 	GetIDsByFilter(ctx context.Context, orgID int, f entity.SegmentFilter) ([]int, error)
 }
 
-type Usecase struct {
-	logger   *slog.Logger
-	segments segmentsRepo
-	clients  clientsRepo
+type rulesRepo interface {
+	CreateRule(ctx context.Context, segmentID int, req entity.CreateSegmentRuleRequest) (*entity.SegmentRule, error)
+	GetRules(ctx context.Context, segmentID int) ([]entity.SegmentRule, error)
+	DeleteRule(ctx context.Context, ruleID int) error
+	DeleteRulesBySegment(ctx context.Context, segmentID int) error
 }
 
-func New(segments segmentsRepo, clients clientsRepo) *Usecase {
-	return &Usecase{segments: segments, clients: clients}
+type predictionsRepo interface {
+	UpsertPrediction(ctx context.Context, pred *entity.ClientPrediction) error
+	GetPredictions(ctx context.Context, orgID int, limit, offset int) ([]entity.ClientPrediction, error)
+	GetPredictionByClient(ctx context.Context, clientID int) (*entity.ClientPrediction, error)
+	GetHighChurnClients(ctx context.Context, orgID int, threshold float32) ([]entity.ClientPrediction, error)
+	GetPredictionSummary(ctx context.Context, orgID int) (*entity.PredictionSummary, error)
+}
+
+type Usecase struct {
+	logger      *slog.Logger
+	segments    segmentsRepo
+	clients     clientsRepo
+	rules       rulesRepo
+	predictions predictionsRepo
+}
+
+type Option func(*Usecase)
+
+func WithRules(r rulesRepo) Option           { return func(uc *Usecase) { uc.rules = r } }
+func WithPredictions(r predictionsRepo) Option { return func(uc *Usecase) { uc.predictions = r } }
+
+func New(segments segmentsRepo, clients clientsRepo, opts ...Option) *Usecase {
+	uc := &Usecase{segments: segments, clients: clients}
+	for _, opt := range opts {
+		opt(uc)
+	}
+	return uc
 }
 
 func (uc *Usecase) Init(_ context.Context, logger *slog.Logger) error {
@@ -156,4 +182,88 @@ func (uc *Usecase) PreviewCount(ctx context.Context, orgID int, f entity.Segment
 		return 0, fmt.Errorf("preview segment count: %w", err)
 	}
 	return count, nil
+}
+
+// ── Segment Rules ────────────────────────────────────────────────────────────
+
+func (uc *Usecase) AddRule(ctx context.Context, segmentID, orgID int, req entity.CreateSegmentRuleRequest) (*entity.SegmentRule, error) {
+	if uc.rules == nil {
+		return nil, fmt.Errorf("rules not configured")
+	}
+	if _, err := uc.GetByID(ctx, segmentID, orgID); err != nil {
+		return nil, err
+	}
+	return uc.rules.CreateRule(ctx, segmentID, req)
+}
+
+func (uc *Usecase) GetRules(ctx context.Context, segmentID, orgID int) ([]entity.SegmentRule, error) {
+	if uc.rules == nil {
+		return nil, nil
+	}
+	if _, err := uc.GetByID(ctx, segmentID, orgID); err != nil {
+		return nil, err
+	}
+	return uc.rules.GetRules(ctx, segmentID)
+}
+
+func (uc *Usecase) DeleteRule(ctx context.Context, segmentID, orgID, ruleID int) error {
+	if uc.rules == nil {
+		return fmt.Errorf("rules not configured")
+	}
+	if _, err := uc.GetByID(ctx, segmentID, orgID); err != nil {
+		return err
+	}
+	return uc.rules.DeleteRule(ctx, ruleID)
+}
+
+// ── Predictions ──────────────────────────────────────────────────────────────
+
+func (uc *Usecase) GetPredictions(ctx context.Context, orgID, limit, offset int) ([]entity.ClientPrediction, error) {
+	if uc.predictions == nil {
+		return nil, nil
+	}
+	return uc.predictions.GetPredictions(ctx, orgID, limit, offset)
+}
+
+func (uc *Usecase) GetClientPrediction(ctx context.Context, clientID int) (*entity.ClientPrediction, error) {
+	if uc.predictions == nil {
+		return nil, ErrPredictionNotFound
+	}
+	pred, err := uc.predictions.GetPredictionByClient(ctx, clientID)
+	if err != nil {
+		return nil, err
+	}
+	if pred == nil {
+		return nil, ErrPredictionNotFound
+	}
+	return pred, nil
+}
+
+func (uc *Usecase) GetHighChurnClients(ctx context.Context, orgID int, threshold float32) ([]entity.ClientPrediction, error) {
+	if uc.predictions == nil {
+		return nil, nil
+	}
+	if threshold <= 0 {
+		threshold = 0.7
+	}
+	return uc.predictions.GetHighChurnClients(ctx, orgID, threshold)
+}
+
+func (uc *Usecase) GetPredictionSummary(ctx context.Context, orgID int) (*entity.PredictionSummary, error) {
+	if uc.predictions == nil {
+		return &entity.PredictionSummary{}, nil
+	}
+	return uc.predictions.GetPredictionSummary(ctx, orgID)
+}
+
+// ComputePredictions runs heuristic predictions for all clients in an org.
+// This should be called by a scheduler task.
+func (uc *Usecase) ComputePredictions(ctx context.Context, orgID int) error {
+	if uc.predictions == nil {
+		return fmt.Errorf("predictions not configured")
+	}
+	// Heuristic prediction will be implemented when POS/loyalty data is available.
+	// For now, this is a placeholder that can be connected to the scheduler.
+	uc.logger.Info("compute predictions called", "org_id", orgID)
+	return nil
 }

@@ -23,18 +23,38 @@ type clientsRepo interface {
 	GetByPhone(ctx context.Context, orgID int, phone string) (*entity.BotClient, error)
 }
 
+type menusRepo interface {
+	GetByOrgAndIntegration(ctx context.Context, orgID, integrationID int) (*entity.Menu, error)
+	UpsertFromPOS(ctx context.Context, integrationID, orgID int, posMenu *POSMenu) error
+}
+
 // SyncService orchestrates POS data synchronisation using provider adapters.
 type SyncService struct {
 	integrations integrationsRepo
 	clients      clientsRepo
+	menus        menusRepo
 	logger       *slog.Logger
 }
 
-func NewSyncService(integrations integrationsRepo, clients clientsRepo, logger *slog.Logger) *SyncService {
-	return &SyncService{
+func NewSyncService(integrations integrationsRepo, clients clientsRepo, logger *slog.Logger, opts ...SyncOption) *SyncService {
+	s := &SyncService{
 		integrations: integrations,
 		clients:      clients,
 		logger:       logger,
+	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+// SyncOption configures optional dependencies for SyncService.
+type SyncOption func(*SyncService)
+
+// WithMenus enables menu auto-import during POS sync.
+func WithMenus(menus menusRepo) SyncOption {
+	return func(s *SyncService) {
+		s.menus = menus
 	}
 }
 
@@ -97,9 +117,13 @@ func (s *SyncService) Sync(ctx context.Context, integration *entity.Integration)
 			OrderedAt:     &order.OrderedAt,
 		}
 
-		if order.CustomerPhone != "" && s.clients != nil {
-			if client, err := s.clients.GetByPhone(ctx, integration.OrgID, order.CustomerPhone); err == nil {
-				extOrder.ClientID = &client.ID
+		if order.CustomerPhone != "" {
+			phone := order.CustomerPhone
+			extOrder.CustomerPhone = &phone
+			if s.clients != nil {
+				if client, err := s.clients.GetByPhone(ctx, integration.OrgID, order.CustomerPhone); err == nil {
+					extOrder.ClientID = &client.ID
+				}
 			}
 		}
 
@@ -110,6 +134,36 @@ func (s *SyncService) Sync(ctx context.Context, integration *entity.Integration)
 
 	s.integrations.UpdateLastSync(ctx, integration.ID, "active")
 	s.logger.Info("sync completed", "integration_id", integration.ID, "orders_synced", len(orders))
+
+	// Auto-import menu from POS if menus repo is configured.
+	if s.menus != nil {
+		if err := s.syncMenu(ctx, provider, integration); err != nil {
+			s.logger.Error("menu sync failed", "error", err, "integration_id", integration.ID)
+			// Menu sync failure is non-fatal; orders were already synced successfully.
+		}
+	}
+
+	return nil
+}
+
+// syncMenu fetches the menu from the POS provider and upserts it into the database.
+func (s *SyncService) syncMenu(ctx context.Context, provider POSProvider, integration *entity.Integration) error {
+	posMenu, err := provider.GetMenu(ctx)
+	if err != nil {
+		return fmt.Errorf("get menu: %w", err)
+	}
+	if posMenu == nil || len(posMenu.Categories) == 0 {
+		return nil
+	}
+
+	if err := s.menus.UpsertFromPOS(ctx, integration.ID, integration.OrgID, posMenu); err != nil {
+		return fmt.Errorf("upsert menu: %w", err)
+	}
+
+	s.logger.Info("menu synced",
+		"integration_id", integration.ID,
+		"categories", len(posMenu.Categories),
+	)
 	return nil
 }
 

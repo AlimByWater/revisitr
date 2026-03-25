@@ -34,6 +34,10 @@ type Bot struct {
 	Token string
 }
 
+type AdminBot struct {
+	Token string
+}
+
 type MinIO struct {
 	Endpoint  string
 	AccessKey string
@@ -48,6 +52,7 @@ type Module struct {
 	Redis    Redis
 	Auth     Auth
 	Bot      Bot
+	AdminBot AdminBot
 	MinIO    MinIO
 }
 
@@ -77,6 +82,9 @@ func NewFromEnv() *Module {
 		},
 		Bot: Bot{
 			Token: env.GetString("BOT_TOKEN", ""),
+		},
+		AdminBot: AdminBot{
+			Token: env.GetString("ADMIN_BOT_TOKEN", ""),
 		},
 		MinIO: MinIO{
 			Endpoint:  env.GetString("MINIO_ENDPOINT", "localhost:9000"),

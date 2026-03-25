@@ -24,13 +24,29 @@ type botsUsecase interface {
 	UpdateSettings(ctx context.Context, id, orgID int, req *entity.UpdateBotSettingsRequest) error
 }
 
+type posLocationsUsecase interface {
+	SetBotPOSLocations(ctx context.Context, botID int, posIDs []int) error
+	GetBotPOSLocations(ctx context.Context, botID int) ([]int, error)
+}
+
 type Group struct {
 	uc        botsUsecase
+	posLoc    posLocationsUsecase
 	jwtSecret string
 }
 
-func New(uc botsUsecase, jwtSecret string) *Group {
-	return &Group{uc: uc, jwtSecret: jwtSecret}
+type Option func(*Group)
+
+func WithPOSLocations(uc posLocationsUsecase) Option {
+	return func(g *Group) { g.posLoc = uc }
+}
+
+func New(uc botsUsecase, jwtSecret string, opts ...Option) *Group {
+	g := &Group{uc: uc, jwtSecret: jwtSecret}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g
 }
 
 func (g *Group) Path() string {
@@ -42,7 +58,7 @@ func (g *Group) Auth() gin.HandlerFunc {
 }
 
 func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
-	return []func() (string, string, gin.HandlerFunc){
+	handlers := []func() (string, string, gin.HandlerFunc){
 		g.handleCreate,
 		g.handleList,
 		g.handleGet,
@@ -51,6 +67,10 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handleGetSettings,
 		g.handleUpdateSettings,
 	}
+	if g.posLoc != nil {
+		handlers = append(handlers, g.handleGetPOSLocations, g.handleSetPOSLocations)
+	}
+	return handlers
 }
 
 func (g *Group) handleCreate() (string, string, gin.HandlerFunc) {
@@ -196,6 +216,51 @@ func (g *Group) handleUpdateSettings() (string, string, gin.HandlerFunc) {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "settings updated"})
+	}
+}
+
+func (g *Group) handleGetPOSLocations() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/:id/pos-locations", func(c *gin.Context) {
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid bot id"})
+			return
+		}
+
+		posIDs, err := g.posLoc.GetBotPOSLocations(c.Request.Context(), id)
+		if err != nil {
+			slog.Error("get bot pos locations", "error", err, "bot_id", id)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"pos_ids": posIDs})
+	}
+}
+
+func (g *Group) handleSetPOSLocations() (string, string, gin.HandlerFunc) {
+	return http.MethodPut, "/:id/pos-locations", func(c *gin.Context) {
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid bot id"})
+			return
+		}
+
+		var req struct {
+			POSIDs []int `json:"pos_ids" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if err := g.posLoc.SetBotPOSLocations(c.Request.Context(), id, req.POSIDs); err != nil {
+			slog.Error("set bot pos locations", "error", err, "bot_id", id)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "pos locations updated"})
 	}
 }
 

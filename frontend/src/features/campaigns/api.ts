@@ -10,6 +10,12 @@ import type {
   UpdateScenarioRequest,
   AudienceFilter,
   PaginatedResponse,
+  CampaignVariant,
+  CreateABTestRequest,
+  ABTestResults,
+  CampaignTemplate,
+  CreateCampaignTemplateRequest,
+  UpdateCampaignTemplateRequest,
 } from './types'
 
 export const campaignsApi = {
@@ -137,6 +143,55 @@ export const campaignsApi = {
       `/campaigns/scenarios/${scenarioId}/log`,
       { params: { limit, offset } },
     )
+    return response.data
+  },
+
+  // A/B testing
+  createABTest: async (id: number, data: CreateABTestRequest): Promise<CampaignVariant[]> => {
+    const response = await api.post<CampaignVariant[]>(`/campaigns/${id}/variants`, data)
+    return response.data
+  },
+
+  getVariants: async (id: number): Promise<CampaignVariant[]> => {
+    const response = await api.get<CampaignVariant[]>(`/campaigns/${id}/variants`)
+    return response.data
+  },
+
+  getABResults: async (id: number): Promise<ABTestResults> => {
+    const response = await api.get<ABTestResults>(`/campaigns/${id}/ab-results`)
+    return response.data
+  },
+
+  pickWinner: async (campaignId: number, variantId: number): Promise<void> => {
+    await api.post(`/campaigns/${campaignId}/variants/${variantId}/winner`)
+  },
+
+  // Campaign templates
+  listCampaignTemplates: async (): Promise<CampaignTemplate[]> => {
+    const response = await api.get<CampaignTemplate[]>('/campaigns/templates')
+    return response.data
+  },
+
+  getCampaignTemplate: async (id: number): Promise<CampaignTemplate> => {
+    const response = await api.get<CampaignTemplate>(`/campaigns/templates/${id}`)
+    return response.data
+  },
+
+  createCampaignTemplate: async (data: CreateCampaignTemplateRequest): Promise<CampaignTemplate> => {
+    const response = await api.post<CampaignTemplate>('/campaigns/templates', data)
+    return response.data
+  },
+
+  updateCampaignTemplate: async (id: number, data: UpdateCampaignTemplateRequest): Promise<void> => {
+    await api.patch(`/campaigns/templates/${id}`, data)
+  },
+
+  deleteCampaignTemplate: async (id: number): Promise<void> => {
+    await api.delete(`/campaigns/templates/${id}`)
+  },
+
+  createFromTemplate: async (templateId: number, botId: number): Promise<Campaign> => {
+    const response = await api.post<Campaign>(`/campaigns/templates/${templateId}/use`, { bot_id: botId })
     return response.data
   },
 }

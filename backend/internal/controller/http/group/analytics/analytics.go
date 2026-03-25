@@ -20,13 +20,31 @@ type analyticsUsecase interface {
 	GetCampaignAnalytics(ctx context.Context, orgID int, f entity.AnalyticsFilter) (*entity.CampaignAnalytics, error)
 }
 
-type Group struct {
-	uc        analyticsUsecase
-	jwtSecret string
+type Option func(*Group)
+
+func WithFeatureGate(gate gin.HandlerFunc) Option {
+	return func(g *Group) { g.featureGate = gate }
 }
 
-func New(uc analyticsUsecase, jwtSecret string) *Group {
-	return &Group{uc: uc, jwtSecret: jwtSecret}
+type Group struct {
+	uc          analyticsUsecase
+	jwtSecret   string
+	featureGate gin.HandlerFunc
+}
+
+func New(uc analyticsUsecase, jwtSecret string, opts ...Option) *Group {
+	g := &Group{uc: uc, jwtSecret: jwtSecret}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g
+}
+
+func (g *Group) ExtraMiddleware() []gin.HandlerFunc {
+	if g.featureGate != nil {
+		return []gin.HandlerFunc{g.featureGate}
+	}
+	return nil
 }
 
 func (g *Group) Path() string {

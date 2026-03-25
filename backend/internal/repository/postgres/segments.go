@@ -180,3 +180,124 @@ func (r *Segments) CountByFilter(ctx context.Context, orgID int, f entity.Segmen
 	}
 	return count, nil
 }
+
+// ── Segment Rules ────────────────────────────────────────────────────────────
+
+func (r *Segments) CreateRule(ctx context.Context, segmentID int, req entity.CreateSegmentRuleRequest) (*entity.SegmentRule, error) {
+	var rule entity.SegmentRule
+	err := r.pg.DB().GetContext(ctx, &rule, `
+		INSERT INTO segment_rules (segment_id, field, operator, value)
+		VALUES ($1, $2, $3, $4)
+		RETURNING *`,
+		segmentID, req.Field, req.Operator, req.Value)
+	if err != nil {
+		return nil, fmt.Errorf("segments.CreateRule: %w", err)
+	}
+	return &rule, nil
+}
+
+func (r *Segments) GetRules(ctx context.Context, segmentID int) ([]entity.SegmentRule, error) {
+	var rules []entity.SegmentRule
+	err := r.pg.DB().SelectContext(ctx, &rules,
+		"SELECT * FROM segment_rules WHERE segment_id = $1 ORDER BY id", segmentID)
+	if err != nil {
+		return nil, fmt.Errorf("segments.GetRules: %w", err)
+	}
+	return rules, nil
+}
+
+func (r *Segments) DeleteRule(ctx context.Context, ruleID int) error {
+	_, err := r.pg.DB().ExecContext(ctx,
+		"DELETE FROM segment_rules WHERE id = $1", ruleID)
+	if err != nil {
+		return fmt.Errorf("segments.DeleteRule: %w", err)
+	}
+	return nil
+}
+
+func (r *Segments) DeleteRulesBySegment(ctx context.Context, segmentID int) error {
+	_, err := r.pg.DB().ExecContext(ctx,
+		"DELETE FROM segment_rules WHERE segment_id = $1", segmentID)
+	if err != nil {
+		return fmt.Errorf("segments.DeleteRulesBySegment: %w", err)
+	}
+	return nil
+}
+
+// ── Client Predictions ───────────────────────────────────────────────────────
+
+func (r *Segments) UpsertPrediction(ctx context.Context, pred *entity.ClientPrediction) error {
+	err := r.pg.DB().GetContext(ctx, pred, `
+		INSERT INTO client_predictions (org_id, client_id, churn_risk, upsell_score, predicted_value, factors)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (client_id) DO UPDATE SET
+			churn_risk = EXCLUDED.churn_risk,
+			upsell_score = EXCLUDED.upsell_score,
+			predicted_value = EXCLUDED.predicted_value,
+			factors = EXCLUDED.factors,
+			computed_at = now()
+		RETURNING *`,
+		pred.OrgID, pred.ClientID, pred.ChurnRisk, pred.UpsellScore, pred.PredictedValue, pred.Factors)
+	if err != nil {
+		return fmt.Errorf("segments.UpsertPrediction: %w", err)
+	}
+	return nil
+}
+
+func (r *Segments) GetPredictions(ctx context.Context, orgID int, limit, offset int) ([]entity.ClientPrediction, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	var preds []entity.ClientPrediction
+	err := r.pg.DB().SelectContext(ctx, &preds, `
+		SELECT * FROM client_predictions
+		WHERE org_id = $1
+		ORDER BY churn_risk DESC
+		LIMIT $2 OFFSET $3`,
+		orgID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("segments.GetPredictions: %w", err)
+	}
+	return preds, nil
+}
+
+func (r *Segments) GetPredictionByClient(ctx context.Context, clientID int) (*entity.ClientPrediction, error) {
+	var pred entity.ClientPrediction
+	err := r.pg.DB().GetContext(ctx, &pred,
+		"SELECT * FROM client_predictions WHERE client_id = $1", clientID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("segments.GetPredictionByClient: %w", err)
+	}
+	return &pred, nil
+}
+
+func (r *Segments) GetHighChurnClients(ctx context.Context, orgID int, threshold float32) ([]entity.ClientPrediction, error) {
+	var preds []entity.ClientPrediction
+	err := r.pg.DB().SelectContext(ctx, &preds, `
+		SELECT * FROM client_predictions
+		WHERE org_id = $1 AND churn_risk >= $2
+		ORDER BY churn_risk DESC`,
+		orgID, threshold)
+	if err != nil {
+		return nil, fmt.Errorf("segments.GetHighChurnClients: %w", err)
+	}
+	return preds, nil
+}
+
+func (r *Segments) GetPredictionSummary(ctx context.Context, orgID int) (*entity.PredictionSummary, error) {
+	var summary entity.PredictionSummary
+	err := r.pg.DB().GetContext(ctx, &summary, `
+		SELECT
+			COUNT(*) FILTER (WHERE churn_risk >= 0.7) AS high_churn_count,
+			COALESCE(AVG(churn_risk), 0) AS avg_churn_risk,
+			COUNT(*) FILTER (WHERE upsell_score >= 0.7) AS high_upsell_count,
+			COUNT(*) AS total_predicted
+		FROM client_predictions WHERE org_id = $1`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("segments.GetPredictionSummary: %w", err)
+	}
+	return &summary, nil
+}

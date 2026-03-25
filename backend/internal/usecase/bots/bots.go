@@ -70,6 +70,10 @@ func (uc *Usecase) GetByOrgID(ctx context.Context, orgID int) ([]entity.Bot, err
 		return nil, fmt.Errorf("get bots by org: %w", err)
 	}
 
+	for i := range bots {
+		bots[i].TokenMasked = entity.MaskToken(bots[i].Token)
+	}
+
 	return bots, nil
 }
 
@@ -82,6 +86,8 @@ func (uc *Usecase) GetByID(ctx context.Context, id, orgID int) (*entity.Bot, err
 	if bot.OrgID != orgID {
 		return nil, ErrNotBotOwner
 	}
+
+	bot.TokenMasked = entity.MaskToken(bot.Token)
 
 	return bot, nil
 }

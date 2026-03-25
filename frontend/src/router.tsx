@@ -34,6 +34,15 @@ import SegmentsPage from './routes/dashboard/clients/segments'
 import PromotionsPage from './routes/dashboard/promotions/index'
 import PromoCodesPage from './routes/dashboard/promotions/codes'
 import PromotionsArchivePage from './routes/dashboard/promotions/archive'
+import OnboardingPage from './routes/dashboard/onboarding/index'
+import MenusPage from './routes/dashboard/menus/index'
+import MenuDetailPage from './routes/dashboard/menus/$menuId'
+import WalletPage from './routes/dashboard/loyalty/wallet'
+import MarketplacePage from './routes/dashboard/marketplace/index'
+import BillingPage from './routes/dashboard/billing/index'
+import InvoicesPage from './routes/dashboard/billing/invoices'
+import CampaignTemplatesPage from './routes/dashboard/campaigns/templates'
+import PredictionsPage from './routes/dashboard/clients/predictions'
 
 function DashboardLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -68,9 +77,29 @@ function DashboardLayout() {
   )
 }
 
-function authLoader() {
+async function authLoader() {
   const token = localStorage.getItem('token')
   if (!token) return redirect('/auth/login')
+
+  // Check onboarding status
+  try {
+    const baseURL = import.meta.env.VITE_API_URL || '/api/v1'
+    const response = await fetch(`${baseURL}/onboarding`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (response.ok) {
+      const data = await response.json()
+      if (!data.onboarding_completed) {
+        // Only redirect if not already on onboarding page
+        if (!window.location.pathname.includes('/onboarding')) {
+          return redirect('/dashboard/onboarding')
+        }
+      }
+    }
+  } catch {
+    // If onboarding check fails, don't block — just continue to dashboard
+  }
+
   return null
 }
 
@@ -92,14 +121,17 @@ export const router = createBrowserRouter(
             { path: 'bots/:botId', element: <BotDetailPage /> },
             { path: 'clients', element: <ClientsPage /> },
             { path: 'clients/segments', element: <SegmentsPage /> },
+            { path: 'clients/predictions', element: <PredictionsPage /> },
             { path: 'clients/:clientId', element: <ClientDetailPage /> },
             { path: 'loyalty', element: <LoyaltyProgramsPage /> },
+            { path: 'loyalty/wallet', element: <WalletPage /> },
             { path: 'loyalty/:programId', element: <ProgramDetailPage /> },
             { path: 'pos', element: <POSListPage /> },
             { path: 'pos/:posId', element: <POSDetailPage /> },
             { path: 'campaigns', element: <CampaignsPage /> },
             { path: 'campaigns/create', element: <CreateCampaignPage /> },
             { path: 'campaigns/scenarios', element: <ScenariosPage /> },
+            { path: 'campaigns/templates', element: <CampaignTemplatesPage /> },
             { path: 'analytics/sales', element: <SalesAnalyticsPage /> },
             { path: 'analytics/loyalty', element: <LoyaltyAnalyticsPage /> },
             { path: 'analytics/mailings', element: <MailingsAnalyticsPage /> },
@@ -109,6 +141,12 @@ export const router = createBrowserRouter(
             { path: 'promotions/archive', element: <PromotionsArchivePage /> },
             { path: 'integrations', element: <IntegrationsPage /> },
             { path: 'integrations/:integrationId', element: <IntegrationDetailPage /> },
+            { path: 'onboarding', element: <OnboardingPage /> },
+            { path: 'marketplace', element: <MarketplacePage /> },
+            { path: 'menus', element: <MenusPage /> },
+            { path: 'menus/:menuId', element: <MenuDetailPage /> },
+            { path: 'billing', element: <BillingPage /> },
+            { path: 'billing/invoices', element: <InvoicesPage /> },
           ],
         },
       ],

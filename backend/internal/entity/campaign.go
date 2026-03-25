@@ -144,6 +144,93 @@ type CampaignMessage struct {
 	CreatedAt    time.Time  `db:"created_at" json:"created_at"`
 }
 
+// ── A/B Testing ──────────────────────────────────────────────────────────────
+
+type CampaignVariant struct {
+	ID         int             `db:"id" json:"id"`
+	CampaignID int             `db:"campaign_id" json:"campaign_id"`
+	Name       string          `db:"name" json:"name"`
+	AudiencePct int            `db:"audience_pct" json:"audience_pct"`
+	Message    string          `db:"message" json:"message"`
+	MediaURL   *string         `db:"media_url" json:"media_url,omitempty"`
+	Buttons    CampaignButtons `db:"buttons" json:"buttons"`
+	Stats      CampaignStats   `db:"stats" json:"stats"`
+	IsWinner   bool            `db:"is_winner" json:"is_winner"`
+	CreatedAt  time.Time       `db:"created_at" json:"created_at"`
+}
+
+type CreateVariantRequest struct {
+	Name        string          `json:"name" binding:"required"`
+	AudiencePct int             `json:"audience_pct" binding:"required,min=1,max=100"`
+	Message     string          `json:"message" binding:"required"`
+	MediaURL    *string         `json:"media_url,omitempty"`
+	Buttons     CampaignButtons `json:"buttons"`
+}
+
+type CreateABTestRequest struct {
+	Variants []CreateVariantRequest `json:"variants" binding:"required,min=2,max=5"`
+}
+
+type ABTestResults struct {
+	CampaignID int               `json:"campaign_id"`
+	Variants   []VariantResult   `json:"variants"`
+	WinnerID   *int              `json:"winner_id,omitempty"`
+}
+
+type VariantResult struct {
+	ID          int     `json:"id"`
+	Name        string  `json:"name"`
+	AudiencePct int     `json:"audience_pct"`
+	Total       int     `json:"total"`
+	Sent        int     `json:"sent"`
+	Failed      int     `json:"failed"`
+	Clicked     int     `json:"clicked"`
+	ClickRate   float64 `json:"click_rate"`
+	IsWinner    bool    `json:"is_winner"`
+}
+
+// ── Campaign Templates ───────────────────────────────────────────────────────
+
+type CampaignTemplate struct {
+	ID             int            `db:"id" json:"id"`
+	OrgID          *int           `db:"org_id" json:"org_id,omitempty"`
+	Name           string         `db:"name" json:"name"`
+	Category       string         `db:"category" json:"category"`
+	Description    *string        `db:"description" json:"description,omitempty"`
+	Message        string         `db:"message" json:"message"`
+	MediaURL       *string        `db:"media_url" json:"media_url,omitempty"`
+	Buttons        CampaignButtons `db:"buttons" json:"buttons"`
+	AudienceFilter AudienceFilter `db:"audience_filter" json:"audience_filter"`
+	TrackingMode   string         `db:"tracking_mode" json:"tracking_mode"`
+	IsSystem       bool           `db:"is_system" json:"is_system"`
+	CreatedAt      time.Time      `db:"created_at" json:"created_at"`
+	UpdatedAt      time.Time      `db:"updated_at" json:"updated_at"`
+}
+
+type CreateCampaignTemplateRequest struct {
+	Name           string          `json:"name" binding:"required"`
+	Category       string          `json:"category"`
+	Description    *string         `json:"description,omitempty"`
+	Message        string          `json:"message" binding:"required"`
+	MediaURL       *string         `json:"media_url,omitempty"`
+	Buttons        CampaignButtons `json:"buttons"`
+	AudienceFilter AudienceFilter  `json:"audience_filter"`
+	TrackingMode   string          `json:"tracking_mode"`
+}
+
+type UpdateCampaignTemplateRequest struct {
+	Name           *string          `json:"name,omitempty"`
+	Category       *string          `json:"category,omitempty"`
+	Description    *string          `json:"description,omitempty"`
+	Message        *string          `json:"message,omitempty"`
+	MediaURL       *string          `json:"media_url,omitempty"`
+	Buttons        *CampaignButtons `json:"buttons,omitempty"`
+	AudienceFilter *AudienceFilter  `json:"audience_filter,omitempty"`
+	TrackingMode   *string          `json:"tracking_mode,omitempty"`
+}
+
+// ── Campaign Requests ────────────────────────────────────────────────────────
+
 type CreateCampaignRequest struct {
 	BotID          int            `json:"bot_id" binding:"required"`
 	Name           string         `json:"name" binding:"required"`

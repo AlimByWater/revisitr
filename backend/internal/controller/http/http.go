@@ -23,6 +23,16 @@ type group interface {
 	Auth() gin.HandlerFunc
 }
 
+// groupWithMiddleware is an optional interface for groups that provide additional middleware.
+type groupWithMiddleware interface {
+	ExtraMiddleware() []gin.HandlerFunc
+}
+
+// groupWithPublicHandlers is an optional interface for groups with unauthenticated routes.
+type groupWithPublicHandlers interface {
+	PublicHandlers() []func() (method string, path string, handlerFunc gin.HandlerFunc)
+}
+
 type Module struct {
 	cfg    config
 	server *http.Server
@@ -51,28 +61,31 @@ func (m *Module) Init(_ context.Context, stop context.CancelFunc, logger *slog.L
 	)
 
 	for _, g := range m.groups {
+		// Register public (unauthenticated) handlers first
+		if pub, ok := g.(groupWithPublicHandlers); ok {
+			pubGroup := engine.Group(g.Path())
+			for _, handlerFn := range pub.PublicHandlers() {
+				method, path, handler := handlerFn()
+				registerRoute(pubGroup, method, path, handler)
+			}
+		}
+
 		rg := engine.Group(g.Path())
 		authMW := g.Auth()
 		if authMW != nil {
 			rg.Use(authMW)
 		}
 
+		// Apply extra middleware (e.g. feature gating)
+		if mw, ok := g.(groupWithMiddleware); ok {
+			for _, m := range mw.ExtraMiddleware() {
+				rg.Use(m)
+			}
+		}
+
 		for _, handlerFn := range g.Handlers() {
 			method, path, handler := handlerFn()
-			switch method {
-			case http.MethodGet:
-				rg.GET(path, handler)
-			case http.MethodPost:
-				rg.POST(path, handler)
-			case http.MethodPut:
-				rg.PUT(path, handler)
-			case http.MethodPatch:
-				rg.PATCH(path, handler)
-			case http.MethodDelete:
-				rg.DELETE(path, handler)
-			default:
-				rg.Handle(method, path, handler)
-			}
+			registerRoute(rg, method, path, handler)
 		}
 	}
 
@@ -91,6 +104,23 @@ func (m *Module) Run() {
 	m.logger.Info("http server starting", "addr", m.server.Addr)
 	if err := m.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		m.logger.Error("http server error", "error", err)
+	}
+}
+
+func registerRoute(rg *gin.RouterGroup, method, path string, handler gin.HandlerFunc) {
+	switch method {
+	case http.MethodGet:
+		rg.GET(path, handler)
+	case http.MethodPost:
+		rg.POST(path, handler)
+	case http.MethodPut:
+		rg.PUT(path, handler)
+	case http.MethodPatch:
+		rg.PATCH(path, handler)
+	case http.MethodDelete:
+		rg.DELETE(path, handler)
+	default:
+		rg.Handle(method, path, handler)
 	}
 }
 

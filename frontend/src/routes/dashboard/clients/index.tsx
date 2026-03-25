@@ -1,8 +1,9 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { useClientsQuery, useClientStatsQuery } from '@/features/clients/queries'
 import { useBotsQuery } from '@/features/bots/queries'
+import { RFM_SEGMENT_LABELS, RFM_SEGMENT_COLORS } from '@/features/rfm/types'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorState } from '@/components/common/ErrorState'
 import { TableSkeleton, MetricSkeleton } from '@/components/common/LoadingSkeleton'
@@ -20,6 +21,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  X,
 } from 'lucide-react'
 
 function formatDate(dateStr: string): string {
@@ -84,6 +86,26 @@ const columns: Column[] = [
     ),
   },
   {
+    id: 'rfm_segment',
+    header: 'RFM сегмент',
+    render: (row) => {
+      if (!row.rfm_segment) return <span className="text-neutral-400">--</span>
+      const color = RFM_SEGMENT_COLORS[row.rfm_segment]
+      const label = RFM_SEGMENT_LABELS[row.rfm_segment] ?? row.rfm_segment
+      return (
+        <span
+          className={cn(
+            'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+            color?.bg ?? 'bg-neutral-100',
+            color?.text ?? 'text-neutral-700',
+          )}
+        >
+          {label}
+        </span>
+      )
+    },
+  },
+  {
     id: 'registered_at',
     header: 'Зарегистрирован',
     render: (row) => (
@@ -116,6 +138,8 @@ function StatCard({
 
 export default function ClientsPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rfmSegment = searchParams.get('rfm_segment') ?? undefined
   const { data: bots } = useBotsQuery()
   const { data: stats } = useClientStatsQuery()
 
@@ -126,16 +150,25 @@ export default function ClientsPage() {
   const [pageIndex, setPageIndex] = useState(0)
   const pageSize = 20
 
+  const clearRfmFilter = () => {
+    setSearchParams((prev) => {
+      prev.delete('rfm_segment')
+      return prev
+    })
+    setPageIndex(0)
+  }
+
   const filter: ClientFilter = useMemo(
     () => ({
       search: search || undefined,
       bot_id: botFilter,
+      segment: rfmSegment,
       sort_by: sortBy,
       sort_order: sortBy ? (sortDesc ? 'desc' : 'asc') : undefined,
       limit: pageSize,
       offset: pageIndex * pageSize,
     }),
-    [search, botFilter, sortBy, sortDesc, pageIndex],
+    [search, botFilter, rfmSegment, sortBy, sortDesc, pageIndex],
   )
 
   const { data, isLoading, isError, mutate } = useClientsQuery(filter)
@@ -235,6 +268,26 @@ export default function ClientsPage() {
             </option>
           ))}
         </select>
+
+        {rfmSegment && (
+          <div
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium',
+              RFM_SEGMENT_COLORS[rfmSegment]?.bg ?? 'bg-neutral-100',
+              RFM_SEGMENT_COLORS[rfmSegment]?.text ?? 'text-neutral-700',
+            )}
+          >
+            <span>RFM: {RFM_SEGMENT_LABELS[rfmSegment] ?? rfmSegment}</span>
+            <button
+              type="button"
+              onClick={clearRfmFilter}
+              className="ml-1 hover:opacity-70 transition-opacity"
+              aria-label="Сбросить фильтр по RFM-сегменту"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Table */}

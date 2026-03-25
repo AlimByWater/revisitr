@@ -29,13 +29,31 @@ type loyaltyUsecase interface {
 	CancelReserve(ctx context.Context, reserveID int) error
 }
 
-type Group struct {
-	uc        loyaltyUsecase
-	jwtSecret string
+type Option func(*Group)
+
+func WithFeatureGate(gate gin.HandlerFunc) Option {
+	return func(g *Group) { g.featureGate = gate }
 }
 
-func New(uc loyaltyUsecase, jwtSecret string) *Group {
-	return &Group{uc: uc, jwtSecret: jwtSecret}
+type Group struct {
+	uc          loyaltyUsecase
+	jwtSecret   string
+	featureGate gin.HandlerFunc
+}
+
+func New(uc loyaltyUsecase, jwtSecret string, opts ...Option) *Group {
+	g := &Group{uc: uc, jwtSecret: jwtSecret}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g
+}
+
+func (g *Group) ExtraMiddleware() []gin.HandlerFunc {
+	if g.featureGate != nil {
+		return []gin.HandlerFunc{g.featureGate}
+	}
+	return nil
 }
 
 func (g *Group) Path() string {

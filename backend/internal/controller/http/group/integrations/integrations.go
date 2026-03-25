@@ -32,13 +32,31 @@ type integrationsUsecase interface {
 	GetDashboardData(ctx context.Context, orgID int, from, to time.Time) (*entity.DashboardAggregates, error)
 }
 
-type Group struct {
-	uc        integrationsUsecase
-	jwtSecret string
+type Option func(*Group)
+
+func WithFeatureGate(gate gin.HandlerFunc) Option {
+	return func(g *Group) { g.featureGate = gate }
 }
 
-func New(uc integrationsUsecase, jwtSecret string) *Group {
-	return &Group{uc: uc, jwtSecret: jwtSecret}
+type Group struct {
+	uc          integrationsUsecase
+	jwtSecret   string
+	featureGate gin.HandlerFunc
+}
+
+func New(uc integrationsUsecase, jwtSecret string, opts ...Option) *Group {
+	g := &Group{uc: uc, jwtSecret: jwtSecret}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g
+}
+
+func (g *Group) ExtraMiddleware() []gin.HandlerFunc {
+	if g.featureGate != nil {
+		return []gin.HandlerFunc{g.featureGate}
+	}
+	return nil
 }
 
 func (g *Group) Path() string {

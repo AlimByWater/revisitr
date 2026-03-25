@@ -6,6 +6,9 @@ import type {
   CreateScenarioRequest,
   UpdateScenarioRequest,
   AudienceFilter,
+  CreateABTestRequest,
+  CreateCampaignTemplateRequest,
+  UpdateCampaignTemplateRequest,
 } from './types'
 
 export function useCampaignsQuery(limit = 20, offset = 0) {
@@ -129,5 +132,86 @@ export function useActionLogQuery(scenarioId: number, limit = 20, offset = 0) {
   return useApiQuery(
     scenarioId ? `scenarios-${scenarioId}-log-${limit}-${offset}` : null,
     () => campaignsApi.getActionLog(scenarioId, limit, offset),
+  )
+}
+
+// ── A/B Testing ──────────────────────────────────────────────────────────────
+
+export function useVariantsQuery(campaignId: number) {
+  return useApiQuery(
+    campaignId ? `campaigns-${campaignId}-variants` : null,
+    () => campaignsApi.getVariants(campaignId),
+  )
+}
+
+export function useABResultsQuery(campaignId: number) {
+  return useApiQuery(
+    campaignId ? `campaigns-${campaignId}-ab-results` : null,
+    () => campaignsApi.getABResults(campaignId),
+  )
+}
+
+export function useCreateABTestMutation() {
+  return useApiMutation(
+    'campaigns/create-ab-test',
+    ({ id, data }: { id: number; data: CreateABTestRequest }) =>
+      campaignsApi.createABTest(id, data),
+    ['campaigns'],
+  )
+}
+
+export function usePickWinnerMutation() {
+  return useApiMutation(
+    'campaigns/pick-winner',
+    ({ campaignId, variantId }: { campaignId: number; variantId: number }) =>
+      campaignsApi.pickWinner(campaignId, variantId),
+    ['campaigns'],
+  )
+}
+
+// ── Campaign Templates ───────────────────────────────────────────────────────
+
+export function useCampaignTemplatesQuery() {
+  return useApiQuery('campaign-templates', campaignsApi.listCampaignTemplates)
+}
+
+export function useCampaignTemplateQuery(id: number) {
+  return useApiQuery(
+    id ? `campaign-templates-${id}` : null,
+    () => campaignsApi.getCampaignTemplate(id),
+  )
+}
+
+export function useCreateCampaignTemplateMutation() {
+  return useApiMutation(
+    'campaign-templates/create',
+    (data: CreateCampaignTemplateRequest) => campaignsApi.createCampaignTemplate(data),
+    ['campaign-templates'],
+  )
+}
+
+export function useUpdateCampaignTemplateMutation() {
+  return useApiMutation(
+    'campaign-templates/update',
+    ({ id, data }: { id: number; data: UpdateCampaignTemplateRequest }) =>
+      campaignsApi.updateCampaignTemplate(id, data),
+    ['campaign-templates'],
+  )
+}
+
+export function useDeleteCampaignTemplateMutation() {
+  return useApiMutation(
+    'campaign-templates/delete',
+    (id: number) => campaignsApi.deleteCampaignTemplate(id),
+    ['campaign-templates'],
+  )
+}
+
+export function useCreateFromTemplateMutation() {
+  return useApiMutation(
+    'campaigns/create-from-template',
+    ({ templateId, botId }: { templateId: number; botId: number }) =>
+      campaignsApi.createFromTemplate(templateId, botId),
+    ['campaigns'],
   )
 }

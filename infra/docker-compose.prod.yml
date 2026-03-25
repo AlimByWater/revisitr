@@ -25,6 +25,18 @@ services:
     networks:
       - revisitr
 
+  admin-bot:
+    image: ghcr.io/${GITHUB_REPO:-alimbywater/revisitr}/admin-bot:${ADMIN_BOT_TAG:-latest}
+    env_file: .env.prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - revisitr
+
   frontend:
     image: ghcr.io/${GITHUB_REPO:-alimbywater/revisitr}/frontend:${FRONTEND_TAG:-latest}
     ports:

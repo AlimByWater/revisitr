@@ -113,6 +113,93 @@ export interface AutoActionLog {
   executed_at: string
 }
 
+// ── A/B Testing ──────────────────────────────────────────────────────────────
+
+export interface CampaignVariant {
+  id: number
+  campaign_id: number
+  name: string
+  audience_pct: number
+  message: string
+  media_url?: string
+  buttons: CampaignButton[]
+  stats: CampaignStats
+  is_winner: boolean
+  created_at: string
+}
+
+export interface CreateVariantRequest {
+  name: string
+  audience_pct: number
+  message: string
+  media_url?: string
+  buttons?: CampaignButton[]
+}
+
+export interface CreateABTestRequest {
+  variants: CreateVariantRequest[]
+}
+
+export interface VariantResult {
+  id: number
+  name: string
+  audience_pct: number
+  total: number
+  sent: number
+  failed: number
+  clicked: number
+  click_rate: number
+  is_winner: boolean
+}
+
+export interface ABTestResults {
+  campaign_id: number
+  variants: VariantResult[]
+  winner_id?: number
+}
+
+// ── Campaign Templates ───────────────────────────────────────────────────────
+
+export interface CampaignTemplate {
+  id: number
+  org_id?: number
+  name: string
+  category: string
+  description?: string
+  message: string
+  media_url?: string
+  buttons: CampaignButton[]
+  audience_filter: AudienceFilter
+  tracking_mode: string
+  is_system: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateCampaignTemplateRequest {
+  name: string
+  category?: string
+  description?: string
+  message: string
+  media_url?: string
+  buttons?: CampaignButton[]
+  audience_filter?: AudienceFilter
+  tracking_mode?: string
+}
+
+export interface UpdateCampaignTemplateRequest {
+  name?: string
+  category?: string
+  description?: string
+  message?: string
+  media_url?: string
+  buttons?: CampaignButton[]
+  audience_filter?: AudienceFilter
+  tracking_mode?: string
+}
+
+// ── Campaign Requests ────────────────────────────────────────────────────────
+
 export interface CreateCampaignRequest {
   bot_id: number
   name: string
