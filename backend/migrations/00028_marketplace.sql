@@ -21,7 +21,7 @@ CREATE INDEX idx_marketplace_products_org ON marketplace_products(org_id);
 CREATE TABLE marketplace_orders (
     id           SERIAL PRIMARY KEY,
     org_id       INT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    client_id    INT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    client_id    INT NOT NULL REFERENCES bot_clients(id) ON DELETE CASCADE,
     status       VARCHAR(20) NOT NULL DEFAULT 'pending'
                  CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled')),
     total_points INT NOT NULL CHECK (total_points >= 0),

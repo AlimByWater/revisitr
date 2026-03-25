@@ -20,7 +20,7 @@ CREATE TABLE wallet_configs (
 CREATE TABLE wallet_passes (
     id              SERIAL PRIMARY KEY,
     org_id          INT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    client_id       INT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    client_id       INT NOT NULL REFERENCES bot_clients(id) ON DELETE CASCADE,
     platform        VARCHAR(10) NOT NULL CHECK (platform IN ('apple', 'google')),
     serial_number   VARCHAR(64) NOT NULL UNIQUE,
     auth_token      VARCHAR(128) NOT NULL,
