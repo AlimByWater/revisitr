@@ -98,8 +98,8 @@ type PlaceOrderItem struct {
 }
 
 type MarketplaceStats struct {
-	TotalProducts  int `json:"total_products"`
-	ActiveProducts int `json:"active_products"`
-	TotalOrders    int `json:"total_orders"`
-	TotalSpent     int `json:"total_spent_points"`
+	TotalProducts  int `json:"total_products" db:"total_products"`
+	ActiveProducts int `json:"active_products" db:"active_products"`
+	TotalOrders    int `json:"total_orders" db:"total_orders"`
+	TotalSpent     int `json:"total_spent_points" db:"total_spent_points"`
 }

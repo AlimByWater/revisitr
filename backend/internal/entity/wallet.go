@@ -124,8 +124,8 @@ type WalletPassPublic struct {
 }
 
 type WalletStats struct {
-	TotalPasses  int `json:"total_passes"`
-	ApplePasses  int `json:"apple_passes"`
-	GooglePasses int `json:"google_passes"`
-	ActivePasses int `json:"active_passes"`
+	TotalPasses  int `json:"total_passes" db:"total_passes"`
+	ApplePasses  int `json:"apple_passes" db:"apple_passes"`
+	GooglePasses int `json:"google_passes" db:"google_passes"`
+	ActivePasses int `json:"active_passes" db:"active_passes"`
 }
