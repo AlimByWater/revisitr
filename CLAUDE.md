@@ -131,6 +131,18 @@ Production nginx routes: `/revisitr/api/*` → `:8090`, `/revisitr/*` → `:3340
 - `docs/phases/` — план разработки по фазам
 - `docs/architecture.md` — архитектурные решения
 - `docs/testing.md` — стратегия и спецификация тестирования
+- `docs/phase4-analysis.md` — Phase 4 stubs and critical issues analysis
+
+## Session Memory
+
+Project-level session memory is persisted in `.serena/memories/`:
+
+- `dev-progress.md` — текущий статус разработки, фазы, CI/CD, test coverage
+- `prod-deploy-2026-03-26.md` — первый прод-деплой: 8 багов, фиксы, lessons learned
+- `architecture/db-migration-plan.md` — план миграций
+- `design-doc/` — customer journey analysis, scenarios decisions
+
+Claude Code agent memory: `~/.claude/projects/-Users-admin-go-src-revisitr/memory/`
 
 ## Figma
 
