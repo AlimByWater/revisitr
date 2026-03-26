@@ -66,6 +66,5 @@ jobs:
           docker compose -f docker-compose.prod.yml up -d --no-deps backend
       - name: Run migrations
         run: |
-          cd /opt/revisitr/infra
           export BACKEND_TAG=${{ github.sha }}
-          bash /opt/revisitr/infra/scripts/migrate.sh up
+          bash infra/scripts/migrate.sh up
