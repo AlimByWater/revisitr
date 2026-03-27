@@ -43,7 +43,7 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     error: undefined,
     isValidating: false,
     mutate: vi.fn(),
-  } as ReturnType<typeof useRFMTemplatesQuery>)
+  } as unknown as ReturnType<typeof useRFMTemplatesQuery>)
 
   vi.mocked(useRFMActiveTemplateQuery).mockReturnValue({
     data: overrides.activeTemplate ?? {
@@ -56,7 +56,7 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     error: undefined,
     isValidating: false,
     mutate: vi.fn(),
-  } as ReturnType<typeof useRFMActiveTemplateQuery>)
+  } as unknown as ReturnType<typeof useRFMActiveTemplateQuery>)
 
   vi.mocked(useRFMSetTemplateMutation).mockReturnValue({
     data: undefined,
@@ -69,7 +69,7 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     isSuccess: false,
     error: undefined,
     reset: vi.fn(),
-  } as ReturnType<typeof useRFMSetTemplateMutation>)
+  } as unknown as ReturnType<typeof useRFMSetTemplateMutation>)
 }
 
 describe('RFMTemplatePage', () => {

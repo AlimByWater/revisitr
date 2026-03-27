@@ -41,7 +41,7 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     error: undefined,
     isValidating: false,
     mutate: vi.fn(),
-  } as ReturnType<typeof useRFMSegmentClientsQuery>)
+  } as unknown as ReturnType<typeof useRFMSegmentClientsQuery>)
 }
 
 describe('SegmentDetailPage', () => {

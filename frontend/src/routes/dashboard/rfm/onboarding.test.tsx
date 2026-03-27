@@ -45,7 +45,7 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     error: undefined,
     isValidating: false,
     mutate: vi.fn(),
-  } as ReturnType<typeof useRFMActiveTemplateQuery>)
+  } as unknown as ReturnType<typeof useRFMActiveTemplateQuery>)
 
   vi.mocked(useRFMOnboardingQuestionsQuery).mockReturnValue({
     data: overrides.questions ?? mockQuestions,
@@ -54,7 +54,7 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     error: undefined,
     isValidating: false,
     mutate: vi.fn(),
-  } as ReturnType<typeof useRFMOnboardingQuestionsQuery>)
+  } as unknown as ReturnType<typeof useRFMOnboardingQuestionsQuery>)
 
   vi.mocked(useRFMRecommendMutation).mockReturnValue({
     data: overrides.recommendation ?? undefined,
@@ -67,7 +67,7 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     isSuccess: false,
     error: undefined,
     reset: vi.fn(),
-  } as ReturnType<typeof useRFMRecommendMutation>)
+  } as unknown as ReturnType<typeof useRFMRecommendMutation>)
 
   vi.mocked(useRFMSetTemplateMutation).mockReturnValue({
     data: undefined,
@@ -80,7 +80,7 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     isSuccess: false,
     error: undefined,
     reset: vi.fn(),
-  } as ReturnType<typeof useRFMSetTemplateMutation>)
+  } as unknown as ReturnType<typeof useRFMSetTemplateMutation>)
 
   vi.mocked(useRFMTemplatesQuery).mockReturnValue({
     data: overrides.allTemplates ?? [mockRecommendation.recommended],
@@ -89,7 +89,7 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     error: undefined,
     isValidating: false,
     mutate: vi.fn(),
-  } as ReturnType<typeof useRFMTemplatesQuery>)
+  } as unknown as ReturnType<typeof useRFMTemplatesQuery>)
 }
 
 describe('RFMOnboardingPage', () => {
@@ -191,7 +191,7 @@ describe('RFMOnboardingPage', () => {
       error: undefined,
       isValidating: false,
       mutate: vi.fn(),
-    } as ReturnType<typeof useRFMOnboardingQuestionsQuery>)
+    } as unknown as ReturnType<typeof useRFMOnboardingQuestionsQuery>)
 
     const { container } = render(<RFMOnboardingPage />)
     expect(container.querySelector('.animate-spin')).toBeInTheDocument()

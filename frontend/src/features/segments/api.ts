@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import type {
   Segment,
+  SegmentFilter,
   CreateSegmentRequest,
   UpdateSegmentRequest,
   SegmentRule,
