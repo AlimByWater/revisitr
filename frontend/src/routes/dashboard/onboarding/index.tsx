@@ -110,6 +110,12 @@ export default function OnboardingPage() {
   const isLastStep = currentStep === steps.length - 1
   const allCompleted = steps.every((s) => isStepCompleted(s.key))
 
+  // Steps that require entity creation before "Далее" can proceed
+  const actionStepKeys = ['loyalty', 'bot', 'pos', 'integrations']
+  const currentStepKey = steps[currentStep]?.key
+  const isActionStep = actionStepKeys.includes(currentStepKey)
+  const isNextDisabled = isActionStep && !isStepCompleted(currentStepKey)
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="text-center mb-8 animate-in">
@@ -180,14 +186,16 @@ export default function OnboardingPage() {
             Назад
           </button>
 
-          <button
-            type="button"
-            onClick={handleSkip}
-            disabled={updateStep.isPending}
-            className="text-sm text-neutral-400 hover:text-neutral-600 transition-colors"
-          >
-            Пропустить
-          </button>
+          {steps[currentStep]?.key !== 'info' && steps[currentStep]?.key !== 'next_steps' && (
+            <button
+              type="button"
+              onClick={handleSkip}
+              disabled={updateStep.isPending}
+              className="text-sm text-neutral-400 hover:text-neutral-600 transition-colors"
+            >
+              Пропустить
+            </button>
+          )}
 
           {isLastStep && allCompleted ? (
             <button
@@ -208,11 +216,11 @@ export default function OnboardingPage() {
             <button
               type="button"
               onClick={handleNext}
-              disabled={updateStep.isPending}
+              disabled={updateStep.isPending || isNextDisabled}
               className={cn(
                 'flex items-center gap-1.5 py-2.5 px-6 rounded-xl text-sm font-semibold',
                 'bg-accent text-white hover:bg-accent-hover',
-                'disabled:opacity-50 transition-all',
+                'disabled:opacity-50 disabled:cursor-not-allowed transition-all',
                 'shadow-sm shadow-accent/20',
               )}
             >
@@ -319,7 +327,7 @@ function StepContent({
         <h2 className="text-xl font-bold text-neutral-900 mb-2">{step.title}</h2>
         <p className="text-sm text-neutral-500 leading-relaxed max-w-md mx-auto mb-6">
           Revisitr — платформа лояльности для HoReCa на базе Telegram.
-          Управляйте бонусами, рассылками и аналитикой из одного места.
+          Управляйте бонусами, запускайте рассылки и следите за метриками в одном окне.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

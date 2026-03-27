@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useBotsQuery } from '@/features/bots/queries'
+import { OnboardingProgress } from './OnboardingProgress'
 import {
   LayoutDashboard,
   TrendingUp,
@@ -40,13 +41,15 @@ const navigation: NavItem[] = [
       { label: 'Продажи', href: '/dashboard/analytics/sales' },
       { label: 'Лояльность', href: '/dashboard/analytics/loyalty' },
       { label: 'Рассылки', href: '/dashboard/analytics/mailings' },
+      { label: 'RFM-сегментация', href: '/dashboard/rfm' },
     ],
   },
   {
     label: 'Клиенты', icon: Users,
     children: [
       { label: 'Клиенты', href: '/dashboard/clients' },
-      { label: 'Сегментация', href: '/dashboard/clients/segments' },
+      { label: 'RFM-сегментация', href: '/dashboard/clients/segments' },
+      { label: 'Мои сегменты', href: '/dashboard/clients/custom-segments' },
       { label: 'Прогнозы', href: '/dashboard/clients/predictions' },
     ],
   },
@@ -170,9 +173,7 @@ function AuroraNavItem({ item, badges, expanded }: { item: NavItem; badges: Reco
           )}
         >
           {item.children.map((child) => {
-            const isChildActive =
-              currentPath === child.href ||
-              (child.href !== '/dashboard' && currentPath.startsWith(child.href + '/'))
+            const isChildActive = currentPath === child.href
             return (
               <Link
                 key={child.href}
@@ -227,6 +228,8 @@ export function AuroraSidebar() {
           </div>
         )}
       </div>
+
+      {expanded && <OnboardingProgress isAurora />}
 
       {/* Nav */}
       <nav className={cn('flex-1 overflow-y-auto overflow-x-hidden py-2', expanded ? 'px-3' : 'px-2.5')}>

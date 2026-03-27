@@ -78,7 +78,7 @@ const inputClassName = cn(
 const MODULE_DEFS = [
   { key: 'loyalty', label: 'Лояльность', description: 'Начисление и списание бонусов' },
   { key: 'menu', label: 'Меню', description: 'Показ меню заведения в боте' },
-  { key: 'promotions', label: 'Акции', description: 'Спецпредложения и промокоды' },
+  { key: 'marketplace', label: 'Маркетплейс', description: 'Каталог товаров для заказа' },
   { key: 'feedback', label: 'Обратная связь', description: 'Сбор отзывов от клиентов' },
   { key: 'booking', label: 'Бронирование', description: 'Бронирование столиков' },
 ] as const
@@ -90,7 +90,7 @@ const FORM_PRESETS: FormField[] = [
   { name: 'city', label: 'Город', type: 'text', required: false },
 ]
 
-const TEMPLATE_VARIABLES = ['{first_name}', '{bonus_balance}', '{loyalty_level}'] as const
+const TEMPLATE_VARIABLES = ['{first_name}'] as const
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -404,6 +404,9 @@ function GeneralTab({ bot }: { bot: Bot }) {
 
         {advanced && (
           <>
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              Техническая информация о боте. ID — уникальный идентификатор бота в системе. Org ID — идентификатор вашей организации. Токен — секретный ключ для связи с Telegram API.
+            </p>
             {bot.token_masked && (
               <div>
                 <span className="block text-sm text-neutral-500 mb-1">Токен</span>
@@ -418,11 +421,11 @@ function GeneralTab({ bot }: { bot: Bot }) {
               </div>
             )}
             <div>
-              <span className="block text-sm text-neutral-500 mb-1">ID</span>
+              <span className="block text-sm text-neutral-500 mb-1">ID бота</span>
               <div className="font-mono text-sm text-neutral-600">{bot.id}</div>
             </div>
             <div>
-              <span className="block text-sm text-neutral-500 mb-1">Org ID</span>
+              <span className="block text-sm text-neutral-500 mb-1">ID организации</span>
               <div className="font-mono text-sm text-neutral-600">{bot.org_id}</div>
             </div>
           </>
@@ -476,12 +479,15 @@ function MessagesTab({
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
-      <h2 className="text-lg font-semibold text-neutral-900 mb-5">
+      <h2 className="text-lg font-semibold text-neutral-900 mb-1">
         <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">
           Контент
         </span>
         Приветственное сообщение
       </h2>
+      <p className="text-sm text-neutral-400 mb-5">
+        Сообщение, которое клиент видит при запуске бота или вводе команды /start.
+      </p>
 
       {/* Template variable chips */}
       <div className="flex flex-wrap gap-2 mb-3">
@@ -580,6 +586,12 @@ function ButtonsTab({
           </span>
           Кнопки меню
         </h2>
+        <p className="text-xs text-neutral-400 mt-1">
+          <strong className="text-neutral-500">Ссылка</strong> — открывает URL в браузере.{' '}
+          <strong className="text-neutral-500">Callback</strong> — отправляет событие боту для обработки действия.{' '}
+          <strong className="text-neutral-500">WebApp</strong> — открывает мини-приложение внутри Telegram.{' '}
+          <strong className="text-neutral-500">Команда</strong> — выполняет пользовательскую команду (/текст).
+        </p>
         <button
           type="button"
           onClick={addButton}
@@ -634,6 +646,7 @@ function ButtonsTab({
                           <option value="url">Ссылка</option>
                           <option value="callback">Callback</option>
                           <option value="webapp">WebApp</option>
+                          <option value="command">Команда</option>
                         </select>
                         <input
                           type="text"
@@ -644,7 +657,9 @@ function ButtonsTab({
                               ? 'https://...'
                               : button.type === 'webapp'
                                 ? 'https://...'
-                                : 'callback_data'
+                                : button.type === 'command'
+                                  ? '/команда'
+                                  : 'callback_data'
                           }
                           disabled={isSaving}
                           className={inputClassName}
@@ -852,6 +867,35 @@ function FormTab({
                           />
                           <span className="text-sm text-neutral-700">Обязательное</span>
                         </label>
+                        {field.type === 'select' && (
+                          <div className="col-span-2">
+                            <input
+                              type="text"
+                              value={(field.options ?? []).join(', ')}
+                              onChange={(e) => {
+                                const opts = e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
+                                setSettings((s) => {
+                                  if (!s) return s
+                                  const updated = s.registration_form.map((f, i) =>
+                                    i === index ? { ...f, options: opts } : f,
+                                  )
+                                  return { ...s, registration_form: updated }
+                                })
+                              }}
+                              placeholder="Варианты через запятую (будут отображаться как кнопки)"
+                              disabled={isSaving}
+                              className={inputClassName}
+                            />
+                            <p className="text-[11px] text-neutral-400 mt-1">Варианты выбора отображаются как кнопки в боте</p>
+                          </div>
+                        )}
+                        {(field.type === 'email' || field.type === 'phone' || field.type === 'date') && (
+                          <p className="col-span-2 text-[11px] text-neutral-400">
+                            {field.type === 'email' && 'Бот проверит формат email перед принятием ответа'}
+                            {field.type === 'phone' && 'Бот проверит формат номера телефона перед принятием ответа'}
+                            {field.type === 'date' && 'Бот проверит формат даты (ДД.ММ.ГГГГ) перед принятием ответа'}
+                          </p>
+                        )}
                       </div>
                       <button
                         type="button"
@@ -954,6 +998,54 @@ function ModulesTab({
           )
         })}
       </div>
+
+      {/* Anchor links for active modules */}
+      {settings.modules.length > 0 && (
+        <div className="mt-5 pt-5 border-t border-surface-border">
+          <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-3">Активные модули</p>
+          <div className="flex flex-wrap gap-2">
+            {settings.modules.map((mod) => {
+              const def = MODULE_DEFS.find((d) => d.key === mod)
+              return (
+                <a
+                  key={mod}
+                  href={`#module-${mod}`}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+                >
+                  {def?.label ?? mod}
+                </a>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Inline module config sections */}
+      {settings.modules.includes('menu') && (
+        <div id="module-menu" className="mt-5 pt-5 border-t border-surface-border scroll-mt-20">
+          <h3 className="text-sm font-semibold text-neutral-900 mb-2">Настройка: Меню</h3>
+          <p className="text-xs text-neutral-400 mb-3">Меню заведения, которое будет отображаться в боте.</p>
+          <Link
+            to="/dashboard/menus"
+            className="inline-flex items-center gap-1.5 text-sm text-accent hover:text-accent/80 font-medium transition-colors"
+          >
+            Управление меню <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
+
+      {settings.modules.includes('marketplace') && (
+        <div id="module-marketplace" className="mt-5 pt-5 border-t border-surface-border scroll-mt-20">
+          <h3 className="text-sm font-semibold text-neutral-900 mb-2">Настройка: Маркетплейс</h3>
+          <p className="text-xs text-neutral-400 mb-3">Каталог товаров для заказа через бота.</p>
+          <Link
+            to="/dashboard/marketplace"
+            className="inline-flex items-center gap-1.5 text-sm text-accent hover:text-accent/80 font-medium transition-colors"
+          >
+            Управление товарами <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
 
       <SaveButton isSaving={isSaving} saveError={saveError} saveSuccess={saveSuccess} onSave={save} />
     </div>
@@ -1070,12 +1162,15 @@ function POSTab({ botId }: { botId: number }) {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
-      <h2 className="text-lg font-semibold text-neutral-900 mb-5">
+      <h2 className="text-lg font-semibold text-neutral-900 mb-1">
         <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">
           Привязка
         </span>
         POS-точки бота
       </h2>
+      <p className="text-sm text-neutral-400 mb-5">
+        Привяжите точки продаж к боту. Если выбрано несколько, гость сможет выбрать нужную точку при запуске бота через кнопки.
+      </p>
 
       <div className="space-y-2">
         {locations.map((loc: POSLocation) => (
