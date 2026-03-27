@@ -51,10 +51,17 @@ type BotClient struct {
 	Tags         Tags            `db:"tags" json:"tags"`
 	Data         json.RawMessage `db:"data"          json:"-"`
 	RegisteredAt time.Time       `db:"registered_at" json:"registered_at"`
-	// RFM fields (added by migration 00009)
-	RFMRecency   *int       `db:"rfm_recency"    json:"rfm_recency,omitempty"`
-	RFMFrequency *int       `db:"rfm_frequency"  json:"rfm_frequency,omitempty"`
-	RFMMonetary  *float64   `db:"rfm_monetary"   json:"rfm_monetary,omitempty"`
+	// RFM fields
 	RFMSegment   *string    `db:"rfm_segment"    json:"rfm_segment,omitempty"`
 	RFMUpdatedAt *time.Time `db:"rfm_updated_at" json:"rfm_updated_at,omitempty"`
+
+	// RFM scores and raw metrics (migration 00030)
+	RScore           *int       `db:"r_score"              json:"r_score,omitempty"`
+	FScore           *int       `db:"f_score"              json:"f_score,omitempty"`
+	MScore           *int       `db:"m_score"              json:"m_score,omitempty"`
+	RecencyDays      *int       `db:"recency_days"         json:"recency_days,omitempty"`
+	FrequencyCount   *int       `db:"frequency_count"      json:"frequency_count,omitempty"`
+	MonetarySum      *float64   `db:"monetary_sum"         json:"monetary_sum,omitempty"`
+	TotalVisitsLife  int        `db:"total_visits_lifetime" json:"total_visits_lifetime"`
+	LastVisitDate    *time.Time `db:"last_visit_date"      json:"last_visit_date,omitempty"`
 }

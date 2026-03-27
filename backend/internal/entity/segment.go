@@ -7,14 +7,14 @@ import (
 	"time"
 )
 
-// RFM segment categories
+// Deprecated: v1 RFM segment categories. Use RFMSegment* constants from rfm.go instead.
 const (
-	RFMChampions   = "champions"
-	RFMLoyal       = "loyal"
-	RFMAtRisk      = "at_risk"
-	RFMCantLose    = "cant_lose"
-	RFMHibernating = "hibernating"
-	RFMLost        = "lost"
+	RFMChampions   = "champions"   // Deprecated: use RFMSegmentVIP
+	RFMLoyal       = "loyal"       // Deprecated: use RFMSegmentRegular
+	RFMAtRisk      = "at_risk"     // Deprecated: use RFMSegmentChurnRisk
+	RFMCantLose    = "cant_lose"   // Deprecated: use RFMSegmentRareValue
+	RFMHibernating = "hibernating" // Deprecated: use RFMSegmentPromising
+	RFMLost        = "lost"        // Deprecated: use RFMSegmentLost
 )
 
 type Segment struct {

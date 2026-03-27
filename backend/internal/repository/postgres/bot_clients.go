@@ -79,25 +79,32 @@ func (r *BotClients) CountByBotID(ctx context.Context, botID int) (int, error) {
 	return count, nil
 }
 
-// UpdateRFM sets RFM scores and segment label for a single bot client.
-func (r *BotClients) UpdateRFM(ctx context.Context, clientID, recency, frequency int, monetary float64, segment string) error {
+// UpdateRFMScores sets all RFM v2 fields for a single bot client.
+func (r *BotClients) UpdateRFMScores(ctx context.Context, p entity.RFMUpdateParams) error {
 	query := `
 		UPDATE bot_clients
-		SET rfm_recency = $1, rfm_frequency = $2, rfm_monetary = $3,
-		    rfm_segment = $4, rfm_updated_at = NOW()
-		WHERE id = $5`
+		SET r_score = $1, f_score = $2, m_score = $3,
+		    recency_days = $4, frequency_count = $5, monetary_sum = $6,
+		    total_visits_lifetime = $7, last_visit_date = $8,
+		    rfm_segment = $9, rfm_updated_at = NOW()
+		WHERE id = $10`
 
-	result, err := r.pg.DB().ExecContext(ctx, query, recency, frequency, monetary, segment, clientID)
+	result, err := r.pg.DB().ExecContext(ctx, query,
+		p.RScore, p.FScore, p.MScore,
+		p.RecencyDays, p.FrequencyCount, p.MonetarySum,
+		p.TotalVisitsLife, p.LastVisitDate,
+		p.Segment, p.ClientID,
+	)
 	if err != nil {
-		return fmt.Errorf("bot_clients.UpdateRFM: %w", err)
+		return fmt.Errorf("bot_clients.UpdateRFMScores: %w", err)
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("bot_clients.UpdateRFM rows: %w", err)
+		return fmt.Errorf("bot_clients.UpdateRFMScores rows: %w", err)
 	}
 	if rows == 0 {
-		return fmt.Errorf("bot_clients.UpdateRFM: %w", sql.ErrNoRows)
+		return fmt.Errorf("bot_clients.UpdateRFMScores: %w", sql.ErrNoRows)
 	}
 	return nil
 }

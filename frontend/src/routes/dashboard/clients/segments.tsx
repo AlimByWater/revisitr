@@ -6,7 +6,7 @@ import { RFM_SEGMENT_LABELS, RFM_SEGMENT_COLORS } from '@/features/rfm/types'
 import type { RFMConfig, RFMHistory } from '@/features/rfm/types'
 import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 import { ErrorState } from '@/components/common/ErrorState'
-import { RefreshCw, Settings, Users, TrendingUp, BarChart3 } from 'lucide-react'
+import { RefreshCw, Settings, Users, TrendingUp } from 'lucide-react'
 import {
   AreaChart,
   Area,
@@ -18,21 +18,24 @@ import {
 } from 'recharts'
 
 const SEGMENT_HEX_COLORS: Record<string, string> = {
-  champions: '#22c55e',
-  loyal: '#3b82f6',
-  potential_loyalist: '#8b5cf6',
-  new_customers: '#06b6d4',
-  at_risk: '#f59e0b',
-  cant_lose: '#ef4444',
-  hibernating: '#9ca3af',
-  lost: '#4b5563',
+  new: '#06b6d4',
+  promising: '#3b82f6',
+  regular: '#8b5cf6',
+  vip: '#f59e0b',
+  rare_valuable: '#a855f7',
+  churn_risk: '#eab308',
+  lost: '#ef4444',
 }
 
 function buildChartData(trends: RFMHistory[]) {
-  return [...trends].reverse().map((t) => ({
-    date: new Date(t.calculated_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }),
-    ...t.distribution,
-  }))
+  // Group by calculated_at date, pivot segment -> client_count
+  const grouped: Record<string, Record<string, number>> = {}
+  for (const t of trends) {
+    const date = new Date(t.calculated_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+    if (!grouped[date]) grouped[date] = {}
+    grouped[date][t.segment] = t.client_count
+  }
+  return Object.entries(grouped).map(([date, counts]) => ({ date, ...counts }))
 }
 
 function formatDate(dateStr?: string) {
@@ -165,11 +168,11 @@ export default function SegmentsPage() {
                   key={seg.segment}
                   role="button"
                   tabIndex={0}
-                  onClick={() => navigate(`/dashboard/clients?rfm_segment=${seg.segment}`)}
+                  onClick={() => navigate(`/dashboard/rfm/segments/${seg.segment}`)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()
-                      navigate(`/dashboard/clients?rfm_segment=${seg.segment}`)
+                      navigate(`/dashboard/rfm/segments/${seg.segment}`)
                     }
                   }}
                   className="bg-white rounded-2xl border border-surface-border p-5 hover:shadow-sm transition-shadow cursor-pointer"
@@ -267,11 +270,10 @@ function RFMConfigPanel({ config, onClose }: { config?: RFMConfig | null; onClos
   const updateConfig = useRFMUpdateConfigMutation()
 
   const cfg = currentConfig ?? config
-  const [recencyDays, setRecencyDays] = useState(cfg?.recency_days ?? 365)
-  const [minTransactions, setMinTransactions] = useState(cfg?.min_transactions ?? 1)
+  const [periodDays, setPeriodDays] = useState(cfg?.period_days ?? 365)
 
   const handleSave = async () => {
-    await updateConfig.mutate({ recency_days: recencyDays, min_transactions: minTransactions })
+    await updateConfig.mutate({ period_days: periodDays })
   }
 
   const inputClassName = cn(
@@ -295,40 +297,23 @@ function RFMConfigPanel({ config, onClose }: { config?: RFMConfig | null; onClos
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label htmlFor="recency-days" className="block text-sm font-medium text-neutral-700 mb-1">
-            Период анализа (дни)
-          </label>
-          <input
-            id="recency-days"
-            type="number"
-            value={recencyDays}
-            onChange={(e) => setRecencyDays(Number(e.target.value))}
-            min={30}
-            max={730}
-            className={inputClassName}
-          />
-          <p className="text-xs text-neutral-400 mt-1">Анализировать транзакции за последние N дней</p>
-        </div>
-        <div>
-          <label htmlFor="min-tx" className="block text-sm font-medium text-neutral-700 mb-1">
-            Мин. транзакций
-          </label>
-          <input
-            id="min-tx"
-            type="number"
-            value={minTransactions}
-            onChange={(e) => setMinTransactions(Number(e.target.value))}
-            min={1}
-            max={100}
-            className={inputClassName}
-          />
-          <p className="text-xs text-neutral-400 mt-1">Минимум транзакций для включения в расчёт</p>
-        </div>
+      <div className="max-w-sm">
+        <label htmlFor="period-days" className="block text-sm font-medium text-neutral-700 mb-1">
+          Период анализа (дни)
+        </label>
+        <input
+          id="period-days"
+          type="number"
+          value={periodDays}
+          onChange={(e) => setPeriodDays(Number(e.target.value))}
+          min={30}
+          max={730}
+          className={inputClassName}
+        />
+        <p className="text-xs text-neutral-400 mt-1">Анализировать транзакции за последние N дней</p>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mt-4">
         <button
           type="button"
           onClick={handleSave}

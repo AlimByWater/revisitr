@@ -244,6 +244,30 @@ func (r *Loyalty) GetTxStatsPerClient(ctx context.Context, orgID int) ([]entity.
 	return rows, nil
 }
 
+// GetRFMStats returns RFM metrics per client for the given org.
+// F = visits in last 90 days, M = revenue in last 180 days, total_visits = all-time.
+func (r *Loyalty) GetRFMStats(ctx context.Context, orgID int) ([]entity.ClientRFMStats, error) {
+	query := `
+		SELECT
+			bc.id AS client_id,
+			COALESCE(MAX(lt.created_at), '1970-01-01'::timestamptz) AS last_visit_at,
+			COALESCE(SUM(CASE WHEN lt.created_at >= NOW() - INTERVAL '90 days' THEN 1 ELSE 0 END), 0) AS frequency_count,
+			COALESCE(SUM(CASE WHEN lt.created_at >= NOW() - INTERVAL '180 days' THEN lt.amount ELSE 0 END), 0) AS monetary_sum,
+			COUNT(lt.id) AS total_visits_lifetime
+		FROM bot_clients bc
+		JOIN bots b ON b.id = bc.bot_id
+		LEFT JOIN loyalty_transactions lt ON lt.client_id = bc.id AND lt.type = 'earn'
+		WHERE b.org_id = $1
+		GROUP BY bc.id
+		HAVING COUNT(lt.id) > 0`
+
+	var rows []entity.ClientRFMStats
+	if err := r.pg.DB().SelectContext(ctx, &rows, query, orgID); err != nil {
+		return nil, fmt.Errorf("loyalty.GetRFMStats: %w", err)
+	}
+	return rows, nil
+}
+
 func (r *Loyalty) CreateReserve(ctx context.Context, reserve *entity.BalanceReserve) error {
 	query := `
 		INSERT INTO balance_reserves (client_id, program_id, amount, status, expires_at)

@@ -32,15 +32,36 @@ func (r *RFM) GetConfig(ctx context.Context, orgID int) (*entity.RFMConfig, erro
 
 func (r *RFM) UpsertConfig(ctx context.Context, cfg *entity.RFMConfig) error {
 	query := `
-		INSERT INTO rfm_configs (org_id, period_days, recalc_interval)
-		VALUES ($1, $2, $3)
+		INSERT INTO rfm_configs (
+			org_id, period_days, recalc_interval,
+			active_template_type, active_template_key,
+			custom_template_name, custom_r_thresholds, custom_f_thresholds
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (org_id) DO UPDATE
-		SET period_days     = EXCLUDED.period_days,
-		    recalc_interval = EXCLUDED.recalc_interval,
-		    updated_at      = NOW()
+		SET period_days          = EXCLUDED.period_days,
+		    recalc_interval      = EXCLUDED.recalc_interval,
+		    active_template_type = EXCLUDED.active_template_type,
+		    active_template_key  = EXCLUDED.active_template_key,
+		    custom_template_name = EXCLUDED.custom_template_name,
+		    custom_r_thresholds  = EXCLUDED.custom_r_thresholds,
+		    custom_f_thresholds  = EXCLUDED.custom_f_thresholds,
+		    updated_at           = NOW()
 		RETURNING id, created_at, updated_at`
+
+	templateType := cfg.ActiveTemplateType
+	if templateType == "" {
+		templateType = "standard"
+	}
+	templateKey := cfg.ActiveTemplateKey
+	if templateKey == "" {
+		templateKey = "tsr"
+	}
+
 	return r.pg.DB().QueryRowContext(ctx, query,
 		cfg.OrgID, cfg.PeriodDays, cfg.RecalcInterval,
+		templateType, templateKey,
+		cfg.CustomTemplateName, cfg.CustomRThresholds, cfg.CustomFThresholds,
 	).Scan(&cfg.ID, &cfg.CreatedAt, &cfg.UpdatedAt)
 }
 
@@ -85,7 +106,9 @@ func (r *RFM) GetSegmentSummary(ctx context.Context, orgID int) ([]entity.RFMSeg
 	err := r.pg.DB().SelectContext(ctx, &summaries, `
 		SELECT
 			COALESCE(bc.rfm_segment, 'unknown') AS segment,
-			COUNT(*) AS client_count
+			COUNT(*) AS client_count,
+			COALESCE(AVG(bc.monetary_sum), 0) AS avg_check,
+			COALESCE(SUM(bc.monetary_sum), 0) AS total_check
 		FROM bot_clients bc
 		JOIN bots b ON b.id = bc.bot_id
 		WHERE b.org_id = $1 AND bc.rfm_segment IS NOT NULL
@@ -108,4 +131,57 @@ func (r *RFM) GetSegmentSummary(ctx context.Context, orgID int) ([]entity.RFMSeg
 	}
 
 	return summaries, nil
+}
+
+// GetSegmentClients returns paginated client list for a specific RFM segment.
+func (r *RFM) GetSegmentClients(ctx context.Context, orgID int, segment string, sortCol, order string, limit, offset int) ([]entity.SegmentClientRow, int, error) {
+	// Whitelist sort columns to prevent SQL injection
+	allowedSort := map[string]string{
+		"r_score":          "bc.r_score",
+		"f_score":          "bc.f_score",
+		"m_score":          "bc.m_score",
+		"last_visit_date":  "bc.last_visit_date",
+		"frequency_count":  "bc.frequency_count",
+		"monetary_sum":     "bc.monetary_sum",
+	}
+	col, ok := allowedSort[sortCol]
+	if !ok {
+		col = "bc.monetary_sum"
+	}
+	dir := "DESC"
+	if order == "asc" {
+		dir = "ASC"
+	}
+
+	// Count total
+	var total int
+	err := r.pg.DB().GetContext(ctx, &total, `
+		SELECT COUNT(*)
+		FROM bot_clients bc
+		JOIN bots b ON b.id = bc.bot_id
+		WHERE b.org_id = $1 AND bc.rfm_segment = $2`,
+		orgID, segment)
+	if err != nil {
+		return nil, 0, fmt.Errorf("rfm.GetSegmentClients count: %w", err)
+	}
+
+	var rows []entity.SegmentClientRow
+	query := fmt.Sprintf(`
+		SELECT
+			bc.id, bc.first_name, bc.last_name, bc.phone,
+			bc.r_score, bc.f_score, bc.m_score,
+			bc.recency_days, bc.frequency_count, bc.monetary_sum,
+			bc.last_visit_date, bc.total_visits_lifetime
+		FROM bot_clients bc
+		JOIN bots b ON b.id = bc.bot_id
+		WHERE b.org_id = $1 AND bc.rfm_segment = $2
+		ORDER BY %s %s NULLS LAST
+		LIMIT $3 OFFSET $4`, col, dir)
+
+	err = r.pg.DB().SelectContext(ctx, &rows, query, orgID, segment, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("rfm.GetSegmentClients: %w", err)
+	}
+
+	return rows, total, nil
 }

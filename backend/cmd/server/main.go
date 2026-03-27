@@ -107,7 +107,7 @@ func main() {
 	posSyncSvc := posService.NewSyncService(integrationsRepo, botClientsRepo, logger,
 		posService.WithMenus(menusRepo),
 	)
-	rfmSvc := rfmService.New(botClientsRepo, loyaltyRepo, logger)
+	rfmSvc := rfmService.New(botClientsRepo, loyaltyRepo, rfmRepo, logger)
 
 	// Auto-action services
 	actionExecutor := autoactionService.NewActionExecutor(scenariosRepo, logger)

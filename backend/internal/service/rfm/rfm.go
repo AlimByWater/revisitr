@@ -10,51 +10,77 @@ import (
 )
 
 type clientsRepo interface {
-	GetAllByOrgID(ctx context.Context, orgID int) ([]entity.BotClient, error)
-	UpdateRFM(ctx context.Context, clientID, recency, frequency int, monetary float64, segment string) error
+	UpdateRFMScores(ctx context.Context, p entity.RFMUpdateParams) error
 }
 
 type txRepo interface {
-	GetTxStatsPerClient(ctx context.Context, orgID int) ([]entity.ClientTxStats, error)
+	GetRFMStats(ctx context.Context, orgID int) ([]entity.ClientRFMStats, error)
+}
+
+type configRepo interface {
+	GetConfig(ctx context.Context, orgID int) (*entity.RFMConfig, error)
 }
 
 type Service struct {
 	clients clientsRepo
 	txs     txRepo
+	configs configRepo
 	logger  *slog.Logger
 }
 
-func New(clients clientsRepo, txs txRepo, logger *slog.Logger) *Service {
-	return &Service{clients: clients, txs: txs, logger: logger}
+func New(clients clientsRepo, txs txRepo, configs configRepo, logger *slog.Logger) *Service {
+	return &Service{clients: clients, txs: txs, configs: configs, logger: logger}
 }
 
-// RecalculateAll recalculates RFM scores for all clients in the org.
+// RecalculateAll recalculates RFM scores for all clients in the org
+// using the org's active template thresholds.
 func (s *Service) RecalculateAll(ctx context.Context, orgID int) error {
-	stats, err := s.txs.GetTxStatsPerClient(ctx, orgID)
+	// 1. Load template
+	tmpl, err := s.resolveTemplate(ctx, orgID)
 	if err != nil {
 		return err
 	}
 
+	// 2. Load client stats (F=90d window, M=180d window)
+	stats, err := s.txs.GetRFMStats(ctx, orgID)
+	if err != nil {
+		return err
+	}
 	if len(stats) == 0 {
 		return nil
 	}
 
-	// Collect monetary amounts for percentile scoring
+	// 3. Collect monetary amounts for percentile scoring
 	amounts := make([]float64, 0, len(stats))
 	for _, st := range stats {
-		amounts = append(amounts, st.TotalAmount)
+		amounts = append(amounts, st.MonetarySum)
 	}
 	sort.Float64s(amounts)
 
 	now := time.Now()
 
+	// 4. Score each client
 	for _, st := range stats {
-		r := scoreRecency(now, st.LastTxAt)
-		f := scoreFrequency(st.TxCount)
-		m := scoreMonetary(st.TotalAmount, amounts)
-		seg := classifySegment(r + f + m)
+		recencyDays := int(now.Sub(st.LastVisitAt).Hours() / 24)
+		r := ScoreRecency(recencyDays, tmpl.RThresholds)
+		f := ScoreFrequency(st.FrequencyCount, tmpl.FThresholds)
+		m := ScoreMonetary(st.MonetarySum, amounts)
+		seg := ClassifySegment(r, f, m, st.TotalVisitsLifetime)
 
-		if err := s.clients.UpdateRFM(ctx, st.ClientID, r, f, float64(m), seg); err != nil {
+		p := entity.RFMUpdateParams{
+			ClientID:        st.ClientID,
+			RScore:          r,
+			FScore:          f,
+			MScore:          m,
+			RecencyDays:     recencyDays,
+			FrequencyCount:  st.FrequencyCount,
+			MonetarySum:     st.MonetarySum,
+			TotalVisitsLife: st.TotalVisitsLifetime,
+			LastVisitDate:   st.LastVisitAt,
+			Segment:         seg,
+		}
+
+		if err := s.clients.UpdateRFMScores(ctx, p); err != nil {
 			s.logger.Error("rfm: update client", "client_id", st.ClientID, "error", err)
 		}
 	}
@@ -62,42 +88,62 @@ func (s *Service) RecalculateAll(ctx context.Context, orgID int) error {
 	return nil
 }
 
-// scoreRecency: 5=<7d, 4=<30d, 3=<90d, 2=<180d, 1=else
-func scoreRecency(now time.Time, lastTx time.Time) int {
-	days := now.Sub(lastTx).Hours() / 24
+// resolveTemplate loads the active template for the org, falling back to "tsr" default.
+func (s *Service) resolveTemplate(ctx context.Context, orgID int) (entity.RFMTemplate, error) {
+	cfg, err := s.configs.GetConfig(ctx, orgID)
+	if err != nil {
+		return entity.RFMTemplate{}, err
+	}
+
+	if cfg != nil {
+		if tmpl, ok := cfg.ActiveTemplate(); ok {
+			return tmpl, nil
+		}
+	}
+
+	// Fallback: default tsr template
+	return entity.StandardTemplates["tsr"], nil
+}
+
+// ── Scoring functions (exported for testing) ────────────────────────────────
+
+// ScoreRecency scores recency days against template thresholds.
+// RThresholds: [R5_max, R4_max, R3_max, R2_max]
+func ScoreRecency(days int, th [4]int) int {
 	switch {
-	case days < 7:
+	case days <= th[0]:
 		return 5
-	case days < 30:
+	case days <= th[1]:
 		return 4
-	case days < 90:
+	case days <= th[2]:
 		return 3
-	case days < 180:
+	case days <= th[3]:
 		return 2
 	default:
 		return 1
 	}
 }
 
-// scoreFrequency: 5=10+, 4=7+, 3=4+, 2=2+, 1=else
-func scoreFrequency(count int) int {
+// ScoreFrequency scores visit count against template thresholds.
+// FThresholds: [F5_min, F4_min, F3_min, F2_min]
+func ScoreFrequency(count int, th [4]int) int {
 	switch {
-	case count >= 10:
+	case count >= th[0]:
 		return 5
-	case count >= 7:
+	case count >= th[1]:
 		return 4
-	case count >= 4:
+	case count >= th[2]:
 		return 3
-	case count >= 2:
+	case count >= th[3]:
 		return 2
 	default:
 		return 1
 	}
 }
 
-// scoreMonetary: 5=top20%, 4=top40%, 3=top60%, 2=top80%, 1=else
-// sorted is the sorted slice of all monetary values (ascending).
-func scoreMonetary(amount float64, sorted []float64) int {
+// ScoreMonetary scores monetary amount by quintile position.
+// sorted must be ascending. Unchanged from v1 — always relative percentile.
+func ScoreMonetary(amount float64, sorted []float64) int {
 	n := len(sorted)
 	if n == 0 {
 		return 1
@@ -122,21 +168,40 @@ func scoreMonetary(amount float64, sorted []float64) int {
 	}
 }
 
-// classifySegment maps total RFM score to a named category.
-// champions(≥13), loyal(10–12), at_risk(7–9), cant_lose(5–6), hibernating(3–4), lost(<3)
-func classifySegment(total int) string {
-	switch {
-	case total >= 13:
-		return entity.RFMChampions
-	case total >= 10:
-		return entity.RFMLoyal
-	case total >= 7:
-		return entity.RFMAtRisk
-	case total >= 5:
-		return entity.RFMCantLose
-	case total >= 3:
-		return entity.RFMHibernating
-	default:
-		return entity.RFMLost
+// ClassifySegment assigns one of 7 segments based on R/F/M scores.
+// Priority order (first match wins):
+//  1. New         — first visit, still fresh
+//  2. Lost        — not seen in a long time
+//  3. Churn Risk  — cooling off
+//  4. VIP         — frequent, high-value, recent
+//  5. Regular     — frequent and recent
+//  6. Rare Value  — infrequent but high-value
+//  7. Promising   — returning, building habit
+func ClassifySegment(r, f, m, totalVisits int) string {
+	// 1. New: first visit and still fresh
+	if totalVisits == 1 && r >= 4 {
+		return entity.RFMSegmentNew
 	}
+	// 2. Lost
+	if r == 1 {
+		return entity.RFMSegmentLost
+	}
+	// 3. Churn risk
+	if r == 2 {
+		return entity.RFMSegmentChurnRisk
+	}
+	// 4. VIP / Core
+	if r >= 3 && f >= 4 && m >= 4 {
+		return entity.RFMSegmentVIP
+	}
+	// 5. Regular
+	if r >= 3 && f >= 4 {
+		return entity.RFMSegmentRegular
+	}
+	// 6. Rare but valuable
+	if r >= 3 && f <= 2 && m >= 4 {
+		return entity.RFMSegmentRareValue
+	}
+	// 7. Promising (fallback for r >= 3)
+	return entity.RFMSegmentPromising
 }

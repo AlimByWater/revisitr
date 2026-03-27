@@ -43,6 +43,12 @@ import BillingPage from './routes/dashboard/billing/index'
 import InvoicesPage from './routes/dashboard/billing/invoices'
 import CampaignTemplatesPage from './routes/dashboard/campaigns/templates'
 import PredictionsPage from './routes/dashboard/clients/predictions'
+import RFMDashboardPage from './routes/dashboard/rfm/index'
+import RFMOnboardingPage from './routes/dashboard/rfm/onboarding'
+import RFMTemplatePage from './routes/dashboard/rfm/template'
+import SegmentDetailPage from './routes/dashboard/rfm/segments/$segment'
+import AccountPage from './routes/dashboard/account/index'
+import CustomSegmentsPage from './routes/dashboard/clients/custom-segments'
 
 function DashboardLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -122,6 +128,7 @@ export const router = createBrowserRouter(
             { path: 'bots/:botId', element: <BotDetailPage /> },
             { path: 'clients', element: <ClientsPage /> },
             { path: 'clients/segments', element: <SegmentsPage /> },
+            { path: 'clients/custom-segments', element: <CustomSegmentsPage /> },
             { path: 'clients/predictions', element: <PredictionsPage /> },
             { path: 'clients/:clientId', element: <ClientDetailPage /> },
             { path: 'loyalty', element: <LoyaltyProgramsPage /> },
@@ -136,6 +143,10 @@ export const router = createBrowserRouter(
             { path: 'analytics/sales', element: <SalesAnalyticsPage /> },
             { path: 'analytics/loyalty', element: <LoyaltyAnalyticsPage /> },
             { path: 'analytics/mailings', element: <MailingsAnalyticsPage /> },
+            { path: 'rfm', element: <RFMDashboardPage /> },
+            { path: 'rfm/onboarding', element: <RFMOnboardingPage /> },
+            { path: 'rfm/template', element: <RFMTemplatePage /> },
+            { path: 'rfm/segments/:segment', element: <SegmentDetailPage /> },
             { path: 'campaigns/:campaignId', element: <CampaignDetailPage /> },
             { path: 'promotions', element: <PromotionsPage /> },
             { path: 'promotions/codes', element: <PromoCodesPage /> },
@@ -148,6 +159,7 @@ export const router = createBrowserRouter(
             { path: 'menus/:menuId', element: <MenuDetailPage /> },
             { path: 'billing', element: <BillingPage /> },
             { path: 'billing/invoices', element: <InvoicesPage /> },
+            { path: 'account', element: <AccountPage /> },
           ],
         },
       ],
