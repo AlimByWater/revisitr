@@ -249,7 +249,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-sidebar sidebar-glass shrink-0 flex-col h-screen sticky top-0 hidden lg:flex">
+    <aside className="w-sidebar sidebar-glass shrink-0 flex-col h-screen sticky top-0 z-20 hidden lg:flex">
       <div className="p-6">
         <div className="flex items-center gap-2 group/logo">
           <span className={cn(
