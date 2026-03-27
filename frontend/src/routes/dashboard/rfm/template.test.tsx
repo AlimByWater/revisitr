@@ -40,6 +40,8 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     data: overrides.templates ?? mockTemplates,
     isLoading: overrides.isLoading ?? false,
     isError: overrides.isError ?? false,
+    error: undefined,
+    isValidating: false,
     mutate: vi.fn(),
   } as ReturnType<typeof useRFMTemplatesQuery>)
 
@@ -51,15 +53,22 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     },
     isLoading: false,
     isError: false,
+    error: undefined,
+    isValidating: false,
     mutate: vi.fn(),
   } as ReturnType<typeof useRFMActiveTemplateQuery>)
 
   vi.mocked(useRFMSetTemplateMutation).mockReturnValue({
+    data: undefined,
     mutate: vi.fn(),
     mutateAsync: overrides.setMutateAsync ?? mockSetMutateAsync,
+    trigger: overrides.setMutateAsync ?? mockSetMutateAsync,
     isPending: false,
+    isMutating: false,
     isError: false,
     isSuccess: false,
+    error: undefined,
+    reset: vi.fn(),
   } as ReturnType<typeof useRFMSetTemplateMutation>)
 }
 

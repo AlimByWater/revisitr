@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -42,6 +42,8 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     data: overrides.activeTemplate ?? null,
     isLoading: false,
     isError: false,
+    error: undefined,
+    isValidating: false,
     mutate: vi.fn(),
   } as ReturnType<typeof useRFMActiveTemplateQuery>)
 
@@ -49,6 +51,8 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     data: overrides.questions ?? mockQuestions,
     isLoading: false,
     isError: overrides.isError ?? false,
+    error: undefined,
+    isValidating: false,
     mutate: vi.fn(),
   } as ReturnType<typeof useRFMOnboardingQuestionsQuery>)
 
@@ -56,23 +60,34 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     data: overrides.recommendation ?? undefined,
     mutate: overrides.recommendMutate ?? vi.fn(),
     mutateAsync: overrides.recommendMutateAsync ?? vi.fn(),
+    trigger: overrides.recommendMutate ?? vi.fn(),
     isPending: false,
+    isMutating: false,
     isError: false,
     isSuccess: false,
+    error: undefined,
+    reset: vi.fn(),
   } as ReturnType<typeof useRFMRecommendMutation>)
 
   vi.mocked(useRFMSetTemplateMutation).mockReturnValue({
+    data: undefined,
     mutate: vi.fn(),
     mutateAsync: overrides.setTemplateMutateAsync ?? vi.fn().mockResolvedValue({}),
+    trigger: overrides.setTemplateMutateAsync ?? vi.fn().mockResolvedValue({}),
     isPending: false,
+    isMutating: false,
     isError: false,
     isSuccess: false,
+    error: undefined,
+    reset: vi.fn(),
   } as ReturnType<typeof useRFMSetTemplateMutation>)
 
   vi.mocked(useRFMTemplatesQuery).mockReturnValue({
     data: overrides.allTemplates ?? [mockRecommendation.recommended],
     isLoading: false,
     isError: false,
+    error: undefined,
+    isValidating: false,
     mutate: vi.fn(),
   } as ReturnType<typeof useRFMTemplatesQuery>)
 }
@@ -173,6 +188,8 @@ describe('RFMOnboardingPage', () => {
       data: undefined,
       isLoading: true,
       isError: false,
+      error: undefined,
+      isValidating: false,
       mutate: vi.fn(),
     } as ReturnType<typeof useRFMOnboardingQuestionsQuery>)
 

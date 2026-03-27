@@ -52,7 +52,7 @@ export const segmentsApi = {
     await api.post(`/segments/${segmentId}/recalculate`)
   },
 
-  previewCount: async (filter: Record<string, unknown>): Promise<{ count: number }> => {
+  previewCount: async (filter: SegmentFilter): Promise<{ count: number }> => {
     const response = await api.post<{ count: number }>('/segments/preview', filter)
     return response.data
   },

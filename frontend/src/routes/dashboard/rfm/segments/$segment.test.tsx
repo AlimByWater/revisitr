@@ -38,6 +38,8 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     data: overrides.data ?? mockClients,
     isLoading: overrides.isLoading ?? false,
     isError: overrides.isError ?? false,
+    error: undefined,
+    isValidating: false,
     mutate: vi.fn(),
   } as ReturnType<typeof useRFMSegmentClientsQuery>)
 }
