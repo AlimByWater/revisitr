@@ -1,6 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { User, Menu, LogOut, Settings } from 'lucide-react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { User, Menu, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -9,194 +8,110 @@ interface HeaderProps {
   onMenuToggle?: () => void
 }
 
+const NAV_LINKS = [
+  { label: 'Панель управления', href: '/dashboard', underline: true },
+  { label: 'Тарифы', href: '#' },
+  { label: 'Поддержка', href: '#' },
+  { label: 'Маркетинг «под ключ»', href: '#', accent: true },
+  { label: 'Контакты', href: '#' },
+]
+
 export function Header({ onMenuToggle }: HeaderProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const logout = useAuthStore((s) => s.logout)
-  const user = useAuthStore((s) => s.user)
-  const { theme, toggleTheme } = useTheme()
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const { theme } = useTheme()
 
-  const handleLogout = async () => {
-    setMenuOpen(false)
-    await logout()
+  const handleLogout = () => {
+    logout()
     navigate('/auth/login')
   }
 
   const isAurora = theme === 'aurora'
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    if (!menuOpen) return
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [menuOpen])
+  if (isAurora) {
+    return (
+      <header className="h-16 border-b flex items-center justify-between px-4 md:px-6 sticky top-0 z-30 header-glass">
+        <div className="flex items-center gap-4 md:gap-8">
+          <button onClick={onMenuToggle} type="button" className="lg:hidden w-9 h-9 rounded flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10" aria-label="Открыть меню">
+            <Menu className="w-5 h-5" />
+          </button>
+          <Link to="/dashboard" className="text-xl font-bold tracking-tight text-white/90 select-none">rev/sitr</Link>
+        </div>
+        <div className="flex items-center gap-3">
+          <button onClick={handleLogout} type="button" className="w-8 h-8 rounded flex items-center justify-center text-white/30 hover:text-red-400 hover:bg-red-500/10" title="Выйти" aria-label="Выйти">
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+    )
+  }
+
+  const isDashboard = location.pathname.startsWith('/dashboard')
 
   return (
-    <header
-      className={cn(
-        'h-16 border-b flex items-center justify-between px-4 md:px-6 sticky top-0 z-30 transition-all duration-500',
-        isAurora ? 'header-glass' : 'bg-white/80 backdrop-blur-sm border-surface-border',
-      )}
-    >
-      <div className="flex items-center gap-4 md:gap-8">
-        {/* Mobile burger */}
-        <button
-          onClick={onMenuToggle}
-          type="button"
-          className={cn(
-            'lg:hidden w-9 h-9 rounded-lg flex items-center justify-center transition-colors',
-            isAurora
-              ? 'text-white/60 hover:text-white hover:bg-white/10'
-              : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100',
-          )}
-          aria-label="Открыть меню"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+    <header className="px-4 sm:px-8 lg:px-16 pt-4 sm:pt-6 pb-0">
+      <div className="flex items-center justify-between">
+        {/* Left section: mirrors sidebar width on desktop, logo centered within */}
+        <div className="flex items-center shrink-0 lg:w-[220px] lg:justify-center">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <button
+              onClick={onMenuToggle}
+              type="button"
+              className="lg:hidden w-9 h-9 rounded border border-neutral-900 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 transition-colors"
+              aria-label="Открыть меню"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
 
-        <Link to="/dashboard" className="text-xl font-bold tracking-tight group/logo select-none">
-          <span className={isAurora ? 'text-white/90' : undefined}>
-            revi
-          </span>
-          <span
-            className={cn(
-              'transition-all duration-300',
-              isAurora
-                ? 'text-violet-400 group-hover/logo:drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]'
-                : 'text-accent group-hover/logo:drop-shadow-[0_0_8px_rgba(232,93,58,0.55)]',
-            )}
-          >
-            s
-          </span>
-          <span className={isAurora ? 'text-white/90' : undefined}>
-            itr
-          </span>
-        </Link>
+            <Link to="/dashboard" className="shrink-0">
+              <img
+                src="/revisitr/logo.png"
+                alt="Revisitr"
+                className="h-6 sm:h-7 w-auto"
+              />
+            </Link>
+          </div>
+        </div>
 
-        <nav className="hidden md:flex items-center gap-6">
-          <Link
-            to="/dashboard"
-            className={cn(
-              'text-sm font-medium transition-colors',
-              isAurora
-                ? 'text-white/50 hover:text-white/90'
-                : 'text-neutral-600 hover:text-neutral-900',
-            )}
-          >
-            Панель управления
-          </Link>
+        {/* Center: nav — matches content area start */}
+        <nav className="hidden lg:flex items-center gap-6 flex-1 pl-6">
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.label}
+              to={link.href}
+              className={cn(
+                'text-sm whitespace-nowrap transition-colors',
+                link.accent
+                  ? 'text-[#EF3219] font-medium hover:text-[#FF5C47]'
+                  : link.underline && isDashboard
+                    ? 'text-neutral-900 font-bold'
+                    : 'text-neutral-500 hover:text-neutral-900',
+              )}
+            >
+              {link.label}
+            </Link>
+          ))}
         </nav>
-      </div>
 
-      <div className="flex items-center gap-3 md:gap-5">
-        {/* Theme toggle */}
-        <button
-          onClick={toggleTheme}
-          type="button"
-          className="theme-toggle"
-          title={isAurora ? 'Светлая тема' : 'Aurora тема'}
-          aria-label="Переключить тему"
-        />
-
-        <a
-          href="#"
-          className={cn(
-            'hidden md:block text-sm font-medium transition-colors',
-            isAurora
-              ? 'text-white/40 hover:text-violet-400'
-              : 'text-neutral-500 hover:text-accent',
-          )}
-        >
-          Тарифы
-        </a>
-        <a
-          href="#"
-          className={cn(
-            'hidden md:block text-sm font-medium transition-colors',
-            isAurora
-              ? 'text-white/40 hover:text-violet-400'
-              : 'text-neutral-500 hover:text-accent',
-          )}
-        >
-          Поддержка
-        </a>
-
-        {/* User dropdown */}
-        <div
-          ref={menuRef}
-          className={cn(
-            'relative flex items-center gap-2 md:gap-3 pl-3 md:pl-4 border-l',
-            isAurora ? 'border-white/10' : 'border-surface-border',
-          )}
-        >
-          <button
-            type="button"
-            onClick={() => setMenuOpen(!menuOpen)}
-            className={cn(
-              'flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors',
-              isAurora
-                ? 'hover:bg-white/10'
-                : 'hover:bg-neutral-100',
-            )}
-          >
-            <div className={cn(
-              'w-8 h-8 rounded-full flex items-center justify-center',
-              isAurora ? 'bg-white/10' : 'bg-neutral-200',
-            )}>
-              <User className={cn('w-4 h-4', isAurora ? 'text-white/60' : 'text-neutral-500')} />
-            </div>
-            <span className={cn(
-              'text-sm font-medium hidden lg:block',
-              isAurora ? 'text-white/70' : 'text-neutral-700',
-            )}>
-              {user?.name || 'Администратор'}
+        {/* Right: profile */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-neutral-900 flex items-center justify-center">
+            <User className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-900" />
+          </div>
+          <div className="hidden sm:flex flex-col">
+            <span className="text-sm font-bold text-neutral-900 leading-tight uppercase">
+              Gennady P.
             </span>
-          </button>
-
-          {menuOpen && (
-            <div className={cn(
-              'absolute right-0 top-full mt-2 w-48 rounded-xl border shadow-lg py-1 z-50',
-              isAurora
-                ? 'bg-neutral-900 border-white/10'
-                : 'bg-white border-surface-border',
-            )}>
-              <Link
-                to="/dashboard/account"
-                onClick={() => setMenuOpen(false)}
-                className={cn(
-                  'flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors',
-                  isAurora
-                    ? 'text-white/70 hover:bg-white/10 hover:text-white'
-                    : 'text-neutral-700 hover:bg-neutral-50',
-                )}
-              >
-                <Settings className="w-4 h-4" />
-                Настройки аккаунта
-              </Link>
-              <div className={cn('my-1 border-t', isAurora ? 'border-white/10' : 'border-neutral-100')} />
-              <button
-                type="button"
-                onClick={handleLogout}
-                className={cn(
-                  'flex items-center gap-2.5 px-4 py-2.5 text-sm w-full transition-colors',
-                  isAurora
-                    ? 'text-red-400 hover:bg-red-500/10'
-                    : 'text-red-500 hover:bg-red-50',
-                )}
-              >
-                <LogOut className="w-4 h-4" />
-                Выйти
-              </button>
-            </div>
-          )}
+            <span className="text-[11px] font-bold text-[#EF3219] leading-tight">
+              pro
+            </span>
+          </div>
         </div>
       </div>
+
+      {/* Divider line */}
+      <div className="mt-4 border-b border-neutral-900" />
     </header>
   )
 }

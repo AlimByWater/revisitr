@@ -34,21 +34,6 @@ import SegmentsPage from './routes/dashboard/clients/segments'
 import PromotionsPage from './routes/dashboard/promotions/index'
 import PromoCodesPage from './routes/dashboard/promotions/codes'
 import PromotionsArchivePage from './routes/dashboard/promotions/archive'
-import OnboardingPage from './routes/dashboard/onboarding/index'
-import MenusPage from './routes/dashboard/menus/index'
-import MenuDetailPage from './routes/dashboard/menus/$menuId'
-import WalletPage from './routes/dashboard/loyalty/wallet'
-import MarketplacePage from './routes/dashboard/marketplace/index'
-import BillingPage from './routes/dashboard/billing/index'
-import InvoicesPage from './routes/dashboard/billing/invoices'
-import CampaignTemplatesPage from './routes/dashboard/campaigns/templates'
-import PredictionsPage from './routes/dashboard/clients/predictions'
-import RFMDashboardPage from './routes/dashboard/rfm/index'
-import RFMOnboardingPage from './routes/dashboard/rfm/onboarding'
-import RFMTemplatePage from './routes/dashboard/rfm/template'
-import SegmentDetailPage from './routes/dashboard/rfm/segments/$segment'
-import AccountPage from './routes/dashboard/account/index'
-import CustomSegmentsPage from './routes/dashboard/clients/custom-segments'
 
 function DashboardLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -70,12 +55,12 @@ function DashboardLayout() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
+    <div className="min-h-screen">
+      <Header onMenuToggle={() => setMobileNavOpen(true)} />
       <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header onMenuToggle={() => setMobileNavOpen(true)} />
-        <main className="flex-1 p-6 md:p-8">
+      <div className="flex items-start px-4 sm:px-8 lg:px-16 py-4 sm:py-6 gap-4 sm:gap-6">
+        <Sidebar />
+        <main className="flex-1 min-w-0">
           <Outlet />
         </main>
       </div>
@@ -83,30 +68,10 @@ function DashboardLayout() {
   )
 }
 
-async function authLoader({ request }: { request: Request }) {
-  const token = localStorage.getItem('token')
-  if (!token) return redirect('/auth/login')
-
-  // Check onboarding status
-  try {
-    const baseURL = import.meta.env.VITE_API_URL || '/api/v1'
-    const response = await fetch(`${baseURL}/onboarding`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (response.ok) {
-      const data = await response.json()
-      if (!data.onboarding_completed) {
-        // Only redirect if not already on onboarding page
-        const url = new URL(request.url)
-        if (!url.pathname.includes('/onboarding')) {
-          return redirect('/dashboard/onboarding')
-        }
-      }
-    }
-  } catch {
-    // If onboarding check fails, don't block — just continue to dashboard
-  }
-
+function authLoader() {
+  // TODO: restore auth check after visual redesign
+  // const token = localStorage.getItem('token')
+  // if (!token) return redirect('/auth/login')
   return null
 }
 
@@ -128,38 +93,23 @@ export const router = createBrowserRouter(
             { path: 'bots/:botId', element: <BotDetailPage /> },
             { path: 'clients', element: <ClientsPage /> },
             { path: 'clients/segments', element: <SegmentsPage /> },
-            { path: 'clients/custom-segments', element: <CustomSegmentsPage /> },
-            { path: 'clients/predictions', element: <PredictionsPage /> },
             { path: 'clients/:clientId', element: <ClientDetailPage /> },
             { path: 'loyalty', element: <LoyaltyProgramsPage /> },
-            { path: 'loyalty/wallet', element: <WalletPage /> },
             { path: 'loyalty/:programId', element: <ProgramDetailPage /> },
             { path: 'pos', element: <POSListPage /> },
             { path: 'pos/:posId', element: <POSDetailPage /> },
             { path: 'campaigns', element: <CampaignsPage /> },
             { path: 'campaigns/create', element: <CreateCampaignPage /> },
             { path: 'campaigns/scenarios', element: <ScenariosPage /> },
-            { path: 'campaigns/templates', element: <CampaignTemplatesPage /> },
             { path: 'analytics/sales', element: <SalesAnalyticsPage /> },
             { path: 'analytics/loyalty', element: <LoyaltyAnalyticsPage /> },
             { path: 'analytics/mailings', element: <MailingsAnalyticsPage /> },
-            { path: 'rfm', element: <RFMDashboardPage /> },
-            { path: 'rfm/onboarding', element: <RFMOnboardingPage /> },
-            { path: 'rfm/template', element: <RFMTemplatePage /> },
-            { path: 'rfm/segments/:segment', element: <SegmentDetailPage /> },
             { path: 'campaigns/:campaignId', element: <CampaignDetailPage /> },
             { path: 'promotions', element: <PromotionsPage /> },
             { path: 'promotions/codes', element: <PromoCodesPage /> },
             { path: 'promotions/archive', element: <PromotionsArchivePage /> },
             { path: 'integrations', element: <IntegrationsPage /> },
             { path: 'integrations/:integrationId', element: <IntegrationDetailPage /> },
-            { path: 'onboarding', element: <OnboardingPage /> },
-            { path: 'marketplace', element: <MarketplacePage /> },
-            { path: 'menus', element: <MenusPage /> },
-            { path: 'menus/:menuId', element: <MenuDetailPage /> },
-            { path: 'billing', element: <BillingPage /> },
-            { path: 'billing/invoices', element: <InvoicesPage /> },
-            { path: 'account', element: <AccountPage /> },
           ],
         },
       ],
