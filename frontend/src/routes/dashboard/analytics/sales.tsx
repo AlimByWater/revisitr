@@ -28,7 +28,7 @@ export default function SalesAnalyticsPage() {
 
   return (
     <div>
-      <div className="mb-6 animate-in">
+      <div className="animate-in mb-4">
         <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
           Продажи
         </h1>
@@ -46,6 +46,26 @@ export default function SalesAnalyticsPage() {
           onPeriodChange={(p) => setFilter((prev) => ({ ...prev, period: p }))}
           onRangeChange={(from, to) => setFilter((prev) => ({ ...prev, from, to }))}
         />
+
+        {bots && bots.length > 0 && (
+          <select
+            value={filter.bot_id ?? ''}
+            onChange={(e) =>
+              setFilter((prev) => ({
+                ...prev,
+                bot_id: e.target.value ? Number(e.target.value) : undefined,
+              }))
+            }
+            className="bg-white rounded-xl border border-surface-border px-3 py-2 text-sm text-neutral-700 outline-none"
+          >
+            <option value="">Все боты</option>
+            {bots.map((bot) => (
+              <option key={bot.id} value={bot.id}>
+                {bot.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Metrics */}
@@ -89,7 +109,7 @@ export default function SalesAnalyticsPage() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 animate-in animate-in-delay-3">
-        <div className="border border-neutral-900 rounded p-5 bg-white">
+        <div className="border border-neutral-900 rounded bg-white p-6">
           <h3 className="text-sm font-semibold text-neutral-700 mb-4">
             Выручка по дням
           </h3>
@@ -122,7 +142,7 @@ export default function SalesAnalyticsPage() {
                   dataKey="value"
                   stroke="#171717"
                   fill="#171717"
-                  fillOpacity={0.06}
+                  fillOpacity={0.08}
                   strokeWidth={2}
                 />
               </AreaChart>
@@ -130,7 +150,7 @@ export default function SalesAnalyticsPage() {
           )}
         </div>
 
-        <div className="border border-neutral-900 rounded p-5 bg-white">
+        <div className="border border-neutral-900 rounded bg-white p-6">
           <h3 className="text-sm font-semibold text-neutral-700 mb-4">
             Транзакции по дням
           </h3>
@@ -159,7 +179,7 @@ export default function SalesAnalyticsPage() {
                   formatter={(v) => [Number(v), 'Транзакции']}
                   contentStyle={{ borderRadius: 6, border: '1px solid #e5e5e5', fontSize: 13 }}
                 />
-                <Bar dataKey="value" fill="#171717" radius={[3, 3, 0, 0]} opacity={0.85} />
+                <Bar dataKey="value" fill="#171717" radius={[4, 4, 0, 0]} opacity={0.85} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -168,11 +188,11 @@ export default function SalesAnalyticsPage() {
 
       {/* Loyalty comparison */}
       {data?.comparison && (
-        <div className="border border-neutral-900 rounded p-5 bg-white animate-in animate-in-delay-4">
+        <div className="border border-neutral-900 rounded bg-white p-6 animate-in animate-in-delay-4">
           <h3 className="text-sm font-semibold text-neutral-700 mb-1">
             Программа лояльности
           </h3>
-          <p className="text-xs text-neutral-400 mb-4">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-4">
             Средний чек: участники vs остальные
           </p>
           <div className="flex items-end gap-4">
@@ -204,7 +224,7 @@ export default function SalesAnalyticsPage() {
           <TrendingUp className="w-4 h-4 text-neutral-400" />
           <span className="text-sm text-neutral-500">
             Среднее количество покупок на клиента:&nbsp;
-            <span className="font-semibold text-neutral-900">
+            <span className="font-semibold text-neutral-900 font-mono">
               {data.metrics.buy_frequency.toFixed(1)}
             </span>
           </span>
@@ -225,11 +245,11 @@ function StatCard({
 }) {
   return (
     <div className="border border-neutral-900 rounded p-4 bg-white transition-colors hover:border-neutral-300">
-      <div className="flex items-center gap-2 text-neutral-400 mb-2">
+      <div className="flex items-center gap-2 text-neutral-400 mb-3">
         {icon}
         <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
       </div>
-      <div className="text-2xl font-bold text-neutral-900 tracking-tight">
+      <div className="text-3xl font-bold font-mono text-neutral-900 tracking-tight">
         {value}
       </div>
     </div>
@@ -250,14 +270,14 @@ function ComparisonBar({
   const pct = max > 0 ? (value / max) * 100 : 0
   return (
     <div className="flex-1">
-      <div className="h-16 bg-neutral-100 rounded overflow-hidden flex items-end">
+      <div className="h-16 bg-neutral-100 rounded-xl overflow-hidden flex items-end">
         <div
-          className={cn('w-full rounded transition-all duration-500', color)}
+          className={cn('w-full rounded-xl transition-all duration-500', color)}
           style={{ height: `${pct}%` }}
         />
       </div>
       <p className="text-xs font-medium text-neutral-600 mt-2">{label}</p>
-      <p className="text-sm font-semibold text-neutral-900">
+      <p className="font-mono text-sm font-semibold text-neutral-900">
         {formatCurrency(value)}
       </p>
     </div>

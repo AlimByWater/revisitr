@@ -112,10 +112,9 @@
     background-repeat: repeat;
   }
 
-  /* Remove old pseudo-element noise — noise is now on body background directly */
+  /* Noise texture — disabled, replaced by sparse dot pattern on body */
   body::before {
     content: none;
-    transition: opacity 0.5s ease;
   }
 }
 
