@@ -225,34 +225,36 @@ export function Header({ onMenuToggle }: HeaderProps) {
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-neutral-100"
+              className="flex items-center gap-2.5 rounded px-2.5 py-1.5 transition-all duration-150 hover:scale-[1.03]"
             >
-              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-neutral-200 border border-neutral-900">
-                <User className="w-4 h-4 text-neutral-500" />
+              <div className="w-9 h-9 rounded-full flex items-center justify-center bg-white border border-neutral-900">
+                <User className="w-4 h-4 text-neutral-900" />
               </div>
-              <span className="text-sm font-medium hidden lg:block text-neutral-700 uppercase tracking-wide">
-                {user?.name || 'GENNADY P.'}
-              </span>
-              <span className="hidden lg:block text-xs text-[#EF3219] font-medium -ml-1">
-                pro
-              </span>
+              <div className="hidden sm:flex flex-col items-start">
+                <span className="text-sm font-bold text-neutral-900 leading-tight uppercase">
+                  {user?.name || 'GENNADY P.'}
+                </span>
+                <span className="text-[10px] font-bold text-white bg-neutral-900 rounded px-1.5 py-0.5 leading-none mt-0.5 uppercase tracking-wider">
+                  pro
+                </span>
+              </div>
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 rounded-xl border shadow-lg py-1 z-50 bg-white border-surface-border">
+              <div className="absolute right-0 top-full mt-1 w-48 rounded border border-neutral-900 py-1 z-50 bg-white">
                 <Link
                   to="/dashboard/account"
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-neutral-700 hover:bg-neutral-50"
+                  className="flex items-center gap-2.5 px-4 py-2 text-sm transition-colors text-neutral-700 hover:bg-neutral-50"
                 >
                   <Settings className="w-4 h-4" />
                   Настройки аккаунта
                 </Link>
-                <div className="my-1 border-t border-neutral-100" />
+                <div className="my-1 mx-4 border-t border-neutral-200" />
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm w-full transition-colors text-red-500 hover:bg-red-50"
+                  className="flex items-center gap-2.5 px-4 py-2 text-sm w-full transition-colors text-red-500 hover:bg-red-50"
                 >
                   <LogOut className="w-4 h-4" />
                   Выйти

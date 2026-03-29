@@ -104,17 +104,93 @@
 
 ---
 
+## Страницы дашборда (общий визуал)
+
+### Dashboard, Loyalty, Mailings
+- **Файлы**: `frontend/src/routes/dashboard/index.tsx`, `analytics/loyalty.tsx`, `analytics/mailings.tsx`
+- PeriodFilter добавлен на все аналитические страницы
+- Все карточки/виджеты: `border border-neutral-900 rounded bg-white`
+- Графики: stroke/fill `#171717`
+- Staggered entrance animations
+- Подзаголовок: `text-sm text-neutral-400 mt-1`
+
+---
+
+## Страница аккаунта
+
+### Визуал
+- **Файл**: `frontend/src/routes/dashboard/account/index.tsx`
+- Карточки секций: `border border-neutral-900 rounded bg-white`
+- Иконки секций: `text-neutral-900` (User, Shield, FileText)
+- Инпуты: `rounded border border-neutral-900`, disabled — `bg-neutral-100 border-neutral-300`
+- Красные ссылки «Сменить»: `text-[#EF3219] hover:text-[#FF5C47]`
+- Кнопки «Сохранить»: перенесены в левую часть, статус справа
+- Disabled кнопки: `bg-neutral-300` вместо opacity
+
+### CustomSelect (Тип лица)
+- Кастомный дропдаун заменяет нативный `<select>`
+- Портал через `createPortal` — рендерится в `document.body` с `position: fixed`, `z-index: 9999`
+- Решает проблему stacking context от `animate-in` (transform создаёт изолированные контексты)
+- Закрывается по клику вне и по скроллу
+
+### Попап подтверждения выхода
+- Кнопка «Выйти из аккаунта» теперь открывает модальное окно
+- Портал, overlay `bg-black/30`, окно `border border-neutral-900 rounded`
+- Кнопки: «Выйти» (красная) + «Отмена»
+
+### Исправление повторной анимации Реквизитов
+- SWR ретраи без бэкенда вызывали цикл skeleton→content, повторяя анимацию
+- Добавлен `hasRendered` ref — скелетон только при первом рендере
+
+---
+
+## Footer
+
+### Новый компонент
+- **Файл**: `frontend/src/components/layout/Footer.tsx`
+- Тёмный footer `bg-neutral-900` с белым dot noise (SVG, opacity 0.05-0.1)
+- 4 колонки: Brand (rev/sitr + тэглайн), Продукт, Поддержка, Документы
+- Нижняя строка: копирайт + «Сделано в России»
+- Адаптивность: 1 col mobile → 2 tablet → 4 desktop
+
+---
+
+## Header (дополнения)
+
+### Профиль
+- **Файл**: `frontend/src/components/layout/Header.tsx`
+- Аватарка: `bg-white border border-neutral-900`, инициалы
+- Имя: uppercase, рядом PRO badge (`bg-neutral-900 text-white rounded`)
+- Hover профиля: `scale-[1.03]`
+- Dropdown: `rounded border border-neutral-900`, сепараторы `border-neutral-200`
+
+---
+
+## Sidebar (дополнения)
+
+### Hover-эффекты
+- **Файл**: `frontend/src/components/layout/Sidebar.tsx`
+- Hover на пунктах: `hover:scale-[1.02] transition-all duration-150`
+- Обновлён порядок: добавлены Маркетплейс, Меню, Биллинг
+
+---
+
 ## Файлы, которые нужно перенести при мёрдже
 
 | Файл | Тип изменения |
 |------|---------------|
 | `frontend/src/index.css` | Модификация (шрифт, цвета, шум, чекбоксы) |
-| `frontend/src/router.tsx` | Модификация (layout, убрать TODO auth) |
+| `frontend/src/router.tsx` | Модификация (layout + Footer) |
 | `frontend/src/components/layout/Header.tsx` | Полная перезапись |
 | `frontend/src/components/layout/Sidebar.tsx` | Полная перезапись |
+| `frontend/src/components/layout/Footer.tsx` | Новый файл |
 | `frontend/src/components/common/PeriodFilter.tsx` | Новый файл |
 | `frontend/src/routes/auth/login.tsx` | Полная перезапись |
+| `frontend/src/routes/dashboard/index.tsx` | Модификация (визуал + PeriodFilter) |
 | `frontend/src/routes/dashboard/analytics/sales.tsx` | Модификация (визуал + PeriodFilter) |
+| `frontend/src/routes/dashboard/analytics/loyalty.tsx` | Модификация (визуал + PeriodFilter) |
+| `frontend/src/routes/dashboard/analytics/mailings.tsx` | Модификация (визуал + PeriodFilter) |
+| `frontend/src/routes/dashboard/account/index.tsx` | Модификация (визуал + CustomSelect + попап выхода) |
 | `frontend/public/logo.png` | Новый файл |
-| `frontend/docs/design/interaction-states.md` | Новый файл |
+| `frontend/docs/design/interaction-states.md` | Новый/модификация |
 | `docs/design/CHANGELOG.md` | Новый файл (этот) |

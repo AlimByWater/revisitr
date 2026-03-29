@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -17,15 +18,96 @@ import {
   type LegalEntityType,
   type BillingDetails,
 } from '@/features/account/types'
-import { User, Shield, FileText, LogOut, Check, X, Pencil } from 'lucide-react'
+import { User, Shield, FileText, LogOut, Check, X, Pencil, ChevronDown } from 'lucide-react'
 
 const inputClassName = cn(
-  'w-full px-4 py-2.5 rounded-lg border border-surface-border',
-  'text-sm placeholder:text-neutral-400',
-  'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
+  'w-full px-4 py-2.5 rounded border border-neutral-900',
+  'text-sm placeholder:text-neutral-400 bg-white',
+  'focus:outline-none focus:ring-2 focus:ring-neutral-900/10',
   'transition-colors',
-  'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-neutral-50',
+  'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:border-neutral-300 disabled:text-neutral-500',
 )
+
+// ---------------------------------------------------------------------------
+// Custom Select (styled dropdown)
+// ---------------------------------------------------------------------------
+
+function CustomSelect({
+  value,
+  onChange,
+  options,
+}: {
+  value: string
+  onChange: (value: string) => void
+  options: { value: string; label: string }[]
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
+
+  const selectedLabel = options.find((o) => o.value === value)?.label ?? ''
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    function handleScroll() { setOpen(false) }
+    document.addEventListener('mousedown', handleClick)
+    window.addEventListener('scroll', handleScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      window.removeEventListener('scroll', handleScroll, true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (open && ref.current) {
+      const rect = ref.current.getBoundingClientRect()
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      })
+    }
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-2.5 rounded border border-neutral-900 bg-white text-sm text-neutral-900 hover:bg-neutral-50 transition-colors"
+      >
+        <span>{selectedLabel}</span>
+        <ChevronDown className={cn('w-4 h-4 text-neutral-500 transition-transform duration-200', open && 'rotate-180')} />
+      </button>
+
+      {open && createPortal(
+        <div style={dropdownStyle} className="bg-white border border-neutral-900 rounded py-1 shadow-sm">
+          {options.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => { onChange(o.value); setOpen(false) }}
+              className={cn(
+                'w-full flex items-center justify-between px-4 py-2 text-sm text-left transition-colors',
+                o.value === value
+                  ? 'font-semibold text-neutral-900 bg-neutral-50'
+                  : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900',
+              )}
+            >
+              <span>{o.label}</span>
+              {o.value === value && <Check className="w-3.5 h-3.5 text-neutral-900" />}
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </div>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Profile Section
@@ -36,6 +118,7 @@ function ProfileSection() {
   const updateProfile = useUpdateProfileMutation()
   const changeEmail = useChangeEmailMutation()
   const changePhone = useChangePhoneMutation()
+  const hasRendered = useRef(false)
 
   const [name, setName] = useState('')
   const [nameChanged, setNameChanged] = useState(false)
@@ -104,14 +187,16 @@ function ProfileSection() {
     setPhoneSent(true)
   }
 
-  if (isLoading) {
-    return <div className="bg-white rounded-2xl border border-surface-border p-6 h-48 animate-pulse" />
+  if (isLoading && !hasRendered.current) {
+    return <div className="border border-neutral-900 rounded bg-white p-6 h-48 animate-pulse" />
   }
 
+  hasRendered.current = true
+
   return (
-    <div className="bg-white rounded-2xl border border-surface-border p-6">
+    <div className="border border-neutral-900 rounded bg-white p-6 animate-in">
       <div className="flex items-center gap-2 mb-5">
-        <User className="w-5 h-5 text-accent" />
+        <User className="w-5 h-5 text-neutral-900" />
         <h2 className="text-lg font-semibold text-neutral-900">Профиль</h2>
       </div>
 
@@ -142,7 +227,7 @@ function ProfileSection() {
               <button
                 type="button"
                 onClick={() => setEditingEmail(true)}
-                className="shrink-0 text-sm text-accent hover:text-accent/80 font-medium transition-colors flex items-center gap-1"
+                className="shrink-0 text-sm text-[#EF3219] hover:text-[#FF5C47] font-medium transition-colors flex items-center gap-1"
               >
                 <Pencil className="w-3.5 h-3.5" />
                 Сменить
@@ -163,7 +248,7 @@ function ProfileSection() {
                 type="button"
                 onClick={handleChangeEmail}
                 disabled={changeEmail.isPending || !newEmail.trim()}
-                className="shrink-0 px-4 py-2.5 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors"
+                className="shrink-0 px-4 py-2.5 rounded bg-neutral-900 text-white text-sm font-medium hover:bg-neutral-700 active:bg-[#EF3219] transition-colors duration-300 focus:outline-none disabled:opacity-50"
               >
                 {changeEmail.isPending ? '...' : 'Сохранить'}
               </button>
@@ -195,7 +280,7 @@ function ProfileSection() {
               <button
                 type="button"
                 onClick={() => setEditingPhone(true)}
-                className="shrink-0 text-sm text-accent hover:text-accent/80 font-medium transition-colors flex items-center gap-1"
+                className="shrink-0 text-sm text-[#EF3219] hover:text-[#FF5C47] font-medium transition-colors flex items-center gap-1"
               >
                 <Pencil className="w-3.5 h-3.5" />
                 Сменить
@@ -216,7 +301,7 @@ function ProfileSection() {
                 type="button"
                 onClick={handleChangePhone}
                 disabled={changePhone.isPending || !newPhone.trim()}
-                className="shrink-0 px-4 py-2.5 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors"
+                className="shrink-0 px-4 py-2.5 rounded bg-neutral-900 text-white text-sm font-medium hover:bg-neutral-700 active:bg-[#EF3219] transition-colors duration-300 focus:outline-none disabled:opacity-50"
               >
                 {changePhone.isPending ? '...' : 'Сохранить'}
               </button>
@@ -236,31 +321,28 @@ function ProfileSection() {
       </div>
 
       {/* Save name */}
-      <div className="mt-6 pt-5 border-t border-surface-border flex items-center justify-between">
-        <div>
-          {nameSaved && (
-            <div className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
-              <Check className="w-4 h-4" />
-              Сохранено
-            </div>
-          )}
-          {updateProfile.isError && (
-            <p className="text-sm text-red-500">Не удалось сохранить.</p>
-          )}
-        </div>
+      <div className="mt-6 pt-5 border-t border-neutral-200 flex items-center gap-3">
         <button
           type="button"
           onClick={handleSaveName}
           disabled={!nameChanged || updateProfile.isPending}
           className={cn(
-            'px-5 py-2.5 rounded-xl text-sm font-semibold transition-all',
-            'bg-accent text-white hover:bg-accent/90',
-            'disabled:opacity-40 disabled:cursor-not-allowed',
-            'shadow-sm shadow-accent/20',
+            'px-5 py-2.5 rounded text-sm font-semibold',
+            'bg-neutral-900 text-white hover:bg-neutral-700 active:bg-[#EF3219] transition-colors duration-300 focus:outline-none',
+            'disabled:bg-neutral-300 disabled:cursor-not-allowed disabled:hover:bg-neutral-300 disabled:active:bg-neutral-300',
           )}
         >
           {updateProfile.isPending ? 'Сохранение...' : 'Сохранить изменения'}
         </button>
+        {nameSaved && (
+          <div className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
+            <Check className="w-4 h-4" />
+            Сохранено
+          </div>
+        )}
+        {updateProfile.isError && (
+          <p className="text-sm text-red-500">Не удалось сохранить.</p>
+        )}
       </div>
     </div>
   )
@@ -300,9 +382,9 @@ function SecuritySection() {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-surface-border p-6">
+    <div className="border border-neutral-900 rounded bg-white p-6 animate-in animate-in-delay-1">
       <div className="flex items-center gap-2 mb-5">
-        <Shield className="w-5 h-5 text-accent" />
+        <Shield className="w-5 h-5 text-neutral-900" />
         <h2 className="text-lg font-semibold text-neutral-900">Безопасность</h2>
       </div>
 
@@ -342,31 +424,28 @@ function SecuritySection() {
         </div>
       </div>
 
-      <div className="mt-6 pt-5 border-t border-surface-border flex items-center justify-between">
-        <div>
-          {success && (
-            <div className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
-              <Check className="w-4 h-4" />
-              Пароль изменён
-            </div>
-          )}
-          {changePassword.isError && (
-            <p className="text-sm text-red-500">Неверный текущий пароль или ошибка сервера.</p>
-          )}
-        </div>
+      <div className="mt-6 pt-5 border-t border-neutral-200 flex items-center gap-3">
         <button
           type="button"
           onClick={handleSubmit}
           disabled={!allFilled || !passwordsMatch || changePassword.isPending}
           className={cn(
-            'px-5 py-2.5 rounded-xl text-sm font-semibold transition-all',
-            'bg-accent text-white hover:bg-accent/90',
-            'disabled:opacity-40 disabled:cursor-not-allowed',
-            'shadow-sm shadow-accent/20',
+            'px-5 py-2.5 rounded text-sm font-semibold',
+            'bg-neutral-900 text-white hover:bg-neutral-700 active:bg-[#EF3219] transition-colors duration-300 focus:outline-none',
+            'disabled:bg-neutral-300 disabled:cursor-not-allowed disabled:hover:bg-neutral-300 disabled:active:bg-neutral-300',
           )}
         >
           {changePassword.isPending ? 'Сохранение...' : 'Сменить пароль'}
         </button>
+        {success && (
+          <div className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
+            <Check className="w-4 h-4" />
+            Пароль изменён
+          </div>
+        )}
+        {changePassword.isError && (
+          <p className="text-sm text-red-500">Неверный текущий пароль или ошибка сервера.</p>
+        )}
       </div>
     </div>
   )
@@ -379,6 +458,7 @@ function SecuritySection() {
 function BillingDetailsSection() {
   const { data, isLoading } = useBillingDetailsQuery()
   const updateDetails = useUpdateBillingDetailsMutation()
+  const hasRendered = useRef(false)
 
   const [entityType, setEntityType] = useState<LegalEntityType>('none')
   const [fields, setFields] = useState<Record<string, string>>({})
@@ -406,31 +486,29 @@ function BillingDetailsSection() {
 
   const fieldDefs = entityType !== 'none' ? ENTITY_FIELDS[entityType] : []
 
-  if (isLoading) {
-    return <div className="bg-white rounded-2xl border border-surface-border p-6 h-32 animate-pulse" />
+  if (isLoading && !hasRendered.current) {
+    return <div className="border border-neutral-900 rounded bg-white p-6 h-32 animate-pulse" />
   }
 
+  hasRendered.current = true
+
   return (
-    <div className="bg-white rounded-2xl border border-surface-border p-6">
+    <div className="border border-neutral-900 rounded bg-white p-6 animate-in animate-in-delay-2">
       <div className="flex items-center gap-2 mb-5">
-        <FileText className="w-5 h-5 text-accent" />
+        <FileText className="w-5 h-5 text-neutral-900" />
         <h2 className="text-lg font-semibold text-neutral-900">Реквизиты</h2>
       </div>
 
       <div className="max-w-md">
         <label className="block text-sm font-medium text-neutral-700 mb-1.5">Тип лица</label>
-        <select
+        <CustomSelect
           value={entityType}
-          onChange={(e) => {
-            setEntityType(e.target.value as LegalEntityType)
-            // Don't clear fields — keep saved data if user switches back
-          }}
-          className={inputClassName}
-        >
-          {(Object.keys(ENTITY_TYPE_LABELS) as LegalEntityType[]).map((key) => (
-            <option key={key} value={key}>{ENTITY_TYPE_LABELS[key]}</option>
-          ))}
-        </select>
+          onChange={(val) => setEntityType(val as LegalEntityType)}
+          options={(Object.keys(ENTITY_TYPE_LABELS) as LegalEntityType[]).map((key) => ({
+            value: key,
+            label: ENTITY_TYPE_LABELS[key],
+          }))}
+        />
       </div>
 
       {fieldDefs.length > 0 && (
@@ -450,31 +528,28 @@ function BillingDetailsSection() {
       )}
 
       {entityType !== 'none' && (
-        <div className="mt-6 pt-5 border-t border-surface-border flex items-center justify-between">
-          <div>
-            {success && (
-              <div className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
-                <Check className="w-4 h-4" />
-                Сохранено
-              </div>
-            )}
-            {updateDetails.isError && (
-              <p className="text-sm text-red-500">Не удалось сохранить.</p>
-            )}
-          </div>
+        <div className="mt-6 pt-5 border-t border-neutral-200 flex items-center gap-3">
           <button
             type="button"
             onClick={handleSave}
             disabled={updateDetails.isPending}
             className={cn(
-              'px-5 py-2.5 rounded-xl text-sm font-semibold transition-all',
-              'bg-accent text-white hover:bg-accent/90',
-              'disabled:opacity-40 disabled:cursor-not-allowed',
-              'shadow-sm shadow-accent/20',
+              'px-5 py-2.5 rounded text-sm font-semibold',
+              'bg-neutral-900 text-white hover:bg-neutral-700 active:bg-[#EF3219] transition-colors duration-300 focus:outline-none',
+              'disabled:bg-neutral-300 disabled:cursor-not-allowed disabled:hover:bg-neutral-300 disabled:active:bg-neutral-300',
             )}
           >
             {updateDetails.isPending ? 'Сохранение...' : 'Сохранить'}
           </button>
+          {success && (
+            <div className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
+              <Check className="w-4 h-4" />
+              Сохранено
+            </div>
+          )}
+          {updateDetails.isError && (
+            <p className="text-sm text-red-500">Не удалось сохранить.</p>
+          )}
         </div>
       )}
     </div>
@@ -488,6 +563,7 @@ function BillingDetailsSection() {
 export default function AccountPage() {
   const navigate = useNavigate()
   const logout = useAuthStore((s) => s.logout)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   const handleLogout = async () => {
     await logout()
@@ -496,11 +572,11 @@ export default function AccountPage() {
 
   return (
     <div className="max-w-2xl space-y-8">
-      <div>
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+      <div className="animate-in">
+        <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
           Настройки аккаунта
         </h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="text-sm text-neutral-400 mt-1">
           Управление профилем, безопасностью и реквизитами
         </p>
       </div>
@@ -509,19 +585,52 @@ export default function AccountPage() {
       <SecuritySection />
       <BillingDetailsSection />
 
-      <div className="pt-4">
+      <div className="pt-4 animate-in animate-in-delay-3">
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           className={cn(
-            'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium',
-            'text-red-600 bg-red-50 hover:bg-red-100 transition-colors',
+            'flex items-center gap-2 px-5 py-2.5 rounded text-sm font-medium',
+            'text-red-600 bg-red-50 hover:bg-red-100 transition-colors duration-300',
           )}
         >
           <LogOut className="w-4 h-4" />
           Выйти из аккаунта
         </button>
       </div>
+
+      {/* Logout confirmation */}
+      {showLogoutConfirm && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          <div
+            className="bg-white border border-neutral-900 rounded p-6 w-full max-w-sm mx-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-neutral-900 mb-2">Выйти из аккаунта?</h3>
+            <p className="text-sm text-neutral-500 mb-6">Вы уверены, что хотите выйти?</p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-5 py-2.5 rounded text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                Выйти
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-5 py-2.5 rounded text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }

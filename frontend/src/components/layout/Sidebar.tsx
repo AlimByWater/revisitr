@@ -167,7 +167,7 @@ function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<st
             : cn(
                 isActive
                   ? 'font-bold text-neutral-900'
-                  : 'text-neutral-600 hover:text-neutral-900',
+                  : 'text-neutral-600 hover:text-neutral-900 hover:scale-[1.02] transition-all duration-150',
               ),
         )}
       >
@@ -196,7 +196,7 @@ function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<st
             : cn(
                 isActive
                   ? 'font-bold text-neutral-900'
-                  : 'text-neutral-600 hover:text-neutral-900',
+                  : 'text-neutral-600 hover:text-neutral-900 hover:scale-[1.02] transition-all duration-150',
               ),
         )}
         type="button"

@@ -3,13 +3,8 @@ import { Send, Eye, MousePointerClick } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCampaignAnalyticsQuery } from '@/features/analytics/queries'
 import { MetricSkeleton } from '@/components/common/LoadingSkeleton'
+import { PeriodFilter } from '@/components/common/PeriodFilter'
 import type { AnalyticsFilter } from '@/features/analytics/types'
-
-const PERIODS = [
-  { value: '7d', label: '7д' },
-  { value: '30d', label: '30д' },
-  { value: '90d', label: '90д' },
-] as const
 
 export default function MailingsAnalyticsPage() {
   const [filter, setFilter] = useState<AnalyticsFilter>({ period: '30d' })
@@ -18,36 +13,27 @@ export default function MailingsAnalyticsPage() {
   return (
     <div>
       <div className="animate-in mb-4">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 mb-1 tracking-tight">
+        <h1 className="text-2xl font-bold text-neutral-900 tracking-tight mb-1">
           Рассылки
         </h1>
-        <p className="font-mono text-neutral-300 text-xs uppercase tracking-wider">
+        <p className="text-sm text-neutral-400 mt-1">
           Эффективность рассылок
         </p>
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-3 flex-wrap mb-8">
-        <div className="flex bg-white rounded-xl border border-surface-border p-1">
-          {PERIODS.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setFilter((prev) => ({ ...prev, period: p.value }))}
-              className={cn(
-                'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
-                filter.period === p.value
-                  ? 'bg-neutral-900 text-white'
-                  : 'text-neutral-500 hover:text-neutral-700',
-              )}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+      <div className="relative z-20 flex items-center gap-3 flex-wrap mb-8 animate-in animate-in-delay-1">
+        <PeriodFilter
+          period={filter.period ?? '30d'}
+          from={filter.from}
+          to={filter.to}
+          onPeriodChange={(p) => setFilter((prev) => ({ ...prev, period: p }))}
+          onRangeChange={(from, to) => setFilter((prev) => ({ ...prev, from, to }))}
+        />
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6 animate-in animate-in-delay-1">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6 animate-in animate-in-delay-2">
         {isLoading ? (
           <>
             <MetricSkeleton />
@@ -81,8 +67,8 @@ export default function MailingsAnalyticsPage() {
 
       {/* Campaign table */}
       {!isLoading && !isError && data && (
-        <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden animate-in animate-in-delay-2">
-          <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between">
+        <div className="border border-neutral-900 rounded bg-white overflow-hidden animate-in animate-in-delay-3">
+          <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-0.5">
                 Детализация
@@ -102,7 +88,7 @@ export default function MailingsAnalyticsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left border-b border-surface-border">
+                  <tr className="text-left border-b border-neutral-200">
                     <th className="px-6 py-3 font-medium text-neutral-500 font-mono text-[11px] uppercase tracking-wider">
                       Рассылка
                     </th>
@@ -121,7 +107,7 @@ export default function MailingsAnalyticsPage() {
                   {(data.by_campaign ?? []).map((row) => (
                     <tr
                       key={row.campaign_id}
-                      className="border-b border-surface-border last:border-0 hover:bg-neutral-50 transition-colors"
+                      className="border-b border-neutral-200 last:border-0 hover:bg-neutral-50 transition-colors"
                     >
                       <td className="px-6 py-4 text-neutral-900 font-medium">
                         {row.campaign_name}
@@ -157,7 +143,7 @@ function StatCard({
   icon: React.ReactNode
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(0,0,0,0.07)]">
+    <div className="border border-neutral-900 rounded bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(0,0,0,0.07)]">
       <div className="flex items-center gap-2 text-neutral-400 mb-3">
         {icon}
         <span className="text-xs font-medium uppercase tracking-wide">{label}</span>

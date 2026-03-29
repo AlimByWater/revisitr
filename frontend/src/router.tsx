@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createBrowserRouter, redirect, Outlet } from 'react-router-dom'
 import { Sidebar } from './components/layout/Sidebar'
+import { Footer } from './components/layout/Footer'
 import { Header } from './components/layout/Header'
 import { MobileNav } from './components/layout/MobileNav'
 import { AuroraSidebar } from './components/layout/AuroraSidebar'
@@ -79,6 +80,7 @@ function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+      <Footer />
     </div>
   )
 }
