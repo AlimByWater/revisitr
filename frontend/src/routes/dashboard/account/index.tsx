@@ -43,25 +43,13 @@ function CustomSelect({
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
 
   const selectedLabel = options.find((o) => o.value === value)?.label ?? ''
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    function handleScroll() { setOpen(false) }
-    document.addEventListener('mousedown', handleClick)
-    window.addEventListener('scroll', handleScroll, true)
-    return () => {
-      document.removeEventListener('mousedown', handleClick)
-      window.removeEventListener('scroll', handleScroll, true)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (open && ref.current) {
+  const updatePosition = () => {
+    if (ref.current) {
       const rect = ref.current.getBoundingClientRect()
       setDropdownStyle({
         position: 'fixed',
@@ -71,6 +59,28 @@ function CustomSelect({
         zIndex: 9999,
       })
     }
+  }
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      const target = e.target as Node
+      if (
+        ref.current && !ref.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    updatePosition()
+    function handleScroll() { setOpen(false) }
+    window.addEventListener('scroll', handleScroll, true)
+    return () => window.removeEventListener('scroll', handleScroll, true)
   }, [open])
 
   return (
@@ -85,7 +95,7 @@ function CustomSelect({
       </button>
 
       {open && createPortal(
-        <div style={dropdownStyle} className="bg-white border border-neutral-900 rounded py-1 shadow-sm">
+        <div ref={dropdownRef} style={dropdownStyle} className="bg-white border border-neutral-900 rounded py-1 shadow-sm">
           {options.map((o) => (
             <button
               key={o.value}
