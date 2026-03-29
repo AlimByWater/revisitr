@@ -7,6 +7,85 @@ import (
 	"time"
 )
 
+// ── Promotion Triggers & Actions (v2 wizard model) ──────────────────────────
+
+// PromotionTrigger represents a trigger condition for a promotion.
+type PromotionTrigger struct {
+	Type      string   `json:"type"`                    // purchase, purchase_product, purchase_min_items, receipt_sum, event
+	ProductID *int     `json:"product_id,omitempty"`    // for purchase_product
+	MinItems  *int     `json:"min_items,omitempty"`     // for purchase_min_items
+	MinAmount *float64 `json:"min_amount,omitempty"`    // for receipt_sum
+	EventType *string  `json:"event_type,omitempty"`    // birthday, registration, activation, last_purchase
+}
+
+// PromotionTriggers is a slice of PromotionTrigger stored as JSONB.
+type PromotionTriggers []PromotionTrigger
+
+func (t PromotionTriggers) Value() (driver.Value, error) {
+	if t == nil {
+		return []byte("[]"), nil
+	}
+	b, err := json.Marshal(t)
+	if err != nil {
+		return nil, fmt.Errorf("PromotionTriggers.Value: %w", err)
+	}
+	return b, nil
+}
+
+func (t *PromotionTriggers) Scan(src interface{}) error {
+	switch v := src.(type) {
+	case []byte:
+		return json.Unmarshal(v, t)
+	case string:
+		return json.Unmarshal([]byte(v), t)
+	case nil:
+		*t = nil
+		return nil
+	default:
+		return fmt.Errorf("PromotionTriggers.Scan: unsupported type %T", src)
+	}
+}
+
+// PromotionAction represents an action to execute when a promotion triggers.
+type PromotionAction struct {
+	Type            string   `json:"type"`                       // discount, bonus, data_update, campaign
+	DiscountPercent *float64 `json:"discount_percent,omitempty"` // for discount
+	BonusAmount     *int     `json:"bonus_amount,omitempty"`     // for bonus
+	TagAdd          *string  `json:"tag_add,omitempty"`          // for data_update
+	LevelID         *int     `json:"level_id,omitempty"`         // for data_update
+	CampaignID      *int     `json:"campaign_id,omitempty"`      // for campaign
+}
+
+// PromotionActions is a slice of PromotionAction stored as JSONB.
+type PromotionActions []PromotionAction
+
+func (a PromotionActions) Value() (driver.Value, error) {
+	if a == nil {
+		return []byte("[]"), nil
+	}
+	b, err := json.Marshal(a)
+	if err != nil {
+		return nil, fmt.Errorf("PromotionActions.Value: %w", err)
+	}
+	return b, nil
+}
+
+func (a *PromotionActions) Scan(src interface{}) error {
+	switch v := src.(type) {
+	case []byte:
+		return json.Unmarshal(v, a)
+	case string:
+		return json.Unmarshal([]byte(v), a)
+	case nil:
+		*a = nil
+		return nil
+	default:
+		return fmt.Errorf("PromotionActions.Scan: unsupported type %T", src)
+	}
+}
+
+// ── Legacy conditions/result (v1 model, kept for backward compat) ───────────
+
 type PromotionConditions struct {
 	MinAmount  *float64 `json:"min_amount,omitempty"`
 	SegmentID  *int     `json:"segment_id,omitempty"`
@@ -78,18 +157,30 @@ type Promotion struct {
 	Combinable bool                `json:"combinable"  db:"combinable"`
 	Active     bool                `json:"active"      db:"active"`
 	CreatedAt  time.Time           `json:"created_at"  db:"created_at"`
+
+	// v2 wizard fields
+	Filter               SegmentFilter     `json:"filter"                  db:"filter"`
+	Triggers             PromotionTriggers `json:"triggers"                db:"triggers"`
+	Actions              PromotionActions  `json:"actions"                 db:"actions"`
+	CombinableWithLoyalty bool             `json:"combinable_with_loyalty" db:"combinable_with_loyalty"`
 }
 
 type CreatePromotionRequest struct {
 	Name       string              `json:"name"        binding:"required"`
 	Type       string              `json:"type"        binding:"required,oneof=discount bonus tag_update campaign"`
 	Conditions PromotionConditions `json:"conditions"`
-	Result     PromotionResult     `json:"result"      binding:"required"`
+	Result     PromotionResult     `json:"result"`
 	StartsAt   *time.Time          `json:"starts_at,omitempty"`
 	EndsAt     *time.Time          `json:"ends_at,omitempty"`
 	UsageLimit *int                `json:"usage_limit,omitempty"`
 	Recurrence string              `json:"recurrence" binding:"omitempty,oneof=one_time daily weekly monthly"`
 	Combinable bool                `json:"combinable"`
+
+	// v2 wizard fields
+	Filter                SegmentFilter     `json:"filter"`
+	Triggers              PromotionTriggers `json:"triggers"`
+	Actions               PromotionActions  `json:"actions"`
+	CombinableWithLoyalty bool              `json:"combinable_with_loyalty"`
 }
 
 type UpdatePromotionRequest struct {
@@ -101,6 +192,12 @@ type UpdatePromotionRequest struct {
 	UsageLimit *int                 `json:"usage_limit,omitempty"`
 	Combinable *bool                `json:"combinable,omitempty"`
 	Active     *bool                `json:"active,omitempty"`
+
+	// v2 wizard fields
+	Filter                *SegmentFilter     `json:"filter,omitempty"`
+	Triggers              *PromotionTriggers `json:"triggers,omitempty"`
+	Actions               *PromotionActions  `json:"actions,omitempty"`
+	CombinableWithLoyalty *bool              `json:"combinable_with_loyalty,omitempty"`
 }
 
 // PromoCodeConditions — conditions for a promo code.

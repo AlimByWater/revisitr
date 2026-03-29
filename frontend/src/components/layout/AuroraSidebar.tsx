@@ -12,8 +12,6 @@ import {
   Tag,
   Bot,
   Store,
-  UtensilsCrossed,
-  ShoppingBag,
   Workflow,
   CreditCard,
   ChevronRight,
@@ -63,10 +61,8 @@ const navigation: NavItem[] = [
   {
     label: 'Рассылки', icon: Mail,
     children: [
-      { label: 'Все рассылки', href: '/dashboard/campaigns' },
-      { label: 'Создать', href: '/dashboard/campaigns/create' },
-      { label: 'Шаблоны', href: '/dashboard/campaigns/templates' },
-      { label: 'Авто-сценарии', href: '/dashboard/campaigns/scenarios' },
+      { label: 'Создать рассылку', href: '/dashboard/campaigns/create' },
+      { label: 'Мои рассылки', href: '/dashboard/campaigns' },
     ],
   },
   {
@@ -81,9 +77,7 @@ const navigation: NavItem[] = [
     label: 'Боты', icon: Bot, badgeKey: 'bots',
     children: [{ label: 'Список ботов', href: '/dashboard/bots' }],
   },
-  { label: 'Маркетплейс', icon: ShoppingBag, href: '/dashboard/marketplace' },
   { label: 'Точки продаж', icon: Store, href: '/dashboard/pos' },
-  { label: 'Меню', icon: UtensilsCrossed, href: '/dashboard/menus' },
   { label: 'Интеграции', icon: Workflow, href: '/dashboard/integrations' },
   {
     label: 'Биллинг', icon: CreditCard,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"revisitr/internal/entity"
 )
@@ -152,27 +153,27 @@ func (r *Segments) SyncClients(ctx context.Context, segmentID int, clientIDs []i
 }
 
 func (r *Segments) CountByFilter(ctx context.Context, orgID int, f entity.SegmentFilter) (int, error) {
-	query := `
+	args := []interface{}{orgID}
+	where := []string{"b.org_id = $1"}
+
+	clauses, filterArgs, _, needsLoyaltyJoin := buildSegmentFilterWhere(f, 2)
+	where = append(where, clauses...)
+	args = append(args, filterArgs...)
+
+	loyaltyJoin := ""
+	if needsLoyaltyJoin {
+		loyaltyJoin = "LEFT JOIN client_loyalty cl ON bc.id = cl.client_id"
+	}
+
+	query := fmt.Sprintf(`
 		SELECT COUNT(DISTINCT bc.id)
 		FROM bot_clients bc
 		JOIN bots b ON bc.bot_id = b.id
-		WHERE b.org_id = $1`
-
-	args := []interface{}{orgID}
-	idx := 2
-
-	if f.Gender != nil {
-		query += fmt.Sprintf(" AND bc.gender = $%d", idx)
-		args = append(args, *f.Gender)
-		idx++
-	}
-	if f.Tags != nil && len(f.Tags) > 0 {
-		for _, tag := range f.Tags {
-			query += fmt.Sprintf(" AND bc.tags @> $%d::jsonb", idx)
-			args = append(args, `["`+tag+`"]`)
-			idx++
-		}
-	}
+		%s
+		WHERE %s`,
+		loyaltyJoin,
+		strings.Join(where, " AND "),
+	)
 
 	var count int
 	if err := r.pg.DB().GetContext(ctx, &count, query, args...); err != nil {

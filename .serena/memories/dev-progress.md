@@ -1,11 +1,12 @@
 # Development Progress
 
-## Current State (2026-03-26)
+## Current State (2026-03-27)
 - **Phases 1-4**: All implemented, deployed to production
 - **RFM v2**: Phases 1-4 complete (local, not deployed). Phase 5 (Frontend) TODO.
-- **Migrations**: 00001-00029 applied to prod, 00030 ready (rfm_templates)
-- **Last commit**: `8307bb8` — fix: use relative path for migrate.sh in backend CI
-- **Uncommitted**: RFM v2 Phases 1-4 backend — entity, service, usecase, repo, controller, tests
+- **Migrations**: 00001-00029 applied to prod, 00030 committed (rfm_templates, not yet deployed)
+- **Last commit**: `52369ea` — fix: add missing SegmentFilter import and use unknown cast in test mocks
+- **All committed and pushed**: RFM v2 (5 phases) + Backlog v2 (phases A-E frontend)
+- **CI**: All pipelines green (Backend, Bot, Frontend, Infrastructure)
 
 ## RFM v2 Implementation Progress
 
@@ -51,7 +52,8 @@
 - Sidebar: "RFM-сегментация" added under Аналитика (both default and Aurora themes)
 - clients/segments.tsx: updated from v1 to v2 types (distribution→segment/client_count, recency_days→period_days)
 - Improvements applied: mutation error handling (try/catch + feedback), loading spinners, disabled buttons during pending, no unused imports
-- NOT done: unit tests (Vitest), E2E tests (Playwright)
+- Unit tests: Vitest tests written for onboarding, template, segment detail pages
+- NOT done: E2E tests (Playwright)
 
 
 ## Phase 4 Stubs (pre-existing, documented in docs/phase4-analysis.md)

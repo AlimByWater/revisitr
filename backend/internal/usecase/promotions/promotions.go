@@ -54,17 +54,21 @@ func (uc *Usecase) Create(ctx context.Context, orgID int, req *entity.CreateProm
 	}
 
 	p := &entity.Promotion{
-		OrgID:      orgID,
-		Name:       req.Name,
-		Type:       req.Type,
-		Conditions: req.Conditions,
-		Result:     req.Result,
-		StartsAt:   req.StartsAt,
-		EndsAt:     req.EndsAt,
-		UsageLimit: req.UsageLimit,
-		Recurrence: recurrence,
-		Combinable: req.Combinable,
-		Active:     true,
+		OrgID:                 orgID,
+		Name:                  req.Name,
+		Type:                  req.Type,
+		Conditions:            req.Conditions,
+		Result:                req.Result,
+		StartsAt:              req.StartsAt,
+		EndsAt:                req.EndsAt,
+		UsageLimit:            req.UsageLimit,
+		Recurrence:            recurrence,
+		Combinable:            req.Combinable,
+		Active:                true,
+		Filter:                req.Filter,
+		Triggers:              req.Triggers,
+		Actions:               req.Actions,
+		CombinableWithLoyalty: req.CombinableWithLoyalty,
 	}
 
 	if err := uc.promotions.Create(ctx, p); err != nil {
@@ -127,6 +131,18 @@ func (uc *Usecase) Update(ctx context.Context, id, orgID int, req *entity.Update
 	}
 	if req.Active != nil {
 		p.Active = *req.Active
+	}
+	if req.Filter != nil {
+		p.Filter = *req.Filter
+	}
+	if req.Triggers != nil {
+		p.Triggers = *req.Triggers
+	}
+	if req.Actions != nil {
+		p.Actions = *req.Actions
+	}
+	if req.CombinableWithLoyalty != nil {
+		p.CombinableWithLoyalty = *req.CombinableWithLoyalty
 	}
 
 	if err := uc.promotions.Update(ctx, p); err != nil {

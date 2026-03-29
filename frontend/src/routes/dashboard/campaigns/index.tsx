@@ -1,11 +1,12 @@
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { useCampaignsQuery } from '@/features/campaigns/queries'
-import { Mail, Plus } from 'lucide-react'
+import { useCampaignsQuery, useScenariosQuery } from '@/features/campaigns/queries'
+import { Mail, Plus, RotateCcw, Zap } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorState } from '@/components/common/ErrorState'
 import { TableSkeleton } from '@/components/common/LoadingSkeleton'
-import type { Campaign } from '@/features/campaigns/types'
+import type { Campaign, AutoScenario } from '@/features/campaigns/types'
 
 const statusConfig: Record<
   Campaign['status'],
@@ -37,10 +38,42 @@ const statusConfig: Record<
   },
 }
 
-const typeLabels: Record<Campaign['type'], string> = {
-  manual: 'Ручная',
-  auto: 'Авто',
+const triggerLabels: Record<AutoScenario['trigger_type'], string> = {
+  inactive_days: 'Не был N дней',
+  visit_count: 'N-й визит',
+  bonus_threshold: 'Порог бонусов',
+  level_up: 'Новый уровень',
+  birthday: 'День рождения',
+  holiday: 'Праздник',
+  registration: 'Регистрация',
+  level_change: 'Смена уровня',
 }
+
+type TabType = 'active' | 'archive'
+
+interface CampaignRow {
+  kind: 'campaign'
+  id: number
+  name: string
+  type: 'manual' | 'auto'
+  status: Campaign['status']
+  statusLabel: string
+  statusClassName: string
+  total: number
+  sent: number
+  date: string
+}
+
+interface ScenarioRow {
+  kind: 'scenario'
+  id: number
+  name: string
+  triggerType: AutoScenario['trigger_type']
+  isActive: boolean
+  date: string
+}
+
+type ListRow = CampaignRow | ScenarioRow
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ru-RU', {
@@ -52,9 +85,83 @@ function formatDate(dateStr: string): string {
 
 export default function CampaignsPage() {
   const navigate = useNavigate()
-  const { data, isLoading, isError, mutate } = useCampaignsQuery()
+  const [tab, setTab] = useState<TabType>('active')
 
-  const campaigns = data?.items ?? []
+  const {
+    data: campaignsData,
+    isLoading: campaignsLoading,
+    isError: campaignsError,
+    mutate: campaignsMutate,
+  } = useCampaignsQuery()
+
+  const {
+    data: scenariosData,
+    isLoading: scenariosLoading,
+    isError: scenariosError,
+    mutate: scenariosMutate,
+  } = useScenariosQuery()
+
+  const isLoading = campaignsLoading || scenariosLoading
+  const isError = campaignsError || scenariosError
+
+  const campaigns = campaignsData?.items ?? []
+  const scenarios = (scenariosData ?? []) as AutoScenario[]
+
+  const { activeRows, archiveRows } = useMemo(() => {
+    const active: ListRow[] = []
+    const archive: ListRow[] = []
+
+    for (const c of campaigns) {
+      const status = statusConfig[c.status]
+      const row: CampaignRow = {
+        kind: 'campaign',
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        status: c.status,
+        statusLabel: status.label,
+        statusClassName: status.className,
+        total: c.stats.total,
+        sent: c.stats.sent,
+        date: c.created_at,
+      }
+
+      if (['sent', 'completed', 'failed'].includes(c.status)) {
+        archive.push(row)
+      } else {
+        active.push(row)
+      }
+    }
+
+    for (const s of scenarios) {
+      const row: ScenarioRow = {
+        kind: 'scenario',
+        id: s.id,
+        name: s.name,
+        triggerType: s.trigger_type,
+        isActive: s.is_active,
+        date: s.created_at,
+      }
+
+      if (s.is_active) {
+        active.push(row)
+      } else {
+        archive.push(row)
+      }
+    }
+
+    active.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    archive.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+    return { activeRows: active, archiveRows: archive }
+  }, [campaigns, scenarios])
+
+  const rows = tab === 'active' ? activeRows : archiveRows
+
+  function handleRetry() {
+    campaignsMutate()
+    scenariosMutate()
+  }
 
   return (
     <div className="max-w-4xl">
@@ -78,6 +185,34 @@ export default function CampaignsPage() {
         </button>
       </div>
 
+      {/* Tab switcher */}
+      <div className="flex gap-1 p-1 bg-neutral-100 rounded-lg w-fit mb-6 animate-in">
+        <button
+          type="button"
+          onClick={() => setTab('active')}
+          className={cn(
+            'px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
+            tab === 'active'
+              ? 'bg-white text-neutral-900 shadow-sm'
+              : 'text-neutral-500 hover:text-neutral-700',
+          )}
+        >
+          Активные ({activeRows.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('archive')}
+          className={cn(
+            'px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
+            tab === 'archive'
+              ? 'bg-white text-neutral-900 shadow-sm'
+              : 'text-neutral-500 hover:text-neutral-700',
+          )}
+        >
+          Архив ({archiveRows.length})
+        </button>
+      </div>
+
       {isLoading ? (
         <div className="animate-in animate-in-delay-1">
           <TableSkeleton />
@@ -86,17 +221,25 @@ export default function CampaignsPage() {
         <ErrorState
           title="Не удалось загрузить рассылки"
           message="Проверьте подключение к серверу и попробуйте снова."
-          onRetry={() => mutate()}
+          onRetry={handleRetry}
         />
-      ) : campaigns.length === 0 ? (
-        <EmptyState
-          icon={Mail}
-          title="У вас пока нет рассылок"
-          description="Создайте рассылку, чтобы отправить сообщение вашим клиентам через Telegram-бота."
-          actionLabel="Создать рассылку"
-          onAction={() => navigate('/dashboard/campaigns/create')}
-          variant="campaigns"
-        />
+      ) : rows.length === 0 ? (
+        tab === 'active' ? (
+          <EmptyState
+            icon={Mail}
+            title="Нет активных рассылок"
+            description="Создайте рассылку или авто-сценарий, чтобы начать отправку сообщений клиентам."
+            actionLabel="Создать рассылку"
+            onAction={() => navigate('/dashboard/campaigns/create')}
+            variant="campaigns"
+          />
+        ) : (
+          <EmptyState
+            icon={Mail}
+            title="Архив пуст"
+            description="Завершённые рассылки и неактивные сценарии появятся здесь."
+          />
+        )
       ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden animate-in animate-in-delay-1">
           <div className="overflow-x-auto">
@@ -121,54 +264,142 @@ export default function CampaignsPage() {
                   <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
                     Дата
                   </th>
+                  {tab === 'archive' && (
+                    <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
+                      Действие
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
-                {campaigns.map((campaign) => {
-                  const status = statusConfig[campaign.status]
+                {rows.map((row) => {
+                  if (row.kind === 'campaign') {
+                    return (
+                      <tr
+                        key={`c-${row.id}`}
+                        className="hover:bg-neutral-50 transition-colors cursor-pointer"
+                        onClick={() => navigate(`/dashboard/campaigns/${row.id}`)}
+                      >
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-medium text-neutral-900">
+                            {row.name}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 hidden sm:table-cell">
+                          <span className={cn(
+                            'inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full',
+                            row.type === 'auto'
+                              ? 'bg-violet-100 text-violet-700'
+                              : 'bg-neutral-100 text-neutral-600',
+                          )}>
+                            {row.type === 'auto' && <Zap className="w-3 h-3" />}
+                            {row.type === 'manual' ? 'Ручная' : 'Авто'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={cn(
+                              'text-xs font-medium px-2 py-1 rounded-full',
+                              row.statusClassName,
+                            )}
+                          >
+                            {row.statusLabel}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right hidden md:table-cell">
+                          <span className="text-sm font-mono text-neutral-500 tabular-nums">
+                            {row.total}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right hidden md:table-cell">
+                          <span className="text-sm font-mono text-neutral-500 tabular-nums">
+                            {row.sent}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right hidden sm:table-cell">
+                          <span className="text-sm font-mono text-neutral-400 tabular-nums">
+                            {formatDate(row.date)}
+                          </span>
+                        </td>
+                        {tab === 'archive' && (
+                          <td className="px-6 py-4 text-right hidden sm:table-cell">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                navigate(`/dashboard/campaigns/create?clone=${row.id}`)
+                              }}
+                              className={cn(
+                                'inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg',
+                                'text-neutral-600 bg-neutral-100 hover:bg-neutral-200',
+                                'transition-colors duration-150',
+                              )}
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              Повторить
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  }
+
+                  // Scenario row
                   return (
                     <tr
-                      key={campaign.id}
+                      key={`s-${row.id}`}
                       className="hover:bg-neutral-50 transition-colors cursor-pointer"
-                      onClick={() =>
-                        navigate(`/dashboard/campaigns/${campaign.id}`)
-                      }
+                      onClick={() => navigate(`/dashboard/campaigns/${row.id}`)}
                     >
                       <td className="px-6 py-4">
                         <span className="text-sm font-medium text-neutral-900">
-                          {campaign.name}
+                          {row.name}
                         </span>
                       </td>
                       <td className="px-6 py-4 hidden sm:table-cell">
-                        <span className="text-sm text-neutral-500">
-                          {typeLabels[campaign.type]}
+                        <span className={cn(
+                          'inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full',
+                          'bg-violet-100 text-violet-700',
+                        )}>
+                          <Zap className="w-3 h-3" />
+                          Авто
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <span
                           className={cn(
                             'text-xs font-medium px-2 py-1 rounded-full',
-                            status.className,
+                            row.isActive
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-neutral-100 text-neutral-500',
                           )}
                         >
-                          {status.label}
+                          {row.isActive ? 'Активен' : 'Неактивен'}
+                        </span>
+                        <span className="ml-2 text-xs text-neutral-400">
+                          {triggerLabels[row.triggerType]}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right hidden md:table-cell">
-                        <span className="text-sm font-mono text-neutral-500 tabular-nums">
-                          {campaign.stats.total}
+                        <span className="text-sm font-mono text-neutral-400">
+                          &mdash;
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right hidden md:table-cell">
-                        <span className="text-sm font-mono text-neutral-500 tabular-nums">
-                          {campaign.stats.sent}
+                        <span className="text-sm font-mono text-neutral-400">
+                          &mdash;
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right hidden sm:table-cell">
                         <span className="text-sm font-mono text-neutral-400 tabular-nums">
-                          {formatDate(campaign.created_at)}
+                          {formatDate(row.date)}
                         </span>
                       </td>
+                      {tab === 'archive' && (
+                        <td className="px-6 py-4 text-right hidden sm:table-cell">
+                          {/* No repeat action for scenarios */}
+                        </td>
+                      )}
                     </tr>
                   )
                 })}

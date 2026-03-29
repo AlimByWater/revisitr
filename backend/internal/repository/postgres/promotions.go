@@ -28,15 +28,30 @@ func (r *Promotions) Create(ctx context.Context, p *entity.Promotion) error {
 	if err != nil {
 		return fmt.Errorf("promotions.Create result value: %w", err)
 	}
+	filterVal, err := p.Filter.Value()
+	if err != nil {
+		return fmt.Errorf("promotions.Create filter value: %w", err)
+	}
+	triggersVal, err := p.Triggers.Value()
+	if err != nil {
+		return fmt.Errorf("promotions.Create triggers value: %w", err)
+	}
+	actionsVal, err := p.Actions.Value()
+	if err != nil {
+		return fmt.Errorf("promotions.Create actions value: %w", err)
+	}
 
 	query := `
-		INSERT INTO promotions (org_id, name, type, conditions, result, starts_at, ends_at, usage_limit, recurrence, combinable, active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO promotions (org_id, name, type, conditions, result, starts_at, ends_at,
+		                        usage_limit, recurrence, combinable, active,
+		                        filter, triggers, actions, combinable_with_loyalty)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id, created_at`
 
 	return r.pg.DB().QueryRowContext(ctx, query,
 		p.OrgID, p.Name, p.Type, condVal, resultVal,
 		p.StartsAt, p.EndsAt, p.UsageLimit, p.Recurrence, p.Combinable, p.Active,
+		filterVal, triggersVal, actionsVal, p.CombinableWithLoyalty,
 	).Scan(&p.ID, &p.CreatedAt)
 }
 
@@ -71,16 +86,30 @@ func (r *Promotions) Update(ctx context.Context, p *entity.Promotion) error {
 	if err != nil {
 		return fmt.Errorf("promotions.Update result value: %w", err)
 	}
+	filterVal, err := p.Filter.Value()
+	if err != nil {
+		return fmt.Errorf("promotions.Update filter value: %w", err)
+	}
+	triggersVal, err := p.Triggers.Value()
+	if err != nil {
+		return fmt.Errorf("promotions.Update triggers value: %w", err)
+	}
+	actionsVal, err := p.Actions.Value()
+	if err != nil {
+		return fmt.Errorf("promotions.Update actions value: %w", err)
+	}
 
 	query := `
 		UPDATE promotions
 		SET name = $1, conditions = $2, result = $3, starts_at = $4, ends_at = $5,
-		    usage_limit = $6, combinable = $7, active = $8
-		WHERE id = $9`
+		    usage_limit = $6, combinable = $7, active = $8,
+		    filter = $9, triggers = $10, actions = $11, combinable_with_loyalty = $12
+		WHERE id = $13`
 
 	result, err := r.pg.DB().ExecContext(ctx, query,
 		p.Name, condVal, resultVal, p.StartsAt, p.EndsAt,
-		p.UsageLimit, p.Combinable, p.Active, p.ID)
+		p.UsageLimit, p.Combinable, p.Active,
+		filterVal, triggersVal, actionsVal, p.CombinableWithLoyalty, p.ID)
 	if err != nil {
 		return fmt.Errorf("promotions.Update: %w", err)
 	}

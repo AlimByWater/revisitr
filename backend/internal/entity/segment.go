@@ -30,15 +30,26 @@ type Segment struct {
 }
 
 type SegmentFilter struct {
-	Gender      *string  `json:"gender,omitempty"`
-	AgeFrom     *int     `json:"age_from,omitempty"`
-	AgeTo       *int     `json:"age_to,omitempty"`
-	MinVisits   *int     `json:"min_visits,omitempty"`
-	MaxVisits   *int     `json:"max_visits,omitempty"`
-	MinSpend    *float64 `json:"min_spend,omitempty"`
-	MaxSpend    *float64 `json:"max_spend,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
-	RFMCategory *string  `json:"rfm_category,omitempty"`
+	Gender         *string  `json:"gender,omitempty"`
+	AgeFrom        *int     `json:"age_from,omitempty"`
+	AgeTo          *int     `json:"age_to,omitempty"`
+	MinVisits      *int     `json:"min_visits,omitempty"`
+	MaxVisits      *int     `json:"max_visits,omitempty"`
+	MinSpend       *float64 `json:"min_spend,omitempty"`
+	MaxSpend       *float64 `json:"max_spend,omitempty"`
+	Tags           []string `json:"tags,omitempty"`
+	RFMCategory    *string  `json:"rfm_category,omitempty"`
+	BotID          *int     `json:"bot_id,omitempty"`
+	Search         *string  `json:"search,omitempty"`
+	City           *string  `json:"city,omitempty"`
+	OS             *string  `json:"os,omitempty"`
+	LevelID        *int     `json:"level_id,omitempty"`
+	RegisteredFrom *string  `json:"registered_from,omitempty"`
+	RegisteredTo   *string  `json:"registered_to,omitempty"`
+	MinBalance     *float64 `json:"min_balance,omitempty"`
+	MaxBalance     *float64 `json:"max_balance,omitempty"`
+	MinSpentPoints *float64 `json:"min_spent_points,omitempty"`
+	MaxSpentPoints *float64 `json:"max_spent_points,omitempty"`
 }
 
 func (f SegmentFilter) Value() (driver.Value, error) {

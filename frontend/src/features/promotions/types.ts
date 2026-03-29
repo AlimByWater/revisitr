@@ -1,3 +1,22 @@
+import type { SegmentFilter } from '@/features/segments/types'
+
+export interface PromotionTrigger {
+  type: string  // purchase, purchase_product, purchase_min_items, receipt_sum, event
+  product_id?: number
+  min_items?: number
+  min_amount?: number
+  event_type?: string  // birthday, registration, activation, last_purchase
+}
+
+export interface PromotionAction {
+  type: string  // discount, bonus, data_update, campaign
+  discount_percent?: number
+  bonus_amount?: number
+  tag_add?: string
+  level_id?: number
+  campaign_id?: number
+}
+
 export interface PromotionConditions {
   min_amount?: number
   segment_id?: number
@@ -15,7 +34,7 @@ export interface Promotion {
   id: number
   org_id: number
   name: string
-  type: 'discount' | 'bonus' | 'tag' | 'campaign'
+  type: 'discount' | 'bonus' | 'tag_update' | 'campaign'
   conditions: PromotionConditions
   result: PromotionResult
   recurrence: 'one_time' | 'daily' | 'weekly' | 'monthly'
@@ -25,6 +44,10 @@ export interface Promotion {
   combinable: boolean
   active: boolean
   created_at: string
+  filter: SegmentFilter
+  triggers: PromotionTrigger[]
+  actions: PromotionAction[]
+  combinable_with_loyalty: boolean
 }
 
 export interface CreatePromotionRequest {
@@ -37,6 +60,10 @@ export interface CreatePromotionRequest {
   ends_at?: string
   usage_limit?: number
   combinable?: boolean
+  filter?: SegmentFilter
+  triggers?: PromotionTrigger[]
+  actions?: PromotionAction[]
+  combinable_with_loyalty?: boolean
 }
 
 export interface UpdatePromotionRequest {
@@ -49,6 +76,10 @@ export interface UpdatePromotionRequest {
   usage_limit?: number
   combinable?: boolean
   active?: boolean
+  filter?: SegmentFilter
+  triggers?: PromotionTrigger[]
+  actions?: PromotionAction[]
+  combinable_with_loyalty?: boolean
 }
 
 export interface PromoCodeConditions {

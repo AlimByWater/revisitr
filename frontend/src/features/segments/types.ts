@@ -20,6 +20,17 @@ export interface SegmentFilter {
   max_spend?: number
   tags?: string[]
   rfm_category?: string
+  bot_id?: number
+  search?: string
+  city?: string
+  os?: string
+  level_id?: number
+  registered_from?: string
+  registered_to?: string
+  min_balance?: number
+  max_balance?: number
+  min_spent_points?: number
+  max_spent_points?: number
 }
 
 export interface CreateSegmentRequest {

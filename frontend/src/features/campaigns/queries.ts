@@ -5,11 +5,12 @@ import type {
   UpdateCampaignRequest,
   CreateScenarioRequest,
   UpdateScenarioRequest,
-  AudienceFilter,
   CreateABTestRequest,
   CreateCampaignTemplateRequest,
   UpdateCampaignTemplateRequest,
 } from './types'
+import type { SegmentFilter } from '@/features/segments/types'
+import { segmentsApi } from '@/features/segments/api'
 
 export function useCampaignsQuery(limit = 20, offset = 0) {
   return useApiQuery(`campaigns-${limit}-${offset}`, () =>
@@ -63,7 +64,8 @@ export function useSendCampaignMutation() {
 export function usePreviewAudienceMutation() {
   return useApiMutation(
     'campaigns/preview-audience',
-    (filter: AudienceFilter) => campaignsApi.previewAudience(filter),
+    (filter: SegmentFilter) =>
+      segmentsApi.previewCount(filter).then((r) => r.count),
   )
 }
 
