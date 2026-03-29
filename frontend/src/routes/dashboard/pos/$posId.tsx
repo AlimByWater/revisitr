@@ -73,7 +73,7 @@ export default function POSDetailPage() {
         Назад к точкам продаж
       </Link>
 
-      <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight mb-8">{location.name}</h1>
+      <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight mb-8">{location.name}</h1>
 
       {/* General info */}
       <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 mb-6">

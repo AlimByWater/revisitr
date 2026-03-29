@@ -37,7 +37,7 @@ export default function WalletPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Wallet</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
           Карты лояльности в Apple Wallet и Google Wallet
         </p>
       </div>

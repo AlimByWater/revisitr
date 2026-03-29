@@ -85,7 +85,7 @@ export default function MenuDetailPage() {
       <div className="bg-white rounded-2xl border border-surface-border p-6 mb-6 animate-in">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
+            <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight">
               {menu.name}
             </h1>
             <p className="text-xs text-neutral-400 mt-1">

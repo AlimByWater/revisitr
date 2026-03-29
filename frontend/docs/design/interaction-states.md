@@ -28,41 +28,129 @@
 | Release | плавный возврат в чёрный за 300ms |
 | Disabled | `bg-neutral-300 text-white cursor-not-allowed` |
 
-## 4. Интерактивные блоки (фильтры, дропдауны, карточки)
+## 4. Выпадающие меню (CustomSelect)
 
-| Состояние | Стиль |
-|-----------|-------|
-| Default | `border border-neutral-900 bg-white text-neutral-900` |
-| Hover | `bg-neutral-50` |
-| Active / Selected | `bg-neutral-900 text-white` (инверсия) |
-| Disabled | `bg-neutral-300 cursor-not-allowed` |
+Единый компонент `CustomSelect` из `@/components/common/CustomSelect`.
+
+| Правило | Значение |
+|---------|----------|
+| Позиционирование | `absolute` внутри `relative` родителя (привязан к странице) |
+| При скролле | Остаётся на месте (не fixed, не закрывается) |
+| Открытие/закрытие | CSS `opacity + scale-y + pointer-events`, НЕ `{open && ...}` |
+| Стиль кнопки | `border border-neutral-900 rounded px-4 py-2 text-sm font-medium bg-white` |
+| Стиль меню | `border border-neutral-900 rounded bg-white py-1 z-50` |
+| Выбранный пункт | `font-semibold text-neutral-900 bg-neutral-50` + галочка `Check` |
+| Остальные пункты | `text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900` |
+| Группировка | Разделители `border-t border-neutral-200 my-1 mx-3` |
+| ChevronDown | `rotate-180` при открытии, `transition-transform duration-200` |
+| Закрытие | По клику вне (mousedown на document) |
+
+**Запрещено**: нативные `<select>`, портал/createPortal, position:fixed.
 
 ## 5. Поля ввода
 
 | Состояние | Стиль |
 |-----------|-------|
-| Default (editable) | `border border-neutral-900 bg-white` |
+| Default (editable) | `border border-neutral-900 bg-white rounded px-4 py-2.5 text-sm` |
 | Focus | `ring-2 ring-neutral-900/10` |
 | Disabled (read-only) | `border-neutral-300 bg-neutral-100 text-neutral-500` |
 
-## 6. Hover общие паттерны
+## 6. Метрики / виджеты (StatCard)
+
+| Правило | Значение |
+|---------|----------|
+| Стиль | `border border-neutral-900 rounded bg-white p-4/p-5` |
+| Hover | **Нет**. Виджеты не кликабельные — без hover-эффектов |
+| Label | `text-xs font-medium uppercase tracking-wide text-neutral-400` |
+| Value | `text-3xl font-bold text-neutral-900 tracking-tight` |
+
+## 7. Заголовки страниц
+
+| Элемент | Стиль |
+|---------|-------|
+| Заголовок (h1) | `text-2xl font-bold text-neutral-900 tracking-tight` |
+| Подзаголовок (p) | `text-sm text-neutral-400 mt-1` |
+
+**Запрещено**: `text-neutral-500`, `text-neutral-600`, `text-muted-foreground` для подзаголовков.
+
+## 8. Hover общие паттерны
 
 | Элемент | Hover-эффект |
 |---------|-------------|
-| Навигация (sidebar) | `hover:scale-[1.02] hover:text-neutral-900 origin-left` |
+| Навигация (sidebar) | `hover:scale-[1.02] hover:text-neutral-900` |
 | Профиль (header) | `hover:scale-[1.03]` |
 | Красные элементы | `hover:text-[#FF5C47]` (светлее) |
-| Чёрные элементы | `hover:bg-neutral-700` (чуть светлее) |
-| Дропдауны/карточки | `hover:bg-neutral-50` |
+| Чёрные кнопки | `hover:bg-neutral-700` (чуть светлее) |
+| Дропдауны | `hover:bg-neutral-50` |
+| Метрики/виджеты | Без hover (не кликабельные) |
 
 ## Серые оттенки (палитра)
 
 | Назначение | Цвет |
 |------------|------|
+| Подзаголовки страниц | `font-mono text-xs text-neutral-300 uppercase tracking-wider` |
 | Disabled поля ввода | `bg-neutral-100` (#F5F5F5) |
 | Disabled кнопки | `bg-neutral-300` (#D4D4D4) |
 | Разделители внутри блоков | `border-neutral-200` (#E5E5E5) |
 | Обводки блоков | `border-neutral-900` (#171717) |
+
+## 9. Графики и диаграммы
+
+### Правило цвета
+
+| Тип графика | Цвет |
+|-------------|------|
+| Одноцветный (bar, area, line) | `#EF3219` (акцентный красно-оранжевый) |
+| Многоцветный (pie, RFM, сегменты) | Семантическая палитра (см. ниже) |
+| Aurora тема | `#8B5CF6` (фиолетовый) |
+
+### Палитра для pie-диаграмм
+
+`['#EF3219', '#171717', '#525252', '#a3a3a3', '#d4d4d4', '#f5f5f5']`
+
+Первый сегмент — акцентный, остальные — градация серого.
+
+### Палитра RFM-сегментов (функциональная)
+
+| Сегмент | Цвет | Hex |
+|---------|------|-----|
+| new | cyan | `#06b6d4` |
+| promising | blue | `#3b82f6` |
+| regular | violet | `#8b5cf6` |
+| vip | amber | `#f59e0b` |
+| rare_valuable | purple | `#a855f7` |
+| churn_risk | yellow | `#eab308` |
+| lost | red | `#ef4444` |
+
+### Статусная палитра (функциональная)
+
+| Статус | Стиль |
+|--------|-------|
+| Активен / Успех | `bg-green-50 text-green-600` / `bg-green-500 text-white` |
+| Неактивен / Ошибка | `bg-red-50 text-red-600` / `bg-red-500 text-white` |
+| Ожидание / Предупреждение | `bg-amber-50 text-amber-600` |
+| Нейтральный / Черновик | `bg-neutral-100 text-neutral-500` |
+
+### Скругление баров
+
+| Контекст | Radius |
+|----------|--------|
+| Вертикальные бары (столбцы) | `radius={[1, 1, 0, 0]}` |
+| Горизонтальные бары (воронки) | `radius={[0, 2, 2, 0]}` |
+
+### Tooltip
+
+`contentStyle={{ borderRadius: 4, border: '1px solid #e5e5e5', fontSize: 13 }}`
+
+## Шрифты
+
+| Контекст | Шрифт |
+|----------|-------|
+| Body (default theme) | `Outfit` — будет заменён позже |
+| Body (Aurora theme) | `Inter` |
+| Mono | `JetBrains Mono` |
+
+**Примечание**: Шрифты будут унифицированы в отдельном проходе.
 
 ## Общие правила
 
@@ -72,10 +160,19 @@
 - Скругления: `rounded` (4px) — минимальное, рублёное
 - Обводки: 1px `border-neutral-900`
 - Все контентные блоки: `bg-white` (без шума)
-- Все дропдауны: кастомные (не нативные), `border border-neutral-900 rounded bg-white`
+- Все выпадающие меню: только `CustomSelect`, кастомные
+- Кнопки «Сохранить»: слева в секции, статус справа
 
 ## Фон
 
 - Body: белый + шум (sparse dot noise через SVG background-image)
 - Все виджеты/блоки/меню: `bg-white` — перекрывают шум
 - Header: прозрачный — шум виден сквозь него
+- Footer: `bg-neutral-900` + белый dot noise (инверсия)
+
+## Попапы / модалки
+
+- Overlay: `bg-black/30`
+- Окно: `bg-white border border-neutral-900 rounded p-6 shadow-lg`
+- Через `createPortal` в `document.body`
+- Закрытие: по клику на overlay

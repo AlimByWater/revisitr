@@ -11,6 +11,7 @@ import type {
   CreatePromotionRequest,
 } from '@/features/promotions/types'
 import { Tag, Plus, X, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
+import { CustomSelect } from '@/components/common/CustomSelect'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorState } from '@/components/common/ErrorState'
 import { TableSkeleton } from '@/components/common/LoadingSkeleton'
@@ -174,18 +175,16 @@ function CreatePromotionModal({ onClose }: { onClose: () => void }) {
             >
               Тип
             </label>
-            <select
-              id="promo-type"
+            <CustomSelect
               value={type}
-              onChange={(e) => setType(e.target.value)}
-              disabled={createPromotion.isPending}
-              className={inputClass}
-            >
-              <option value="discount">Скидка</option>
-              <option value="bonus">Бонус</option>
-              <option value="tag">Тег</option>
-              <option value="campaign">Рассылка</option>
-            </select>
+              onChange={(v) => setType(v)}
+              options={[
+                { value: 'discount', label: 'Скидка' },
+                { value: 'bonus', label: 'Бонус' },
+                { value: 'tag', label: 'Тег' },
+                { value: 'campaign', label: 'Рассылка' },
+              ]}
+            />
           </div>
 
           {type === 'discount' && (
@@ -258,18 +257,16 @@ function CreatePromotionModal({ onClose }: { onClose: () => void }) {
             >
               Повторяемость
             </label>
-            <select
-              id="promo-recurrence"
+            <CustomSelect
               value={recurrence}
-              onChange={(e) => setRecurrence(e.target.value)}
-              disabled={createPromotion.isPending}
-              className={inputClass}
-            >
-              <option value="one_time">Разовая</option>
-              <option value="daily">Ежедневно</option>
-              <option value="weekly">Еженедельно</option>
-              <option value="monthly">Ежемесячно</option>
-            </select>
+              onChange={(v) => setRecurrence(v)}
+              options={[
+                { value: 'one_time', label: 'Разовая' },
+                { value: 'daily', label: 'Ежедневно' },
+                { value: 'weekly', label: 'Еженедельно' },
+                { value: 'monthly', label: 'Ежемесячно' },
+              ]}
+            />
           </div>
 
           <div>
@@ -430,7 +427,7 @@ export default function PromotionsPage() {
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
             Акции
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
             Управление акциями и специальными предложениями
           </p>
         </div>

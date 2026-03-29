@@ -13,10 +13,10 @@ export default function MailingsAnalyticsPage() {
   return (
     <div>
       <div className="animate-in mb-4">
-        <h1 className="text-2xl font-bold text-neutral-900 tracking-tight mb-1">
+        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight mb-1">
           Рассылки
         </h1>
-        <p className="text-sm text-neutral-400 mt-1">
+        <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
           Эффективность рассылок
         </p>
       </div>
@@ -143,7 +143,7 @@ function StatCard({
   icon: React.ReactNode
 }) {
   return (
-    <div className="border border-neutral-900 rounded bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(0,0,0,0.07)]">
+    <div className="border border-neutral-900 rounded bg-white p-5">
       <div className="flex items-center gap-2 text-neutral-400 mb-3">
         {icon}
         <span className="text-xs font-medium uppercase tracking-wide">{label}</span>

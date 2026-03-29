@@ -172,7 +172,7 @@ export default function ClientDetailPage() {
         Назад к клиентам
       </Link>
 
-      <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight mb-6">{fullName}</h1>
+      <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight mb-6">{fullName}</h1>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-surface-border">

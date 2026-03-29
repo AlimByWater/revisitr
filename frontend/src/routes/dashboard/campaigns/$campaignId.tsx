@@ -106,7 +106,7 @@ export default function CampaignDetailPage() {
           <ArrowLeft className="w-5 h-5 text-neutral-500" />
         </button>
         <div className="flex-1">
-          <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight">
             {campaign.name}
           </h1>
         </div>

@@ -7,6 +7,7 @@ import {
   useCreateFromTemplateMutation,
 } from '@/features/campaigns/queries'
 import { FileText, Plus, Trash2, Copy, Lock } from 'lucide-react'
+import { CustomSelect } from '@/components/common/CustomSelect'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorState } from '@/components/common/ErrorState'
 import { TableSkeleton } from '@/components/common/LoadingSkeleton'
@@ -68,7 +69,7 @@ export default function CampaignTemplatesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Шаблоны рассылок</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
             Готовые шаблоны для быстрого создания рассылок
           </p>
         </div>
@@ -91,15 +92,14 @@ export default function CampaignTemplatesPage() {
             onChange={(e) => setNewName(e.target.value)}
             className="w-full rounded-md border px-3 py-2 text-sm"
           />
-          <select
+          <CustomSelect
             value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-          >
-            {Object.entries(categoryConfig).map(([key, { label }]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
+            onChange={(v) => setNewCategory(v)}
+            options={Object.entries(categoryConfig).map(([key, { label }]) => ({
+              value: key,
+              label,
+            }))}
+          />
           <textarea
             placeholder="Текст сообщения. Используйте {name} для имени клиента"
             value={newMessage}

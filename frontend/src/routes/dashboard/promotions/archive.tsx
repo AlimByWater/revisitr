@@ -66,7 +66,7 @@ export default function PromotionsArchivePage() {
         <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
           Архив акций
         </h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
           Завершённые и деактивированные акции
         </p>
       </div>

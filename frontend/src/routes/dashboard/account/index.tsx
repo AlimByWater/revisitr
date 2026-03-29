@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
+import { CustomSelect } from '@/components/common/CustomSelect'
 import { useAuthStore } from '@/stores/auth'
 import {
   useProfileQuery,
@@ -18,7 +19,7 @@ import {
   type LegalEntityType,
   type BillingDetails,
 } from '@/features/account/types'
-import { User, Shield, FileText, LogOut, Check, X, Pencil, ChevronDown } from 'lucide-react'
+import { User, Shield, FileText, LogOut, Check, X, Pencil } from 'lucide-react'
 
 const inputClassName = cn(
   'w-full px-4 py-2.5 rounded border border-neutral-900',
@@ -27,97 +28,6 @@ const inputClassName = cn(
   'transition-colors',
   'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:border-neutral-300 disabled:text-neutral-500',
 )
-
-// ---------------------------------------------------------------------------
-// Custom Select (styled dropdown)
-// ---------------------------------------------------------------------------
-
-function CustomSelect({
-  value,
-  onChange,
-  options,
-}: {
-  value: string
-  onChange: (value: string) => void
-  options: { value: string; label: string }[]
-}) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
-
-  const selectedLabel = options.find((o) => o.value === value)?.label ?? ''
-
-  const updatePosition = () => {
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect()
-      setDropdownStyle({
-        position: 'fixed',
-        top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
-        zIndex: 9999,
-      })
-    }
-  }
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      const target = e.target as Node
-      if (
-        ref.current && !ref.current.contains(target) &&
-        dropdownRef.current && !dropdownRef.current.contains(target)
-      ) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
-
-  useEffect(() => {
-    if (!open) return
-    updatePosition()
-    function handleScroll() { setOpen(false) }
-    window.addEventListener('scroll', handleScroll, true)
-    return () => window.removeEventListener('scroll', handleScroll, true)
-  }, [open])
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-2.5 rounded border border-neutral-900 bg-white text-sm text-neutral-900 hover:bg-neutral-50 transition-colors"
-      >
-        <span>{selectedLabel}</span>
-        <ChevronDown className={cn('w-4 h-4 text-neutral-500 transition-transform duration-200', open && 'rotate-180')} />
-      </button>
-
-      {open && createPortal(
-        <div ref={dropdownRef} style={dropdownStyle} className="bg-white border border-neutral-900 rounded py-1 shadow-sm">
-          {options.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              onClick={() => { onChange(o.value); setOpen(false) }}
-              className={cn(
-                'w-full flex items-center justify-between px-4 py-2 text-sm text-left transition-colors',
-                o.value === value
-                  ? 'font-semibold text-neutral-900 bg-neutral-50'
-                  : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900',
-              )}
-            >
-              <span>{o.label}</span>
-              {o.value === value && <Check className="w-3.5 h-3.5 text-neutral-900" />}
-            </button>
-          ))}
-        </div>,
-        document.body,
-      )}
-    </div>
-  )
-}
 
 // ---------------------------------------------------------------------------
 // Profile Section
@@ -583,10 +493,10 @@ export default function AccountPage() {
   return (
     <div className="max-w-2xl space-y-8">
       <div className="animate-in">
-        <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
+        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
           Настройки аккаунта
         </h1>
-        <p className="text-sm text-neutral-400 mt-1">
+        <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
           Управление профилем, безопасностью и реквизитами
         </p>
       </div>

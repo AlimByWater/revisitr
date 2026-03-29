@@ -81,7 +81,7 @@ export default function POSListPage() {
                     {loc.name}
                   </h3>
                   {loc.address && (
-                    <p className="text-sm text-neutral-500 mt-1">
+                    <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
                       {loc.address}
                     </p>
                   )}

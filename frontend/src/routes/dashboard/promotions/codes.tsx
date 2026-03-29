@@ -9,6 +9,7 @@ import {
 } from '@/features/promotions/queries'
 import type { PromoCode, CreatePromoCodeRequest } from '@/features/promotions/types'
 import { Ticket, Plus, X, Ban, Copy, Sparkles } from 'lucide-react'
+import { CustomSelect } from '@/components/common/CustomSelect'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorState } from '@/components/common/ErrorState'
 import { TableSkeleton } from '@/components/common/LoadingSkeleton'
@@ -161,22 +162,19 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
               Привязка к акции{' '}
               <span className="text-neutral-400 font-normal">(необязательно)</span>
             </label>
-            <select
-              id="code-promotion"
+            <CustomSelect
               value={promotionId}
-              onChange={(e) => setPromotionId(e.target.value)}
-              disabled={createCode.isPending}
-              className={inputClass}
-            >
-              <option value="">Без привязки</option>
-              {promotions
-                ?.filter((p) => p.active)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-            </select>
+              onChange={(v) => setPromotionId(v)}
+              options={[
+                { value: '', label: 'Без привязки' },
+                ...(promotions
+                  ?.filter((p) => p.active)
+                  .map((p) => ({
+                    value: String(p.id),
+                    label: p.name,
+                  })) ?? []),
+              ]}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -227,21 +225,19 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
               Канал{' '}
               <span className="text-neutral-400 font-normal">(необязательно)</span>
             </label>
-            <select
-              id="code-channel"
+            <CustomSelect
               value={channel}
-              onChange={(e) => setChannel(e.target.value)}
-              disabled={createCode.isPending}
-              className={inputClass}
-            >
-              <option value="">Не указан</option>
-              <option value="smm">SMM</option>
-              <option value="targeting">Таргетинг</option>
-              <option value="yandex_maps">Яндекс Карты</option>
-              <option value="flyer">Флаер</option>
-              <option value="partner">Партнёр</option>
-              <option value="custom">Другой</option>
-            </select>
+              onChange={(v) => setChannel(v)}
+              options={[
+                { value: '', label: 'Не указан' },
+                { value: 'smm', label: 'SMM' },
+                { value: 'targeting', label: 'Таргетинг' },
+                { value: 'yandex_maps', label: 'Яндекс Карты' },
+                { value: 'flyer', label: 'Флаер' },
+                { value: 'partner', label: 'Партнёр' },
+                { value: 'custom', label: 'Другой' },
+              ]}
+            />
           </div>
 
           <div>
@@ -451,7 +447,7 @@ export default function PromoCodesPage() {
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
             Промокоды
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
             Создание и управление промокодами
           </p>
         </div>
@@ -475,24 +471,17 @@ export default function PromoCodesPage() {
 
       {!isLoading && !isError && (codes ?? []).length > 0 && (
         <div className="mb-4 animate-in">
-          <select
+          <CustomSelect
             value={filterPromotionId}
-            onChange={(e) => setFilterPromotionId(e.target.value)}
-            className={cn(
-              'px-4 py-2 rounded-lg border border-surface-border',
-              'text-sm text-neutral-700',
-              'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
-              'transition-colors',
-            )}
-            aria-label="Фильтр по акции"
-          >
-            <option value="">Все акции</option>
-            {promotions?.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setFilterPromotionId(v)}
+            options={[
+              { value: '', label: 'Все акции' },
+              ...(promotions?.map((p) => ({
+                value: String(p.id),
+                label: p.name,
+              })) ?? []),
+            ]}
+          />
         </div>
       )}
 

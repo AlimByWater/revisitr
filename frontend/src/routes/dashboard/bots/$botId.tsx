@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useState, useEffect, useRef, useId } from 'react'
 import { cn } from '@/lib/utils'
 import { useBotQuery } from '@/features/bots/queries'
+import { CustomSelect } from '@/components/common/CustomSelect'
 import { botsApi } from '@/features/bots/api'
 import { useMenusQuery } from '@/features/menus/queries'
 import { menusApi } from '@/features/menus/api'
@@ -636,18 +637,16 @@ function ButtonsTab({
                           className={inputClassName}
                           aria-label={`Название кнопки ${index + 1}`}
                         />
-                        <select
+                        <CustomSelect
                           value={button.type}
-                          onChange={(e) => updateButton(index, 'type', e.target.value)}
-                          disabled={isSaving}
-                          className={inputClassName}
-                          aria-label={`Тип кнопки ${index + 1}`}
-                        >
-                          <option value="url">Ссылка</option>
-                          <option value="callback">Callback</option>
-                          <option value="webapp">WebApp</option>
-                          <option value="command">Команда</option>
-                        </select>
+                          onChange={(v) => updateButton(index, 'type', v)}
+                          options={[
+                            { value: 'url', label: 'Ссылка' },
+                            { value: 'callback', label: 'Callback' },
+                            { value: 'webapp', label: 'WebApp' },
+                            { value: 'command', label: 'Команда' },
+                          ]}
+                        />
                         <input
                           type="text"
                           value={button.value}
@@ -844,19 +843,17 @@ function FormTab({
                           className={inputClassName}
                           aria-label={`Название поля ${index + 1}`}
                         />
-                        <select
+                        <CustomSelect
                           value={field.type}
-                          onChange={(e) => updateField(index, 'type', e.target.value)}
-                          disabled={isSaving}
-                          className={inputClassName}
-                          aria-label={`Тип поля ${index + 1}`}
-                        >
-                          <option value="text">Текст</option>
-                          <option value="email">Email</option>
-                          <option value="phone">Телефон</option>
-                          <option value="date">Дата</option>
-                          <option value="select">Выбор</option>
-                        </select>
+                          onChange={(v) => updateField(index, 'type', v)}
+                          options={[
+                            { value: 'text', label: 'Текст' },
+                            { value: 'email', label: 'Email' },
+                            { value: 'phone', label: 'Телефон' },
+                            { value: 'date', label: 'Дата' },
+                            { value: 'select', label: 'Выбор' },
+                          ]}
+                        />
                         <label className="flex items-center gap-2 px-4 py-2.5">
                           <input
                             type="checkbox"

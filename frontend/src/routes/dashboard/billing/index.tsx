@@ -158,7 +158,7 @@ export default function BillingPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Биллинг</h1>
-          <p className="text-sm text-neutral-500 mt-1">Управление подпиской и тарифом</p>
+          <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">Управление подпиской и тарифом</p>
         </div>
         <Link
           to="/dashboard/billing/invoices"
@@ -179,7 +179,7 @@ export default function BillingPage() {
                   <h2 className="text-lg font-semibold text-neutral-900">{subscription.tariff_name}</h2>
                   <StatusBadge status={subscription.status} />
                 </div>
-                <p className="text-sm text-neutral-500 mt-1">
+                <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
                   Действует до {new Date(subscription.current_period_end).toLocaleDateString('ru-RU')}
                 </p>
               </div>

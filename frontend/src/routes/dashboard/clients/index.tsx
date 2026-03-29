@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useClientsQuery, useClientStatsQuery } from '@/features/clients/queries'
 import { useBotsQuery } from '@/features/bots/queries'
 import { RFM_SEGMENT_LABELS, RFM_SEGMENT_COLORS } from '@/features/rfm/types'
+import { CustomSelect } from '@/components/common/CustomSelect'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorState } from '@/components/common/ErrorState'
 import { TableSkeleton, MetricSkeleton } from '@/components/common/LoadingSkeleton'
@@ -247,27 +248,16 @@ export default function ClientsPage() {
             )}
           />
         </div>
-        <select
-          value={botFilter ?? ''}
-          onChange={(e) => {
-            setBotFilter(e.target.value ? Number(e.target.value) : undefined)
-            setPageIndex(0)
-          }}
-          aria-label="Фильтр по боту"
-          className={cn(
-            'px-4 py-2.5 rounded-lg border border-surface-border',
-            'text-sm bg-white',
-            'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
-            'transition-colors',
-          )}
-        >
-          <option value="">Все боты</option>
-          {bots?.map((bot) => (
-            <option key={bot.id} value={bot.id}>
-              {bot.name}
-            </option>
-          ))}
-        </select>
+        <CustomSelect
+          value={String(botFilter ?? '')}
+          onChange={(v) => { setBotFilter(v ? Number(v) : undefined); setPageIndex(0) }}
+          options={[
+            { value: '', label: 'Все боты' },
+            ...(bots?.map((bot) => ({ value: String(bot.id), label: bot.name })) ?? []),
+          ]}
+          placeholder="Все боты"
+          width="200px"
+        />
 
         {rfmSegment && (
           <div

@@ -97,7 +97,7 @@ export default function SegmentsPage() {
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
             RFM-сегментация
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
             Анализ клиентской базы по Recency, Frequency, Monetary
           </p>
         </div>
@@ -190,9 +190,9 @@ export default function SegmentsPage() {
                       {seg.percentage.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="mt-3 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                  <div className="mt-3 h-1.5 bg-neutral-100 rounded overflow-hidden">
                     <div
-                      className={cn('h-full rounded-full transition-all', color.accent)}
+                      className={cn('h-full rounded transition-all', color.accent)}
                       style={{ width: `${Math.min(seg.percentage, 100)}%` }}
                     />
                   </div>
@@ -225,7 +225,8 @@ export default function SegmentsPage() {
                     allowDecimals={false}
                   />
                   <Tooltip
-                    contentStyle={{ borderRadius: 12, border: '1px solid #e5e5e5', fontSize: 13 }}
+                    contentStyle={{ borderRadius: 4, border: '1px solid #e5e5e5', fontSize: 13 }}
+                    cursor={{ fill: '#f5f5f5' }}
                     formatter={(value: unknown, name: unknown) => [
                       String(value),
                       RFM_SEGMENT_LABELS[String(name)] ?? String(name),

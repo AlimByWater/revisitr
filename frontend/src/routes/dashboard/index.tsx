@@ -39,7 +39,7 @@ export default function DashboardHome() {
   const { data: charts, isLoading: chartsLoading } =
     useDashboardChartsQuery(filter)
 
-  const accentColor = isAurora ? '#8B5CF6' : '#E85D3A'
+  const accentColor = isAurora ? '#8B5CF6' : '#EF3219'
   const gridColor = isAurora ? 'rgba(255,255,255,0.06)' : '#f0f0f0'
   const tickColor = isAurora ? 'rgba(255,255,255,0.3)' : '#a3a3a3'
   const tooltipBg = isAurora ? 'rgba(15,11,26,0.9)' : '#fff'
@@ -50,11 +50,11 @@ export default function DashboardHome() {
     <div>
       <div className="animate-in mb-4">
         <h1
-          className="text-2xl font-bold text-neutral-900 tracking-tight mb-1"
+          className="font-serif text-3xl font-bold text-neutral-900 tracking-tight mb-1"
         >
           Дашборд
         </h1>
-        <p className="text-sm text-neutral-400 mt-1">
+        <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
           Обзор ключевых показателей
         </p>
       </div>
@@ -143,13 +143,14 @@ export default function DashboardHome() {
                     'Выручка',
                   ]}
                   contentStyle={{
-                    borderRadius: 12,
+                    borderRadius: 4,
                     border: `1px solid ${tooltipBorder}`,
                     fontSize: 13,
                     background: tooltipBg,
                     color: tooltipColor,
                   }}
                   labelStyle={tooltipColor ? { color: tooltipColor } : undefined}
+                  cursor={{ fill: isAurora ? 'rgba(255,255,255,0.05)' : '#f5f5f5' }}
                 />
                 <Area
                   type="monotone"
@@ -196,15 +197,16 @@ export default function DashboardHome() {
                   labelFormatter={(label) => formatDateFull(String(label))}
                   formatter={(value) => [Number(value), 'Клиенты']}
                   contentStyle={{
-                    borderRadius: 12,
+                    borderRadius: 4,
                     border: `1px solid ${tooltipBorder}`,
                     fontSize: 13,
                     background: tooltipBg,
                     color: tooltipColor,
                   }}
                   labelStyle={tooltipColor ? { color: tooltipColor } : undefined}
+                  cursor={{ fill: isAurora ? 'rgba(255,255,255,0.05)' : '#f5f5f5' }}
                 />
-                <Bar dataKey="value" fill={accentColor} radius={[4, 4, 0, 0]} opacity={0.85} />
+                <Bar dataKey="value" fill={accentColor} radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -248,7 +250,7 @@ function MetricCard({
   return (
     <div
       className={cn(
-        'border border-neutral-900 rounded bg-white p-5 transition-all duration-200 hover:-translate-y-0.5',
+        'border border-neutral-900 rounded bg-white p-5',
         isAurora && 'glass-card',
       )}
     >
@@ -298,5 +300,5 @@ function formatCurrency(value: number) {
     style: 'decimal',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(Math.round(value))
+  }).format(Math.round(value)) + ' ₽'
 }

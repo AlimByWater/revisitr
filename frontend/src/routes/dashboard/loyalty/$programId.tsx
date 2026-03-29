@@ -100,7 +100,7 @@ export default function ProgramDetailPage() {
       </Link>
 
       <div className="flex items-center gap-3 mb-8">
-        <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">{program.name}</h1>
+        <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight">{program.name}</h1>
         <span
           className={cn(
             'font-mono text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider',

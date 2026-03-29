@@ -19,6 +19,7 @@ import {
   ChartSkeleton as ChartSkeletonComponent,
 } from '@/components/common/LoadingSkeleton'
 import { PeriodFilter } from '@/components/common/PeriodFilter'
+import { CustomSelect } from '@/components/common/CustomSelect'
 import type { AnalyticsFilter } from '@/features/analytics/types'
 
 export default function SalesAnalyticsPage() {
@@ -29,10 +30,10 @@ export default function SalesAnalyticsPage() {
   return (
     <div>
       <div className="animate-in mb-4">
-        <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
+        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
           Продажи
         </h1>
-        <p className="text-sm text-neutral-400 mt-1">
+        <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
           Аналитика транзакций и выручки
         </p>
       </div>
@@ -48,23 +49,16 @@ export default function SalesAnalyticsPage() {
         />
 
         {bots && bots.length > 0 && (
-          <select
-            value={filter.bot_id ?? ''}
-            onChange={(e) =>
-              setFilter((prev) => ({
-                ...prev,
-                bot_id: e.target.value ? Number(e.target.value) : undefined,
-              }))
-            }
-            className="bg-white rounded-xl border border-surface-border px-3 py-2 text-sm text-neutral-700 outline-none"
-          >
-            <option value="">Все боты</option>
-            {bots.map((bot) => (
-              <option key={bot.id} value={bot.id}>
-                {bot.name}
-              </option>
-            ))}
-          </select>
+          <CustomSelect
+            value={String(filter.bot_id ?? '')}
+            onChange={(v) => setFilter((prev) => ({ ...prev, bot_id: v ? Number(v) : undefined }))}
+            options={[
+              { value: '', label: 'Все боты' },
+              ...bots.map((bot) => ({ value: String(bot.id), label: bot.name })),
+            ]}
+            placeholder="Все боты"
+            width="200px"
+          />
         )}
       </div>
 
@@ -135,13 +129,14 @@ export default function SalesAnalyticsPage() {
                 <Tooltip
                   labelFormatter={(l) => formatDayFull(String(l))}
                   formatter={(v) => [formatCurrency(Number(v)), 'Выручка']}
-                  contentStyle={{ borderRadius: 6, border: '1px solid #e5e5e5', fontSize: 13 }}
+                  contentStyle={{ borderRadius: 4, border: '1px solid #e5e5e5', fontSize: 13 }}
+                  cursor={{ fill: '#f5f5f5' }}
                 />
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#171717"
-                  fill="#171717"
+                  stroke="#EF3219"
+                  fill="#EF3219"
                   fillOpacity={0.08}
                   strokeWidth={2}
                 />
@@ -177,9 +172,10 @@ export default function SalesAnalyticsPage() {
                 <Tooltip
                   labelFormatter={(l) => formatDayFull(String(l))}
                   formatter={(v) => [Number(v), 'Транзакции']}
-                  contentStyle={{ borderRadius: 6, border: '1px solid #e5e5e5', fontSize: 13 }}
+                  contentStyle={{ borderRadius: 4, border: '1px solid #e5e5e5', fontSize: 13 }}
+                  cursor={{ fill: '#f5f5f5' }}
                 />
-                <Bar dataKey="value" fill="#171717" radius={[4, 4, 0, 0]} opacity={0.85} />
+                <Bar dataKey="value" fill="#EF3219" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -203,7 +199,7 @@ export default function SalesAnalyticsPage() {
                 data.comparison.participants_avg_amount,
                 data.comparison.non_participants_avg_amount,
               )}
-              color="bg-neutral-900"
+              color="bg-[#EF3219]"
             />
             <ComparisonBar
               label="Без программы"
@@ -212,7 +208,7 @@ export default function SalesAnalyticsPage() {
                 data.comparison.participants_avg_amount,
                 data.comparison.non_participants_avg_amount,
               )}
-              color="bg-neutral-300"
+              color="bg-neutral-900"
             />
           </div>
         </div>
@@ -244,7 +240,7 @@ function StatCard({
   icon: React.ReactNode
 }) {
   return (
-    <div className="border border-neutral-900 rounded p-4 bg-white transition-colors hover:border-neutral-300">
+    <div className="border border-neutral-900 rounded p-4 bg-white">
       <div className="flex items-center gap-2 text-neutral-400 mb-3">
         {icon}
         <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
@@ -270,9 +266,9 @@ function ComparisonBar({
   const pct = max > 0 ? (value / max) * 100 : 0
   return (
     <div className="flex-1">
-      <div className="h-16 bg-neutral-100 rounded-xl overflow-hidden flex items-end">
+      <div className="h-16 bg-neutral-100 rounded overflow-hidden flex items-end">
         <div
-          className={cn('w-full rounded-xl transition-all duration-500', color)}
+          className={cn('w-full rounded transition-all duration-500', color)}
           style={{ height: `${pct}%` }}
         />
       </div>
@@ -302,5 +298,5 @@ function formatCurrency(value: number) {
     style: 'decimal',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(Math.round(value))
+  }).format(Math.round(value)) + ' ₽'
 }

@@ -57,7 +57,7 @@ export default function MarketplacePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Маркетплейс</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
             Товары и заказы за баллы лояльности
           </p>
         </div>

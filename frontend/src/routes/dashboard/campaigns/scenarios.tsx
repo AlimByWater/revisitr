@@ -8,6 +8,7 @@ import {
   useDeleteScenarioMutation,
 } from '@/features/campaigns/queries'
 import { Plus, Trash2, Zap } from 'lucide-react'
+import { CustomSelect } from '@/components/common/CustomSelect'
 import type { AutoScenario } from '@/features/campaigns/types'
 
 const triggerLabels: Record<AutoScenario['trigger_type'], string> = {
@@ -86,7 +87,7 @@ export default function ScenariosPage() {
     return (
       <div className="max-w-4xl">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight">
             Авто-сценарии
           </h1>
         </div>
@@ -101,7 +102,7 @@ export default function ScenariosPage() {
     return (
       <div className="max-w-4xl">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight">
             Авто-сценарии
           </h1>
         </div>
@@ -119,7 +120,7 @@ export default function ScenariosPage() {
   return (
     <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">Авто-сценарии</h1>
+        <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight">Авто-сценарии</h1>
         <button
           onClick={() => setShowForm(true)}
           type="button"
@@ -171,25 +172,17 @@ export default function ScenariosPage() {
                 >
                   Бот
                 </label>
-                <select
-                  id="scenario-bot"
-                  value={formBotId}
-                  onChange={(e) =>
-                    setFormBotId(e.target.value ? Number(e.target.value) : '')
-                  }
-                  className={cn(
-                    'w-full px-3 py-2.5 rounded-lg border border-neutral-200',
-                    'text-sm text-neutral-900 bg-white',
-                    'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
-                  )}
-                >
-                  <option value="">Выберите бота</option>
-                  {bots?.map((bot) => (
-                    <option key={bot.id} value={bot.id}>
-                      {bot.name}
-                    </option>
-                  ))}
-                </select>
+                <CustomSelect
+                  value={String(formBotId)}
+                  onChange={(v) => setFormBotId(v ? Number(v) : '')}
+                  options={[
+                    ...(bots?.map((bot) => ({
+                      value: String(bot.id),
+                      label: bot.name,
+                    })) ?? []),
+                  ]}
+                  placeholder="Выберите бота"
+                />
               </div>
             </div>
 
@@ -201,23 +194,15 @@ export default function ScenariosPage() {
                 >
                   Триггер
                 </label>
-                <select
-                  id="scenario-trigger"
+                <CustomSelect
                   value={formTrigger}
-                  onChange={(e) => setFormTrigger(e.target.value)}
-                  className={cn(
-                    'w-full px-3 py-2.5 rounded-lg border border-neutral-200',
-                    'text-sm text-neutral-900 bg-white',
-                    'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
-                  )}
-                >
-                  <option value="">Выберите триггер</option>
-                  {Object.entries(triggerLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => setFormTrigger(v)}
+                  options={Object.entries(triggerLabels).map(([value, label]) => ({
+                    value,
+                    label,
+                  }))}
+                  placeholder="Выберите триггер"
+                />
               </div>
               <div>
                 {formTrigger === 'inactive_days' && (

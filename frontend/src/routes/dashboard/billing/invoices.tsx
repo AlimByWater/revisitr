@@ -36,7 +36,7 @@ export default function InvoicesPage() {
         </Link>
         <div>
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Счета</h1>
-          <p className="text-sm text-neutral-500 mt-1">История выставленных счетов</p>
+          <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">История выставленных счетов</p>
         </div>
       </div>
 
@@ -50,7 +50,7 @@ export default function InvoicesPage() {
         <div className="flex flex-col items-center justify-center py-16 text-neutral-300">
           <FileText className="w-12 h-12 mb-4" />
           <p className="text-lg font-medium text-neutral-400">Счетов пока нет</p>
-          <p className="text-sm text-neutral-400 mt-1">Счета появятся после выбора платного тарифа</p>
+          <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">Счета появятся после выбора платного тарифа</p>
         </div>
       ) : (
         <div className="rounded-2xl border border-surface-border bg-white overflow-hidden">

@@ -10,6 +10,7 @@ import type { SegmentFilter, Segment } from '@/features/segments/types'
 import { RULE_OPERATORS } from '@/features/segments/types'
 import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 import { Plus, Trash2, Users, Filter, X, Eye } from 'lucide-react'
+import { CustomSelect } from '@/components/common/CustomSelect'
 
 // Filterable client attributes from the design doc
 const FILTER_ATTRIBUTES = [
@@ -136,7 +137,7 @@ export default function CustomSegmentsPage() {
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
             Мои сегменты
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
             Создавайте пользовательские сегменты по любым параметрам клиентов
           </p>
         </div>
@@ -185,53 +186,50 @@ export default function CustomSegmentsPage() {
             <p className="text-sm font-medium text-neutral-700">Фильтры</p>
             {rules.map((rule, index) => (
               <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-neutral-50">
-                <select
+                <CustomSelect
                   value={rule.attribute}
-                  onChange={(e) => updateRule(index, 'attribute', e.target.value)}
-                  className={cn(inputClassName, 'w-48')}
-                >
-                  {FILTER_ATTRIBUTES.map((attr) => (
-                    <option key={attr.key} value={attr.key}>{attr.label}</option>
-                  ))}
-                </select>
+                  onChange={(v) => updateRule(index, 'attribute', v)}
+                  options={FILTER_ATTRIBUTES.map((attr) => ({
+                    value: attr.key,
+                    label: attr.label,
+                  }))}
+                />
 
-                <select
+                <CustomSelect
                   value={rule.operator}
-                  onChange={(e) => updateRule(index, 'operator', e.target.value)}
-                  className={cn(inputClassName, 'w-28')}
-                >
-                  {Object.entries(RULE_OPERATORS).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
-                  ))}
-                </select>
+                  onChange={(v) => updateRule(index, 'operator', v)}
+                  options={Object.entries(RULE_OPERATORS).map(([key, label]) => ({
+                    value: key,
+                    label: label,
+                  }))}
+                />
 
                 {(() => {
                   const attr = FILTER_ATTRIBUTES.find((a) => a.key === rule.attribute)
                   if (attr?.type === 'select' && 'options' in attr) {
                     return (
-                      <select
+                      <CustomSelect
                         value={rule.value}
-                        onChange={(e) => updateRule(index, 'value', e.target.value)}
-                        className={cn(inputClassName, 'flex-1')}
-                      >
-                        <option value="">Выберите...</option>
-                        {attr.options.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                        onChange={(v) => updateRule(index, 'value', v)}
+                        options={attr.options.map((opt) => ({
+                          value: opt,
+                          label: opt,
+                        }))}
+                        placeholder="Выберите..."
+                      />
                     )
                   }
                   if (attr?.type === 'boolean') {
                     return (
-                      <select
+                      <CustomSelect
                         value={rule.value}
-                        onChange={(e) => updateRule(index, 'value', e.target.value)}
-                        className={cn(inputClassName, 'flex-1')}
-                      >
-                        <option value="">Выберите...</option>
-                        <option value="true">Да</option>
-                        <option value="false">Нет</option>
-                      </select>
+                        onChange={(v) => updateRule(index, 'value', v)}
+                        options={[
+                          { value: 'true', label: 'Да' },
+                          { value: 'false', label: 'Нет' },
+                        ]}
+                        placeholder="Выберите..."
+                      />
                     )
                   }
                   return (

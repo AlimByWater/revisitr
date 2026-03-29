@@ -240,8 +240,13 @@ export function Header({ onMenuToggle }: HeaderProps) {
               </div>
             </button>
 
-            {menuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-48 rounded border border-neutral-900 py-1 z-50 bg-white">
+            <div className={cn(
+              'absolute right-0 top-full mt-1 w-48 rounded border border-neutral-900 py-1 z-50 bg-white',
+              'transition-all duration-150 origin-top-right',
+              menuOpen
+                ? 'opacity-100 scale-y-100 pointer-events-auto'
+                : 'opacity-0 scale-y-95 pointer-events-none',
+            )}>
                 <Link
                   to="/dashboard/account"
                   onClick={() => setMenuOpen(false)}
@@ -260,7 +265,6 @@ export function Header({ onMenuToggle }: HeaderProps) {
                   Выйти
                 </button>
               </div>
-            )}
           </div>
         </div>
       </div>

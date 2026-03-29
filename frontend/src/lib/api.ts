@@ -1,9 +1,15 @@
 import axios from 'axios'
+import { installMockApi } from './mock-api'
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/v1',
   timeout: 10000,
 })
+
+// Mock API for local frontend development without backend
+if (import.meta.env.VITE_MOCK_API === 'true') {
+  installMockApi(api)
+}
 
 const BASE_PATH = import.meta.env.BASE_URL?.replace(/\/$/, '') || ''
 const LOGIN_PATH = `${BASE_PATH}/auth/login`
