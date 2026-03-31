@@ -83,15 +83,16 @@ export default function CampaignsPage() {
   const campaigns = campaignsData?.items ?? []
   const scenarios = (scenariosData ?? []) as AutoScenario[]
 
-  // Active tab: only active scenarios
-  // Archive tab: sent/completed/failed campaigns + inactive scenarios (no drafts)
+  // Active tab: active scenarios + in-progress campaigns (scheduled/sending)
+  // Archive tab: sent/completed/failed campaigns + inactive scenarios
+  // Drafts are NOT shown here — they live in Create → Черновики (localStorage)
   const { activeScenarios, activeCampaigns, archiveRows } = useMemo(() => {
     const active = scenarios.filter((s) => s.is_active)
     const inactive = scenarios.filter((s) => !s.is_active)
 
-    // Active also includes draft/scheduled/sending campaigns
+    // Only scheduled/sending campaigns — drafts excluded
     const activeCampaigns = campaigns.filter((c) =>
-      ['draft', 'scheduled', 'sending'].includes(c.status),
+      ['scheduled', 'sending'].includes(c.status),
     )
 
     const terminalCampaigns = campaigns.filter((c) =>
