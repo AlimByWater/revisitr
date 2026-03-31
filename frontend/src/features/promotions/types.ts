@@ -15,6 +15,8 @@ export interface PromotionAction {
   tag_add?: string
   level_id?: number
   campaign_id?: number
+  message?: string
+  media_url?: string
 }
 
 export interface PromotionConditions {

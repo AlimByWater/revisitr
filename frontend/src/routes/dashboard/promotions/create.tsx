@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useCreatePromotionMutation } from '@/features/promotions/queries'
-import { usePreviewAudienceMutation } from '@/features/campaigns/queries'
+import { usePreviewAudienceMutation, useUploadFileMutation } from '@/features/campaigns/queries'
 import { ClientFilterBuilder } from '@/components/filters/ClientFilterBuilder'
-import { ArrowLeft, Plus, X, Check } from 'lucide-react'
+import { ArrowLeft, Plus, X, Check, Upload, FileText } from 'lucide-react'
 import type { SegmentFilter } from '@/features/segments/types'
 import type {
   CreatePromotionRequest,
@@ -737,6 +737,21 @@ interface ActionCardProps {
 }
 
 function ActionCard({ action, onChange, onRemove }: ActionCardProps) {
+  const uploadMutation = useUploadFileMutation()
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    uploadMutation.mutate(file, {
+      onSuccess: (url) => onChange({ ...action, media_url: url }),
+    })
+    e.target.value = ''
+  }
+
+  function isImageUrl(url: string) {
+    return /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)
+  }
+
   return (
     <div className={itemCardClass}>
       <button
@@ -828,18 +843,92 @@ function ActionCard({ action, onChange, onRemove }: ActionCardProps) {
         )}
 
         {action.type === 'campaign' && (
-          <div>
-            <label className={labelClass}>ID рассылки</label>
-            <input
-              type="number"
-              min={1}
-              value={action.campaign_id ?? ''}
-              onChange={(e) =>
-                onChange({ ...action, campaign_id: e.target.value ? Number(e.target.value) : undefined })
-              }
-              placeholder="1"
-              className={cn(inputClass, 'max-w-xs')}
-            />
+          <div className="space-y-4">
+            {/* Message textarea */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-neutral-700">
+                  Текст сообщения
+                </label>
+                <span
+                  className={cn(
+                    'text-xs tabular-nums',
+                    (action.message?.length ?? 0) > 3800 ? 'text-red-500' : 'text-neutral-400',
+                  )}
+                >
+                  {action.message?.length ?? 0} / 4096
+                </span>
+              </div>
+              <textarea
+                value={action.message ?? ''}
+                onChange={(e) => onChange({ ...action, message: e.target.value || undefined })}
+                rows={6}
+                maxLength={4096}
+                placeholder="Текст сообщения. Поддерживается форматирование Telegram: *жирный*, _курсив_"
+                className={cn(
+                  'w-full px-3 py-2.5 rounded-lg border border-neutral-200',
+                  'text-sm text-neutral-900 placeholder:text-neutral-400 resize-none',
+                  'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
+                )}
+              />
+            </div>
+
+            {/* File attachment */}
+            <div>
+              <p className="text-sm font-medium text-neutral-700 mb-2">Вложение</p>
+              {action.media_url ? (
+                <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+                  {isImageUrl(action.media_url) ? (
+                    <img
+                      src={action.media_url}
+                      alt="Вложение"
+                      className="w-12 h-12 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-neutral-200 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-neutral-500" />
+                    </div>
+                  )}
+                  <span className="flex-1 text-sm text-neutral-700 truncate">
+                    {action.media_url.split('/').pop()}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onChange({ ...action, media_url: undefined })}
+                    className="p-1.5 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-neutral-300',
+                    'text-sm text-neutral-500 cursor-pointer',
+                    'hover:bg-neutral-50 hover:border-neutral-400 transition-colors',
+                    uploadMutation.isPending && 'opacity-50 pointer-events-none',
+                  )}
+                >
+                  {uploadMutation.isPending ? (
+                    <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4" />
+                  )}
+                  {uploadMutation.isPending ? 'Загрузка...' : 'Прикрепить файл'}
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*,.pdf,.doc,.docx"
+                    onChange={handleFileUpload}
+                    disabled={uploadMutation.isPending}
+                  />
+                  <span className="ml-auto text-xs text-neutral-400">до 50 МБ</span>
+                </label>
+              )}
+              {uploadMutation.isError && (
+                <p className="text-xs text-red-500 mt-1">Не удалось загрузить файл</p>
+              )}
+            </div>
           </div>
         )}
       </div>
