@@ -44,36 +44,12 @@ const triggerLabels: Record<AutoScenario['trigger_type'], string> = {
   bonus_threshold: 'Порог бонусов',
   level_up: 'Новый уровень',
   birthday: 'День рождения',
-  holiday: 'Праздник',
+  holiday: 'Дата',
   registration: 'Регистрация',
   level_change: 'Смена уровня',
 }
 
 type TabType = 'active' | 'archive'
-
-interface CampaignRow {
-  kind: 'campaign'
-  id: number
-  name: string
-  type: 'manual' | 'auto'
-  status: Campaign['status']
-  statusLabel: string
-  statusClassName: string
-  total: number
-  sent: number
-  date: string
-}
-
-interface ScenarioRow {
-  kind: 'scenario'
-  id: number
-  name: string
-  triggerType: AutoScenario['trigger_type']
-  isActive: boolean
-  date: string
-}
-
-type ListRow = CampaignRow | ScenarioRow
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ru-RU', {
@@ -107,56 +83,40 @@ export default function CampaignsPage() {
   const campaigns = campaignsData?.items ?? []
   const scenarios = (scenariosData ?? []) as AutoScenario[]
 
-  const { activeRows, archiveRows } = useMemo(() => {
-    const active: ListRow[] = []
-    const archive: ListRow[] = []
+  // Active tab: only active scenarios
+  // Archive tab: sent/completed/failed campaigns + inactive scenarios (no drafts)
+  const { activeScenarios, archiveRows } = useMemo(() => {
+    const active = scenarios.filter((s) => s.is_active)
+    const inactive = scenarios.filter((s) => !s.is_active)
 
-    for (const c of campaigns) {
-      const status = statusConfig[c.status]
-      const row: CampaignRow = {
-        kind: 'campaign',
-        id: c.id,
-        name: c.name,
-        type: c.type,
-        status: c.status,
-        statusLabel: status.label,
-        statusClassName: status.className,
-        total: c.stats.total,
-        sent: c.stats.sent,
-        date: c.created_at,
-      }
+    // Active also includes draft/scheduled/sending campaigns
+    const activeCampaigns = campaigns.filter((c) =>
+      ['draft', 'scheduled', 'sending'].includes(c.status),
+    )
 
-      if (['sent', 'completed', 'failed'].includes(c.status)) {
-        archive.push(row)
-      } else {
-        active.push(row)
-      }
-    }
+    const terminalCampaigns = campaigns.filter((c) =>
+      ['sent', 'completed', 'failed'].includes(c.status),
+    )
 
-    for (const s of scenarios) {
-      const row: ScenarioRow = {
-        kind: 'scenario',
-        id: s.id,
-        name: s.name,
-        triggerType: s.trigger_type,
-        isActive: s.is_active,
-        date: s.created_at,
-      }
+    type ArchiveRow =
+      | { kind: 'campaign'; data: Campaign }
+      | { kind: 'scenario'; data: AutoScenario }
 
-      if (s.is_active) {
-        active.push(row)
-      } else {
-        archive.push(row)
-      }
-    }
+    const archive: ArchiveRow[] = [
+      ...terminalCampaigns.map((c) => ({ kind: 'campaign' as const, data: c })),
+      ...inactive.map((s) => ({ kind: 'scenario' as const, data: s })),
+    ]
+    archive.sort(
+      (a, b) =>
+        new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime(),
+    )
 
-    active.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    archive.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    active.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    )
 
-    return { activeRows: active, archiveRows: archive }
+    return { activeScenarios: active, activeCampaigns, archiveRows: archive }
   }, [campaigns, scenarios])
-
-  const rows = tab === 'active' ? activeRows : archiveRows
 
   function handleRetry() {
     campaignsMutate()
@@ -166,7 +126,9 @@ export default function CampaignsPage() {
   return (
     <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-6 animate-in">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Рассылки</h1>
+        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+          Все рассылки
+        </h1>
         <button
           onClick={() => navigate('/dashboard/campaigns/create')}
           type="button"
@@ -197,7 +159,7 @@ export default function CampaignsPage() {
               : 'text-neutral-500 hover:text-neutral-700',
           )}
         >
-          Активные ({activeRows.length})
+          Активные ({activeScenarios.length + activeCampaigns.length})
         </button>
         <button
           type="button"
@@ -223,8 +185,9 @@ export default function CampaignsPage() {
           message="Проверьте подключение к серверу и попробуйте снова."
           onRetry={handleRetry}
         />
-      ) : rows.length === 0 ? (
-        tab === 'active' ? (
+      ) : tab === 'active' ? (
+        /* ── Active tab: active scenarios + draft/scheduled/sending campaigns ── */
+        activeScenarios.length === 0 && activeCampaigns.length === 0 ? (
           <EmptyState
             icon={Mail}
             title="Нет активных рассылок"
@@ -234,100 +197,188 @@ export default function CampaignsPage() {
             variant="campaigns"
           />
         ) : (
-          <EmptyState
-            icon={Mail}
-            title="Архив пуст"
-            description="Завершённые рассылки и неактивные сценарии появятся здесь."
-          />
-        )
-      ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden animate-in animate-in-delay-1">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-surface-border">
-                  <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
-                    Название
-                  </th>
-                  <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
-                    Тип
-                  </th>
-                  <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
-                    Статус
-                  </th>
-                  <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden md:table-cell">
-                    Охват
-                  </th>
-                  <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden md:table-cell">
-                    Отправлено
-                  </th>
-                  <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
-                    Дата
-                  </th>
-                  {tab === 'archive' && (
-                    <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
-                      Действие
+          <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden animate-in animate-in-delay-1">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-surface-border">
+                    <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
+                      Название
                     </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-border">
-                {rows.map((row) => {
-                  if (row.kind === 'campaign') {
+                    <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
+                      Тип
+                    </th>
+                    <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
+                      Статус
+                    </th>
+                    <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
+                      Дата
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-border">
+                  {activeCampaigns.map((c) => {
+                    const status = statusConfig[c.status]
                     return (
                       <tr
-                        key={`c-${row.id}`}
+                        key={`c-${c.id}`}
                         className="hover:bg-neutral-50 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/dashboard/campaigns/${row.id}`)}
+                        onClick={() => navigate(`/dashboard/campaigns/${c.id}`)}
                       >
                         <td className="px-6 py-4">
                           <span className="text-sm font-medium text-neutral-900">
-                            {row.name}
+                            {c.name}
                           </span>
                         </td>
                         <td className="px-6 py-4 hidden sm:table-cell">
-                          <span className={cn(
-                            'inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full',
-                            row.type === 'auto'
-                              ? 'bg-violet-100 text-violet-700'
-                              : 'bg-neutral-100 text-neutral-600',
-                          )}>
-                            {row.type === 'auto' && <Zap className="w-3 h-3" />}
-                            {row.type === 'manual' ? 'Ручная' : 'Авто'}
+                          <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
+                            Ручная
                           </span>
                         </td>
                         <td className="px-6 py-4">
                           <span
                             className={cn(
                               'text-xs font-medium px-2 py-1 rounded-full',
-                              row.statusClassName,
+                              status.className,
                             )}
                           >
-                            {row.statusLabel}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right hidden md:table-cell">
-                          <span className="text-sm font-mono text-neutral-500 tabular-nums">
-                            {row.total}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right hidden md:table-cell">
-                          <span className="text-sm font-mono text-neutral-500 tabular-nums">
-                            {row.sent}
+                            {status.label}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right hidden sm:table-cell">
                           <span className="text-sm font-mono text-neutral-400 tabular-nums">
-                            {formatDate(row.date)}
+                            {formatDate(c.created_at)}
                           </span>
                         </td>
-                        {tab === 'archive' && (
+                      </tr>
+                    )
+                  })}
+                  {activeScenarios.map((s) => (
+                    <tr
+                      key={`s-${s.id}`}
+                      className="hover:bg-neutral-50 transition-colors cursor-pointer"
+                      onClick={() => navigate(`/dashboard/campaigns/scenario/${s.id}`)}
+                    >
+                      <td className="px-6 py-4">
+                        <span className="text-sm font-medium text-neutral-900">
+                          {s.name}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 hidden sm:table-cell">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">
+                          <Zap className="w-3 h-3" />
+                          Авто
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700">
+                          Активен
+                        </span>
+                        <span className="ml-2 text-xs text-neutral-400">
+                          {triggerLabels[s.trigger_type]}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right hidden sm:table-cell">
+                        <span className="text-sm font-mono text-neutral-400 tabular-nums">
+                          {formatDate(s.created_at)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      ) : (
+        /* ── Archive tab: campaigns + inactive scenarios ──────────── */
+        archiveRows.length === 0 ? (
+          <EmptyState
+            icon={Mail}
+            title="Архив пуст"
+            description="Завершённые рассылки и неактивные сценарии появятся здесь."
+          />
+        ) : (
+          <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden animate-in animate-in-delay-1">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-surface-border">
+                    <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
+                      Название
+                    </th>
+                    <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
+                      Тип
+                    </th>
+                    <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
+                      Статус
+                    </th>
+                    <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden md:table-cell">
+                      Охват
+                    </th>
+                    <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden md:table-cell">
+                      Отправлено
+                    </th>
+                    <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
+                      Дата
+                    </th>
+                    <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
+                      Действие
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-border">
+                  {archiveRows.map((row) => {
+                    if (row.kind === 'campaign') {
+                      const c = row.data
+                      const status = statusConfig[c.status]
+                      return (
+                        <tr
+                          key={`c-${c.id}`}
+                          className="hover:bg-neutral-50 transition-colors cursor-pointer"
+                          onClick={() => navigate(`/dashboard/campaigns/${c.id}`)}
+                        >
+                          <td className="px-6 py-4">
+                            <span className="text-sm font-medium text-neutral-900">
+                              {c.name}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 hidden sm:table-cell">
+                            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
+                              Ручная
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={cn(
+                                'text-xs font-medium px-2 py-1 rounded-full',
+                                status.className,
+                              )}
+                            >
+                              {status.label}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right hidden md:table-cell">
+                            <span className="text-sm font-mono text-neutral-500 tabular-nums">
+                              {c.stats.total}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right hidden md:table-cell">
+                            <span className="text-sm font-mono text-neutral-500 tabular-nums">
+                              {c.stats.sent}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right hidden sm:table-cell">
+                            <span className="text-sm font-mono text-neutral-400 tabular-nums">
+                              {formatDate(c.created_at)}
+                            </span>
+                          </td>
                           <td className="px-6 py-4 text-right hidden sm:table-cell">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                navigate(`/dashboard/campaigns/create?clone=${row.id}`)
+                                navigate(`/dashboard/campaigns/create?clone=${c.id}&type=campaign`)
                               }}
                               className={cn(
                                 'inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg',
@@ -339,74 +390,73 @@ export default function CampaignsPage() {
                               Повторить
                             </button>
                           </td>
-                        )}
+                        </tr>
+                      )
+                    }
+
+                    // Inactive scenario row
+                    const s = row.data
+                    return (
+                      <tr
+                        key={`s-${s.id}`}
+                        className="hover:bg-neutral-50 transition-colors cursor-pointer"
+                        onClick={() => navigate(`/dashboard/campaigns/scenario/${s.id}`)}
+                      >
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-medium text-neutral-900">
+                            {s.name}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 hidden sm:table-cell">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">
+                            <Zap className="w-3 h-3" />
+                            Авто
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs font-medium px-2 py-1 rounded-full bg-neutral-100 text-neutral-500">
+                            Неактивен
+                          </span>
+                          <span className="ml-2 text-xs text-neutral-400">
+                            {triggerLabels[s.trigger_type]}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right hidden md:table-cell">
+                          <span className="text-sm font-mono text-neutral-400">&mdash;</span>
+                        </td>
+                        <td className="px-6 py-4 text-right hidden md:table-cell">
+                          <span className="text-sm font-mono text-neutral-400">&mdash;</span>
+                        </td>
+                        <td className="px-6 py-4 text-right hidden sm:table-cell">
+                          <span className="text-sm font-mono text-neutral-400 tabular-nums">
+                            {formatDate(s.created_at)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right hidden sm:table-cell">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigate(`/dashboard/campaigns/create?clone=${s.id}&type=scenario`)
+                            }}
+                            className={cn(
+                              'inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg',
+                              'text-neutral-600 bg-neutral-100 hover:bg-neutral-200',
+                              'transition-colors duration-150',
+                            )}
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            Повторить
+                          </button>
+                        </td>
                       </tr>
                     )
-                  }
-
-                  // Scenario row
-                  return (
-                    <tr
-                      key={`s-${row.id}`}
-                      className="hover:bg-neutral-50 transition-colors cursor-pointer"
-                      onClick={() => navigate(`/dashboard/campaigns/${row.id}`)}
-                    >
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-medium text-neutral-900">
-                          {row.name}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 hidden sm:table-cell">
-                        <span className={cn(
-                          'inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full',
-                          'bg-violet-100 text-violet-700',
-                        )}>
-                          <Zap className="w-3 h-3" />
-                          Авто
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={cn(
-                            'text-xs font-medium px-2 py-1 rounded-full',
-                            row.isActive
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-neutral-100 text-neutral-500',
-                          )}
-                        >
-                          {row.isActive ? 'Активен' : 'Неактивен'}
-                        </span>
-                        <span className="ml-2 text-xs text-neutral-400">
-                          {triggerLabels[row.triggerType]}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right hidden md:table-cell">
-                        <span className="text-sm font-mono text-neutral-400">
-                          &mdash;
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right hidden md:table-cell">
-                        <span className="text-sm font-mono text-neutral-400">
-                          &mdash;
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right hidden sm:table-cell">
-                        <span className="text-sm font-mono text-neutral-400 tabular-nums">
-                          {formatDate(row.date)}
-                        </span>
-                      </td>
-                      {tab === 'archive' && (
-                        <td className="px-6 py-4 text-right hidden sm:table-cell">
-                          {/* No repeat action for scenarios */}
-                        </td>
-                      )}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )
       )}
     </div>
   )

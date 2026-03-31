@@ -158,46 +158,6 @@ export interface ABTestResults {
   winner_id?: number
 }
 
-// ── Campaign Templates ───────────────────────────────────────────────────────
-
-export interface CampaignTemplate {
-  id: number
-  org_id?: number
-  name: string
-  category: string
-  description?: string
-  message: string
-  media_url?: string
-  buttons: CampaignButton[]
-  audience_filter: AudienceFilter
-  tracking_mode: string
-  is_system: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface CreateCampaignTemplateRequest {
-  name: string
-  category?: string
-  description?: string
-  message: string
-  media_url?: string
-  buttons?: CampaignButton[]
-  audience_filter?: AudienceFilter
-  tracking_mode?: string
-}
-
-export interface UpdateCampaignTemplateRequest {
-  name?: string
-  category?: string
-  description?: string
-  message?: string
-  media_url?: string
-  buttons?: CampaignButton[]
-  audience_filter?: AudienceFilter
-  tracking_mode?: string
-}
-
 // ── Campaign Requests ────────────────────────────────────────────────────────
 
 export interface CreateCampaignRequest {

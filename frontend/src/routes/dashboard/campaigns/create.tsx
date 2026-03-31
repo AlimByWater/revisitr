@@ -1,13 +1,16 @@
-import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { useBotsQuery } from '@/features/bots/queries'
 import {
   useCreateCampaignMutation,
   useCreateScenarioMutation,
   usePreviewAudienceMutation,
+  useCampaignQuery,
+  useScenarioQuery,
+  useUploadFileMutation,
 } from '@/features/campaigns/queries'
-import { ArrowLeft, Send, Zap } from 'lucide-react'
+import { ArrowLeft, Send, Zap, Upload, X, FileText, Save } from 'lucide-react'
 import type { SegmentFilter } from '@/features/segments/types'
 import type { AudienceFilter } from '@/features/campaigns/types'
 import { ClientFilterBuilder } from '@/components/filters/ClientFilterBuilder'
@@ -30,7 +33,7 @@ const TRIGGER_OPTIONS: { value: TriggerType; label: string }[] = [
   { value: 'bonus_threshold', label: 'Порог бонусов' },
   { value: 'level_up', label: 'Новый уровень' },
   { value: 'birthday', label: 'День рождения' },
-  { value: 'date', label: 'Конкретная дата' },
+  { value: 'date', label: 'Дата' },
   { value: 'registration', label: 'Регистрация' },
   { value: 'level_change', label: 'Смена уровня' },
 ]
@@ -46,18 +49,60 @@ const labelClass = 'block text-sm font-medium text-neutral-700 mb-1.5'
 const blockHeaderClass =
   'font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-4'
 
+// ── Draft types ──────────────────────────────────────────────────────────────
+
+interface CampaignDraft {
+  id: string
+  name: string
+  format: Format
+  botId: number | ''
+  message: string
+  audienceFilter: SegmentFilter
+  triggerType: TriggerType
+  triggerDays: number | ''
+  triggerCount: number | ''
+  triggerThreshold: number | ''
+  triggerDate: string
+  daysBefore: number | ''
+  daysAfter: number | ''
+  mediaUrl: string
+  createdAt: string
+  updatedAt: string
+}
+
+const DRAFTS_KEY = 'campaign-drafts'
+
+function loadDrafts(): CampaignDraft[] {
+  try {
+    const raw = localStorage.getItem(DRAFTS_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function saveDrafts(drafts: CampaignDraft[]) {
+  localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts))
+}
+
+type TabType = 'create' | 'drafts'
+
 export default function CreateCampaignPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { data: bots } = useBotsQuery()
   const createCampaignMutation = useCreateCampaignMutation()
   const createScenarioMutation = useCreateScenarioMutation()
   const previewMutation = usePreviewAudienceMutation()
+  const uploadMutation = useUploadFileMutation()
 
+  const [activeTab, setActiveTab] = useState<TabType>('create')
   const [format, setFormat] = useState<Format>('manual')
   const [name, setName] = useState('')
   const [botId, setBotId] = useState<number | ''>('')
   const [message, setMessage] = useState('')
   const [audienceFilter, setAudienceFilter] = useState<SegmentFilter>({})
+  const [mediaUrl, setMediaUrl] = useState('')
 
   // Auto-scenario state
   const [triggerType, setTriggerType] = useState<TriggerType>('inactive_days')
@@ -67,6 +112,68 @@ export default function CreateCampaignPage() {
   const [triggerDate, setTriggerDate] = useState('')
   const [daysBefore, setDaysBefore] = useState<number | ''>('')
   const [daysAfter, setDaysAfter] = useState<number | ''>('')
+
+  // Drafts
+  const [drafts, setDrafts] = useState<CampaignDraft[]>(loadDrafts)
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null)
+
+  // Auto-save debounce
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Clone support
+  const cloneId = searchParams.get('clone')
+  const cloneType = searchParams.get('type') as 'campaign' | 'scenario' | null
+  const cloneCampaignId = cloneType === 'campaign' && cloneId ? Number(cloneId) : 0
+  const cloneScenarioId = cloneType === 'scenario' && cloneId ? Number(cloneId) : 0
+  const { data: cloneCampaign } = useCampaignQuery(cloneCampaignId)
+  const { data: cloneScenario } = useScenarioQuery(cloneScenarioId)
+
+  // Load clone data
+  useEffect(() => {
+    if (cloneType === 'campaign' && cloneCampaign) {
+      setFormat('manual')
+      setName(`${cloneCampaign.name} (копия)`)
+      setBotId(cloneCampaign.bot_id)
+      setMessage(cloneCampaign.message)
+      setMediaUrl(cloneCampaign.media_url || '')
+      if (cloneCampaign.audience_filter) {
+        const af = cloneCampaign.audience_filter
+        const sf: SegmentFilter = {}
+        if (af.bot_id) sf.bot_id = af.bot_id
+        if (af.tags) sf.tags = af.tags
+        if (af.level_id) sf.level_id = af.level_id
+        setAudienceFilter(sf)
+      }
+      // Clear clone params
+      setSearchParams({}, { replace: true })
+    }
+  }, [cloneCampaign, cloneType, setSearchParams])
+
+  useEffect(() => {
+    if (cloneType === 'scenario' && cloneScenario) {
+      setFormat('auto')
+      setName(`${cloneScenario.name} (копия)`)
+      setBotId(cloneScenario.bot_id)
+      setMessage(cloneScenario.message)
+      // Map API 'holiday' back to UI 'date'
+      const tt = cloneScenario.trigger_type === 'holiday' ? 'date' : cloneScenario.trigger_type
+      setTriggerType(tt as TriggerType)
+      const tc = cloneScenario.trigger_config
+      if (tc.days) setTriggerDays(tc.days)
+      if (tc.count) setTriggerCount(tc.count)
+      if (tc.threshold) setTriggerThreshold(tc.threshold)
+      if (tc.month && tc.day) {
+        const year = new Date().getFullYear()
+        const dateStr = `${year}-${String(tc.month).padStart(2, '0')}-${String(tc.day).padStart(2, '0')}`
+        setTriggerDate(dateStr)
+      }
+      if (cloneScenario.timing) {
+        if (cloneScenario.timing.days_before !== undefined) setDaysBefore(cloneScenario.timing.days_before)
+        if (cloneScenario.timing.days_after !== undefined) setDaysAfter(cloneScenario.timing.days_after)
+      }
+      setSearchParams({}, { replace: true })
+    }
+  }, [cloneScenario, cloneType, setSearchParams])
 
   const isManual = format === 'manual'
   const activeMutation = isManual ? createCampaignMutation : createScenarioMutation
@@ -102,7 +209,6 @@ export default function CreateCampaignPage() {
     }
   }
 
-  /** Convert SegmentFilter to AudienceFilter for the create campaign request */
   function toAudienceFilter(filter: SegmentFilter): AudienceFilter {
     const af: AudienceFilter = {}
     if (filter.bot_id) af.bot_id = filter.bot_id
@@ -132,6 +238,105 @@ export default function CreateCampaignPage() {
     }
   }
 
+  // ── Auto-save to draft ──────────────────────────────────────────────────────
+
+  const getCurrentFormState = useCallback((): Omit<CampaignDraft, 'id' | 'createdAt' | 'updatedAt'> => ({
+    name, format, botId, message, audienceFilter, triggerType,
+    triggerDays, triggerCount, triggerThreshold, triggerDate,
+    daysBefore, daysAfter, mediaUrl,
+  }), [name, format, botId, message, audienceFilter, triggerType,
+    triggerDays, triggerCount, triggerThreshold, triggerDate,
+    daysBefore, daysAfter, mediaUrl])
+
+  // Auto-save debounced
+  useEffect(() => {
+    if (!name.trim()) return // Don't auto-save empty forms
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(() => {
+      const now = new Date().toISOString()
+      const state = getCurrentFormState()
+      setDrafts((prev) => {
+        let updated: CampaignDraft[]
+        if (editingDraftId) {
+          updated = prev.map((d) =>
+            d.id === editingDraftId ? { ...d, ...state, updatedAt: now } : d,
+          )
+        } else {
+          const newId = crypto.randomUUID()
+          setEditingDraftId(newId)
+          updated = [{ ...state, id: newId, createdAt: now, updatedAt: now }, ...prev]
+        }
+        saveDrafts(updated)
+        return updated
+      })
+    }, 1000)
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  }, [getCurrentFormState, editingDraftId, name])
+
+  function handleSaveDraft() {
+    const now = new Date().toISOString()
+    const state = getCurrentFormState()
+    if (!name.trim()) return
+    setDrafts((prev) => {
+      let updated: CampaignDraft[]
+      if (editingDraftId) {
+        updated = prev.map((d) =>
+          d.id === editingDraftId ? { ...d, ...state, updatedAt: now } : d,
+        )
+      } else {
+        const newId = crypto.randomUUID()
+        setEditingDraftId(newId)
+        updated = [{ ...state, id: newId, createdAt: now, updatedAt: now }, ...prev]
+      }
+      saveDrafts(updated)
+      return updated
+    })
+  }
+
+  function loadDraft(draft: CampaignDraft) {
+    setEditingDraftId(draft.id)
+    setName(draft.name)
+    setFormat(draft.format)
+    setBotId(draft.botId)
+    setMessage(draft.message)
+    setAudienceFilter(draft.audienceFilter)
+    setTriggerType(draft.triggerType)
+    setTriggerDays(draft.triggerDays)
+    setTriggerCount(draft.triggerCount)
+    setTriggerThreshold(draft.triggerThreshold)
+    setTriggerDate(draft.triggerDate)
+    setDaysBefore(draft.daysBefore)
+    setDaysAfter(draft.daysAfter)
+    setMediaUrl(draft.mediaUrl)
+    setActiveTab('create')
+  }
+
+  function deleteDraft(draftId: string) {
+    setDrafts((prev) => {
+      const updated = prev.filter((d) => d.id !== draftId)
+      saveDrafts(updated)
+      return updated
+    })
+    if (editingDraftId === draftId) setEditingDraftId(null)
+  }
+
+  // ── File attachment ─────────────────────────────────────────────────────────
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    uploadMutation.mutate(file, {
+      onSuccess: (url) => setMediaUrl(url),
+    })
+    e.target.value = ''
+  }
+
+  function isImageUrl(url: string) {
+    return /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)
+  }
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!isValid) return
@@ -146,8 +351,15 @@ export default function CreateCampaignPage() {
             ...audienceFilter,
             bot_id: botId as number,
           }),
+          media_url: mediaUrl || undefined,
         },
-        { onSuccess: () => navigate('/dashboard/campaigns') },
+        {
+          onSuccess: () => {
+            // Remove draft on success
+            if (editingDraftId) deleteDraft(editingDraftId)
+            navigate('/dashboard/campaigns')
+          },
+        },
       )
     } else {
       const timing: { days_before?: number; days_after?: number } = {}
@@ -158,13 +370,17 @@ export default function CreateCampaignPage() {
         {
           bot_id: botId as number,
           name: name.trim(),
-          // "date" in UI maps to "holiday" for API backward compatibility
           trigger_type: triggerType === 'date' ? 'holiday' : triggerType,
           trigger_config: buildTriggerConfig(),
           message: message.trim(),
           timing: Object.keys(timing).length > 0 ? timing : undefined,
         },
-        { onSuccess: () => navigate('/dashboard/campaigns') },
+        {
+          onSuccess: () => {
+            if (editingDraftId) deleteDraft(editingDraftId)
+            navigate('/dashboard/campaigns')
+          },
+        },
       )
     }
   }
@@ -181,325 +397,460 @@ export default function CreateCampaignPage() {
           <ArrowLeft className="w-5 h-5 text-neutral-500" />
         </button>
         <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
-          {isManual ? 'Создать рассылку' : 'Создать авто-сценарий'}
+          Создать рассылку
         </h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* ── Block 1: Format Selection ─────────────────────────────── */}
-        <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 space-y-5">
-          <div>
-            <p className={blockHeaderClass}>Формат рассылки</p>
-            <p className="text-sm text-neutral-500 mb-3">
-              Выберите тип рассылки
-            </p>
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-neutral-100 rounded-lg w-fit mb-6 animate-in">
+        <button
+          type="button"
+          onClick={() => setActiveTab('create')}
+          className={cn(
+            'px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
+            activeTab === 'create'
+              ? 'bg-white text-neutral-900 shadow-sm'
+              : 'text-neutral-500 hover:text-neutral-700',
+          )}
+        >
+          Создать
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('drafts')}
+          className={cn(
+            'px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
+            activeTab === 'drafts'
+              ? 'bg-white text-neutral-900 shadow-sm'
+              : 'text-neutral-500 hover:text-neutral-700',
+          )}
+        >
+          Черновики ({drafts.length})
+        </button>
+      </div>
 
-            <select
-              value={format}
-              onChange={(e) => setFormat(e.target.value as Format)}
-              className={inputClass}
-            >
-              <option value="manual">Ручная рассылка</option>
-              <option value="auto">Авто-сценарий</option>
-            </select>
-          </div>
-
-          {/* Bot selector */}
-          <div>
-            <label htmlFor="bot" className={labelClass}>
-              Бот
-            </label>
-            <select
-              id="bot"
-              value={botId}
-              onChange={(e) => handleBotChange(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">Выберите бота</option>
-              {bots?.map((bot) => (
-                <option key={bot.id} value={bot.id}>
-                  {bot.name} (@{bot.username})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Campaign name */}
-          <div>
-            <label htmlFor="name" className={labelClass}>
-              {isManual ? 'Название рассылки' : 'Название сценария'}
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={
-                isManual
-                  ? 'Например: Акция выходного дня'
-                  : 'Например: Возврат неактивных клиентов'
-              }
-              className={inputClass}
-            />
-          </div>
+      {activeTab === 'drafts' ? (
+        /* ── Drafts Tab ──────────────────────────────────────────── */
+        <div className="space-y-3">
+          {drafts.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-12 text-center">
+              <p className="text-sm text-neutral-400">Нет сохранённых черновиков</p>
+            </div>
+          ) : (
+            drafts.map((draft) => (
+              <div
+                key={draft.id}
+                className={cn(
+                  'bg-white rounded-2xl shadow-sm border border-surface-border p-4',
+                  'flex items-center gap-4 hover:bg-neutral-50 transition-colors',
+                )}
+              >
+                <button
+                  type="button"
+                  onClick={() => loadDraft(draft)}
+                  className="flex-1 text-left min-w-0"
+                >
+                  <p className="text-sm font-medium text-neutral-900 truncate">
+                    {draft.name || 'Без названия'}
+                  </p>
+                  <p className="text-xs text-neutral-400 mt-0.5">
+                    {draft.format === 'manual' ? 'Ручная' : 'Авто-сценарий'} &middot;{' '}
+                    {new Date(draft.updatedAt).toLocaleDateString('ru-RU', {
+                      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                    })}
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteDraft(draft.id)}
+                  className="p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))
+          )}
         </div>
-
-        {/* ── Block 2: Auto-scenario Settings ──────────────────────── */}
-        {!isManual && (
+      ) : (
+        /* ── Create Tab ──────────────────────────────────────────── */
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* ── Block 1: Создать ─────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 space-y-5">
-            <p className={blockHeaderClass}>Настройки сценария</p>
+            <p className={blockHeaderClass}>Создать</p>
 
-            {/* Trigger type */}
+            {/* Campaign name */}
             <div>
-              <label htmlFor="trigger-type" className={labelClass}>
-                Триггер
+              <label htmlFor="name" className={labelClass}>
+                Название
+              </label>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={
+                  isManual
+                    ? 'Например: Акция выходного дня'
+                    : 'Например: Возврат неактивных клиентов'
+                }
+                className={inputClass}
+              />
+            </div>
+
+            {/* Format */}
+            <div>
+              <label htmlFor="format" className={labelClass}>
+                Формат
               </label>
               <select
-                id="trigger-type"
-                value={triggerType}
-                onChange={(e) => setTriggerType(e.target.value as TriggerType)}
+                id="format"
+                value={format}
+                onChange={(e) => setFormat(e.target.value as Format)}
                 className={inputClass}
               >
-                {TRIGGER_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                <option value="manual">Ручная рассылка</option>
+                <option value="auto">Авто-сценарий</option>
+              </select>
+            </div>
+          </div>
+
+          {/* ── Block 2: Настройки ───────────────────────────────── */}
+          <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 space-y-5">
+            <p className={blockHeaderClass}>Настройки</p>
+
+            {/* Bot selector */}
+            <div>
+              <label htmlFor="bot" className={labelClass}>
+                Бот
+              </label>
+              <select
+                id="bot"
+                value={botId}
+                onChange={(e) => handleBotChange(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Выберите бота</option>
+                {bots?.map((bot) => (
+                  <option key={bot.id} value={bot.id}>
+                    {bot.name} (@{bot.username})
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Trigger config fields (conditional) */}
-            {triggerType === 'inactive_days' && (
-              <div>
-                <label htmlFor="trigger-days" className={labelClass}>
-                  Количество дней
-                </label>
-                <input
-                  id="trigger-days"
-                  type="number"
-                  min={1}
-                  value={triggerDays}
-                  onChange={(e) =>
-                    setTriggerDays(e.target.value ? Number(e.target.value) : '')
-                  }
-                  placeholder="7"
-                  className={inputClass}
-                />
-              </div>
-            )}
-
-            {triggerType === 'visit_count' && (
-              <div>
-                <label htmlFor="trigger-count" className={labelClass}>
-                  Номер визита
-                </label>
-                <input
-                  id="trigger-count"
-                  type="number"
-                  min={1}
-                  value={triggerCount}
-                  onChange={(e) =>
-                    setTriggerCount(
-                      e.target.value ? Number(e.target.value) : '',
-                    )
-                  }
-                  placeholder="5"
-                  className={inputClass}
-                />
-              </div>
-            )}
-
-            {triggerType === 'bonus_threshold' && (
-              <div>
-                <label htmlFor="trigger-threshold" className={labelClass}>
-                  Порог бонусов
-                </label>
-                <input
-                  id="trigger-threshold"
-                  type="number"
-                  min={1}
-                  value={triggerThreshold}
-                  onChange={(e) =>
-                    setTriggerThreshold(
-                      e.target.value ? Number(e.target.value) : '',
-                    )
-                  }
-                  placeholder="1000"
-                  className={inputClass}
-                />
-              </div>
-            )}
-
-            {triggerType === 'date' && (
-              <div>
-                <label htmlFor="trigger-date" className={labelClass}>
-                  Выберите дату
-                </label>
-                <input
-                  id="trigger-date"
-                  type="date"
-                  value={triggerDate}
-                  onChange={(e) => setTriggerDate(e.target.value)}
-                  className={inputClass}
-                />
-              </div>
-            )}
-
-            {/* Timing section */}
+            {/* Audience filter */}
             <div>
-              <p className="text-sm font-medium text-neutral-700 mb-3">
-                Время отправки (опционально)
+              <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-2">
+                Аудитория
               </p>
-              <div className="flex gap-4">
-                <div className="flex-1 max-w-[180px]">
-                  <label
-                    htmlFor="days-before"
-                    className="block text-xs text-neutral-500 mb-1"
-                  >
-                    Дней до
-                  </label>
-                  <input
-                    id="days-before"
-                    type="number"
-                    min={0}
-                    value={daysBefore}
-                    onChange={(e) =>
-                      setDaysBefore(
-                        e.target.value ? Number(e.target.value) : '',
-                      )
-                    }
-                    placeholder="0"
-                    className={inputClass}
-                  />
-                </div>
-                <div className="flex-1 max-w-[180px]">
-                  <label
-                    htmlFor="days-after"
-                    className="block text-xs text-neutral-500 mb-1"
-                  >
-                    Дней после
-                  </label>
-                  <input
-                    id="days-after"
-                    type="number"
-                    min={0}
-                    value={daysAfter}
-                    onChange={(e) =>
-                      setDaysAfter(
-                        e.target.value ? Number(e.target.value) : '',
-                      )
-                    }
-                    placeholder="0"
-                    className={inputClass}
-                  />
-                </div>
-              </div>
+              <ClientFilterBuilder
+                value={audienceFilter}
+                onChange={(f) =>
+                  setAudienceFilter(
+                    botId ? { ...f, bot_id: botId as number } : f,
+                  )
+                }
+                hiddenFields={['bot_id']}
+                previewCount={
+                  previewMutation.isSuccess ? previewMutation.data : null
+                }
+                onPreview={botId ? handlePreview : undefined}
+                isPreviewing={previewMutation.isPending}
+              />
             </div>
-          </div>
-        )}
 
-        {/* ── Block 3: Message Editor ──────────────────────────────── */}
-        <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 space-y-5">
-          <p className={blockHeaderClass}>Сообщение</p>
+            {/* Auto-scenario specific fields */}
+            {!isManual && (
+              <>
+                {/* Trigger type */}
+                <div>
+                  <label htmlFor="trigger-type" className={labelClass}>
+                    Триггер
+                  </label>
+                  <select
+                    id="trigger-type"
+                    value={triggerType}
+                    onChange={(e) => setTriggerType(e.target.value as TriggerType)}
+                    className={inputClass}
+                  >
+                    {TRIGGER_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-          {/* Message textarea */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label htmlFor="message" className="block text-sm font-medium text-neutral-700">
-                Текст сообщения
-              </label>
-              <span
-                className={cn(
-                  'text-xs tabular-nums',
-                  message.length > 3800 ? 'text-red-500' : 'text-neutral-400',
+                {/* Trigger config fields */}
+                {triggerType === 'inactive_days' && (
+                  <div>
+                    <label htmlFor="trigger-days" className={labelClass}>
+                      Количество дней
+                    </label>
+                    <input
+                      id="trigger-days"
+                      type="number"
+                      min={1}
+                      value={triggerDays}
+                      onChange={(e) =>
+                        setTriggerDays(e.target.value ? Number(e.target.value) : '')
+                      }
+                      placeholder="7"
+                      className={inputClass}
+                    />
+                  </div>
                 )}
-              >
-                {message.length} / 4096
-              </span>
+
+                {triggerType === 'visit_count' && (
+                  <div>
+                    <label htmlFor="trigger-count" className={labelClass}>
+                      Номер визита
+                    </label>
+                    <input
+                      id="trigger-count"
+                      type="number"
+                      min={1}
+                      value={triggerCount}
+                      onChange={(e) =>
+                        setTriggerCount(e.target.value ? Number(e.target.value) : '')
+                      }
+                      placeholder="5"
+                      className={inputClass}
+                    />
+                  </div>
+                )}
+
+                {triggerType === 'bonus_threshold' && (
+                  <div>
+                    <label htmlFor="trigger-threshold" className={labelClass}>
+                      Порог бонусов
+                    </label>
+                    <input
+                      id="trigger-threshold"
+                      type="number"
+                      min={1}
+                      value={triggerThreshold}
+                      onChange={(e) =>
+                        setTriggerThreshold(e.target.value ? Number(e.target.value) : '')
+                      }
+                      placeholder="1000"
+                      className={inputClass}
+                    />
+                  </div>
+                )}
+
+                {triggerType === 'date' && (
+                  <div>
+                    <label htmlFor="trigger-date" className={labelClass}>
+                      Выберите дату
+                    </label>
+                    <input
+                      id="trigger-date"
+                      type="date"
+                      value={triggerDate}
+                      onChange={(e) => setTriggerDate(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                )}
+
+                {/* Timing */}
+                <div>
+                  <p className="text-sm font-medium text-neutral-700 mb-3">
+                    Время отправки (опционально)
+                  </p>
+                  <div className="flex gap-4">
+                    <div className="flex-1 max-w-[180px]">
+                      <label htmlFor="days-before" className="block text-xs text-neutral-500 mb-1">
+                        Дней до
+                      </label>
+                      <input
+                        id="days-before"
+                        type="number"
+                        min={0}
+                        value={daysBefore}
+                        onChange={(e) =>
+                          setDaysBefore(e.target.value ? Number(e.target.value) : '')
+                        }
+                        placeholder="0"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="flex-1 max-w-[180px]">
+                      <label htmlFor="days-after" className="block text-xs text-neutral-500 mb-1">
+                        Дней после
+                      </label>
+                      <input
+                        id="days-after"
+                        type="number"
+                        min={0}
+                        value={daysAfter}
+                        onChange={(e) =>
+                          setDaysAfter(e.target.value ? Number(e.target.value) : '')
+                        }
+                        placeholder="0"
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ── Block 3: Редактировать сообщение ─────────────────── */}
+          <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 space-y-5">
+            <p className={blockHeaderClass}>Редактировать сообщение</p>
+
+            {/* Message textarea */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="message" className="block text-sm font-medium text-neutral-700">
+                  Текст сообщения
+                </label>
+                <span
+                  className={cn(
+                    'text-xs tabular-nums',
+                    message.length > 3800 ? 'text-red-500' : 'text-neutral-400',
+                  )}
+                >
+                  {message.length} / 4096
+                </span>
+              </div>
+              <textarea
+                id="message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={6}
+                maxLength={4096}
+                placeholder="Текст сообщения. Поддерживается форматирование Telegram: *жирный*, _курсив_"
+                className={cn(
+                  'w-full px-3 py-2.5 rounded-lg border border-neutral-200',
+                  'text-sm text-neutral-900 placeholder:text-neutral-400 resize-none',
+                  'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
+                )}
+              />
             </div>
-            <textarea
-              id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={6}
-              maxLength={4096}
-              placeholder="Текст сообщения. Поддерживается форматирование Telegram: *жирный*, _курсив_"
-              className={cn(
-                'w-full px-3 py-2.5 rounded-lg border border-neutral-200',
-                'text-sm text-neutral-900 placeholder:text-neutral-400 resize-none',
-                'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
+
+            {/* File attachment */}
+            <div>
+              <p className="text-sm font-medium text-neutral-700 mb-2">Вложение</p>
+              {mediaUrl ? (
+                <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+                  {isImageUrl(mediaUrl) ? (
+                    <img
+                      src={mediaUrl}
+                      alt="Вложение"
+                      className="w-12 h-12 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-neutral-200 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-neutral-500" />
+                    </div>
+                  )}
+                  <span className="flex-1 text-sm text-neutral-700 truncate">
+                    {mediaUrl.split('/').pop()}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setMediaUrl('')}
+                    className="p-1.5 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-neutral-300',
+                    'text-sm text-neutral-500 cursor-pointer',
+                    'hover:bg-neutral-50 hover:border-neutral-400 transition-colors',
+                    uploadMutation.isPending && 'opacity-50 pointer-events-none',
+                  )}
+                >
+                  {uploadMutation.isPending ? (
+                    <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4" />
+                  )}
+                  {uploadMutation.isPending ? 'Загрузка...' : 'Прикрепить файл'}
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*,.pdf,.doc,.docx"
+                    onChange={handleFileUpload}
+                    disabled={uploadMutation.isPending}
+                  />
+                  <span className="ml-auto text-xs text-neutral-400">до 50 МБ</span>
+                </label>
               )}
-            />
+              {uploadMutation.isError && (
+                <p className="text-xs text-red-500 mt-1">Не удалось загрузить файл</p>
+              )}
+            </div>
           </div>
 
-          {/* Audience filter */}
-          <div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-2">
-              Аудитория
+          {/* ── Bottom Actions ───────────────────────────────────── */}
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={!name.trim()}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
+                'border border-neutral-200 text-neutral-700',
+                'hover:bg-neutral-50 transition-colors',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+              )}
+            >
+              <Save className="w-4 h-4" />
+              Сохранить черновик
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/campaigns')}
+              className={cn(
+                'px-4 py-2.5 rounded-lg text-sm font-medium',
+                'border border-neutral-200 text-neutral-700',
+                'hover:bg-neutral-50 transition-colors',
+              )}
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              disabled={!isValid || activeMutation.isPending}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
+                'bg-accent text-white',
+                'hover:bg-accent/90 active:bg-accent/80',
+                'transition-colors',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'focus:outline-none focus:ring-2 focus:ring-accent/20',
+              )}
+            >
+              {isManual ? (
+                <Send className="w-4 h-4" />
+              ) : (
+                <Zap className="w-4 h-4" />
+              )}
+              {activeMutation.isPending
+                ? 'Создание...'
+                : isManual
+                  ? 'Создать рассылку'
+                  : 'Создать авто-сценарий'}
+            </button>
+          </div>
+
+          {activeMutation.isError && (
+            <p className="text-sm text-red-600 mt-3 text-right">
+              {isManual
+                ? 'Не удалось создать рассылку. Попробуйте ещё раз.'
+                : 'Не удалось создать сценарий. Попробуйте ещё раз.'}
             </p>
-            <ClientFilterBuilder
-              value={audienceFilter}
-              onChange={(f) =>
-                setAudienceFilter(
-                  botId ? { ...f, bot_id: botId as number } : f,
-                )
-              }
-              hiddenFields={['bot_id']}
-              previewCount={
-                previewMutation.isSuccess ? previewMutation.data : null
-              }
-              onPreview={botId ? handlePreview : undefined}
-              isPreviewing={previewMutation.isPending}
-            />
-          </div>
-        </div>
-
-        {/* ── Bottom Actions ───────────────────────────────────────── */}
-        <div className="flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/campaigns')}
-            className={cn(
-              'px-4 py-2.5 rounded-lg text-sm font-medium',
-              'border border-neutral-200 text-neutral-700',
-              'hover:bg-neutral-50 transition-colors',
-            )}
-          >
-            Отмена
-          </button>
-          <button
-            type="submit"
-            disabled={!isValid || activeMutation.isPending}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
-              'bg-accent text-white',
-              'hover:bg-accent/90 active:bg-accent/80',
-              'transition-colors',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              'focus:outline-none focus:ring-2 focus:ring-accent/20',
-            )}
-          >
-            {isManual ? (
-              <Send className="w-4 h-4" />
-            ) : (
-              <Zap className="w-4 h-4" />
-            )}
-            {activeMutation.isPending
-              ? 'Создание...'
-              : isManual
-                ? 'Создать рассылку'
-                : 'Создать авто-сценарий'}
-          </button>
-        </div>
-
-        {activeMutation.isError && (
-          <p className="text-sm text-red-600 mt-3 text-right">
-            {isManual
-              ? 'Не удалось создать рассылку. Попробуйте ещё раз.'
-              : 'Не удалось создать сценарий. Попробуйте ещё раз.'}
-          </p>
-        )}
-      </form>
+          )}
+        </form>
+      )}
     </div>
   )
 }

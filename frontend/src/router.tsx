@@ -24,6 +24,7 @@ import POSDetailPage from './routes/dashboard/pos/$posId'
 import CampaignsPage from './routes/dashboard/campaigns/index'
 import CreateCampaignPage from './routes/dashboard/campaigns/create'
 import CampaignDetailPage from './routes/dashboard/campaigns/$campaignId'
+import ScenarioDetailPage from './routes/dashboard/campaigns/scenario.$scenarioId'
 import SalesAnalyticsPage from './routes/dashboard/analytics/sales'
 import LoyaltyAnalyticsPage from './routes/dashboard/analytics/loyalty'
 import MailingsAnalyticsPage from './routes/dashboard/analytics/mailings'
@@ -145,6 +146,7 @@ export const router = createBrowserRouter(
             { path: 'rfm/template', element: <RFMTemplatePage /> },
             { path: 'rfm/segments/:segment', element: <SegmentDetailPage /> },
             { path: 'campaigns/:campaignId', element: <CampaignDetailPage /> },
+            { path: 'campaigns/scenario/:scenarioId', element: <ScenarioDetailPage /> },
             { path: 'promotions/create', element: <CreatePromotionPage /> },
             { path: 'promotions', element: <PromotionsPage /> },
             { path: 'promotions/codes', element: <PromoCodesPage /> },

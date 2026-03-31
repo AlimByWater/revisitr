@@ -71,7 +71,7 @@ const navigation: NavItem[] = [
     icon: Mail,
     children: [
       { label: 'Создать рассылку', href: '/dashboard/campaigns/create' },
-      { label: 'Мои рассылки', href: '/dashboard/campaigns' },
+      { label: 'Все рассылки', href: '/dashboard/campaigns' },
     ],
   },
   {
