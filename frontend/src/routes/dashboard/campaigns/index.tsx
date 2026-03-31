@@ -85,7 +85,7 @@ export default function CampaignsPage() {
 
   // Active tab: only active scenarios
   // Archive tab: sent/completed/failed campaigns + inactive scenarios (no drafts)
-  const { activeScenarios, archiveRows } = useMemo(() => {
+  const { activeScenarios, activeCampaigns, archiveRows } = useMemo(() => {
     const active = scenarios.filter((s) => s.is_active)
     const inactive = scenarios.filter((s) => !s.is_active)
 

@@ -297,7 +297,7 @@ export default function CreatePromotionPage() {
           <StepAudienceFilter
             filter={filter}
             setFilter={setFilter}
-            previewCount={previewMutation.isSuccess ? previewMutation.data : null}
+            previewCount={previewMutation.data ?? null}
             onPreview={() => previewMutation.mutate(filter)}
             isPreviewing={previewMutation.isPending}
           />

@@ -20,7 +20,7 @@ const typeConfig: Record<Promotion['type'], { label: string; className: string }
     label: 'Бонус',
     className: 'bg-purple-100 text-purple-700',
   },
-  tag: {
+  tag_update: {
     label: 'Тег',
     className: 'bg-amber-100 text-amber-700',
   },
