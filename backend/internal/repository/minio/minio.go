@@ -47,7 +47,7 @@ func (c *Client) Upload(ctx context.Context, bucket, key string, reader io.Reade
 
 	return &storage.FileInfo{
 		Key:         key,
-		URL:         fmt.Sprintf("/%s/%s", bucket, key),
+		URL:         fmt.Sprintf("/revisitr/storage/%s", key),
 		ContentType: contentType,
 		Size:        size,
 	}, nil
@@ -58,5 +58,5 @@ func (c *Client) Delete(ctx context.Context, bucket, key string) error {
 }
 
 func (c *Client) GetURL(_ context.Context, bucket, key string) (string, error) {
-	return fmt.Sprintf("/%s/%s", bucket, key), nil
+	return fmt.Sprintf("/revisitr/storage/%s", key), nil
 }
