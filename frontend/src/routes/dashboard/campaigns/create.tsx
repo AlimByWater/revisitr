@@ -1,18 +1,22 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useBotsQuery } from '@/features/bots/queries'
 import {
+  useCampaignsQuery,
+  useCampaignQuery,
   useCreateCampaignMutation,
+  useUpdateCampaignMutation,
+  useDeleteCampaignMutation,
+  useSendCampaignMutation,
   useCreateScenarioMutation,
   usePreviewAudienceMutation,
-  useCampaignQuery,
   useScenarioQuery,
   useUploadFileMutation,
 } from '@/features/campaigns/queries'
-import { ArrowLeft, Send, Zap, Upload, X, FileText, Save } from 'lucide-react'
+import { ArrowLeft, Send, Zap, Upload, X, FileText, Save, Trash2 } from 'lucide-react'
 import type { SegmentFilter } from '@/features/segments/types'
-import type { AudienceFilter } from '@/features/campaigns/types'
+import type { AudienceFilter, Campaign } from '@/features/campaigns/types'
 import { ClientFilterBuilder } from '@/components/filters/ClientFilterBuilder'
 
 type Format = 'manual' | 'auto'
@@ -49,42 +53,6 @@ const labelClass = 'block text-sm font-medium text-neutral-700 mb-1.5'
 const blockHeaderClass =
   'font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-4'
 
-// ── Draft types ──────────────────────────────────────────────────────────────
-
-interface CampaignDraft {
-  id: string
-  name: string
-  format: Format
-  botId: number | ''
-  message: string
-  audienceFilter: SegmentFilter
-  triggerType: TriggerType
-  triggerDays: number | ''
-  triggerCount: number | ''
-  triggerThreshold: number | ''
-  triggerDate: string
-  daysBefore: number | ''
-  daysAfter: number | ''
-  mediaUrl: string
-  createdAt: string
-  updatedAt: string
-}
-
-const DRAFTS_KEY = 'campaign-drafts'
-
-function loadDrafts(): CampaignDraft[] {
-  try {
-    const raw = localStorage.getItem(DRAFTS_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function saveDrafts(drafts: CampaignDraft[]) {
-  localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts))
-}
-
 type TabType = 'create' | 'drafts'
 
 export default function CreateCampaignPage() {
@@ -92,6 +60,9 @@ export default function CreateCampaignPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { data: bots } = useBotsQuery()
   const createCampaignMutation = useCreateCampaignMutation()
+  const updateCampaignMutation = useUpdateCampaignMutation()
+  const deleteCampaignMutation = useDeleteCampaignMutation()
+  const sendCampaignMutation = useSendCampaignMutation()
   const createScenarioMutation = useCreateScenarioMutation()
   const previewMutation = usePreviewAudienceMutation()
   const uploadMutation = useUploadFileMutation()
@@ -113,12 +84,14 @@ export default function CreateCampaignPage() {
   const [daysBefore, setDaysBefore] = useState<number | ''>('')
   const [daysAfter, setDaysAfter] = useState<number | ''>('')
 
-  // Drafts
-  const [drafts, setDrafts] = useState<CampaignDraft[]>(loadDrafts)
-  const [editingDraftId, setEditingDraftId] = useState<string | null>(null)
+  // Server draft editing
+  const [editingDraftId, setEditingDraftId] = useState<number | null>(null)
 
-  // Auto-save debounce
-  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Server drafts from campaigns list
+  const { data: campaignsData, mutate: revalidateCampaigns } = useCampaignsQuery()
+  const drafts = (campaignsData?.items ?? []).filter(
+    (c: Campaign) => c.status === 'draft',
+  )
 
   // Clone support
   const cloneId = searchParams.get('clone')
@@ -144,7 +117,6 @@ export default function CreateCampaignPage() {
         if (af.level_id) sf.level_id = af.level_id
         setAudienceFilter(sf)
       }
-      // Clear clone params
       setSearchParams({}, { replace: true })
     }
   }, [cloneCampaign, cloneType, setSearchParams])
@@ -155,7 +127,6 @@ export default function CreateCampaignPage() {
       setName(`${cloneScenario.name} (копия)`)
       setBotId(cloneScenario.bot_id)
       setMessage(cloneScenario.message)
-      // Map API 'holiday' back to UI 'date'
       const tt = cloneScenario.trigger_type === 'holiday' ? 'date' : cloneScenario.trigger_type
       setTriggerType(tt as TriggerType)
       const tc = cloneScenario.trigger_config
@@ -238,86 +209,83 @@ export default function CreateCampaignPage() {
     }
   }
 
-  // ── Auto-save to draft ──────────────────────────────────────────────────────
-
-  const getCurrentFormState = useCallback((): Omit<CampaignDraft, 'id' | 'createdAt' | 'updatedAt'> => ({
-    name, format, botId, message, audienceFilter, triggerType,
-    triggerDays, triggerCount, triggerThreshold, triggerDate,
-    daysBefore, daysAfter, mediaUrl,
-  }), [name, format, botId, message, audienceFilter, triggerType,
-    triggerDays, triggerCount, triggerThreshold, triggerDate,
-    daysBefore, daysAfter, mediaUrl])
-
-  // Auto-save debounced
-  useEffect(() => {
-    if (!name.trim()) return // Don't auto-save empty forms
-    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
-    autoSaveTimer.current = setTimeout(() => {
-      const now = new Date().toISOString()
-      const state = getCurrentFormState()
-      setDrafts((prev) => {
-        let updated: CampaignDraft[]
-        if (editingDraftId) {
-          updated = prev.map((d) =>
-            d.id === editingDraftId ? { ...d, ...state, updatedAt: now } : d,
-          )
-        } else {
-          const newId = crypto.randomUUID()
-          setEditingDraftId(newId)
-          updated = [{ ...state, id: newId, createdAt: now, updatedAt: now }, ...prev]
-        }
-        saveDrafts(updated)
-        return updated
-      })
-    }, 1000)
-    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
-  }, [getCurrentFormState, editingDraftId, name])
-
-  function handleSaveDraft() {
-    const now = new Date().toISOString()
-    const state = getCurrentFormState()
-    if (!name.trim()) return
-    setDrafts((prev) => {
-      let updated: CampaignDraft[]
-      if (editingDraftId) {
-        updated = prev.map((d) =>
-          d.id === editingDraftId ? { ...d, ...state, updatedAt: now } : d,
-        )
-      } else {
-        const newId = crypto.randomUUID()
-        setEditingDraftId(newId)
-        updated = [{ ...state, id: newId, createdAt: now, updatedAt: now }, ...prev]
-      }
-      saveDrafts(updated)
-      return updated
-    })
+  function resetForm() {
+    setEditingDraftId(null)
+    setName('')
+    setFormat('manual')
+    setBotId('')
+    setMessage('')
+    setAudienceFilter({})
+    setMediaUrl('')
+    setTriggerType('inactive_days')
+    setTriggerDays('')
+    setTriggerCount('')
+    setTriggerThreshold('')
+    setTriggerDate('')
+    setDaysBefore('')
+    setDaysAfter('')
   }
 
-  function loadDraft(draft: CampaignDraft) {
+  // ── Server draft operations ─────────────────────────────────────────────────
+
+  function handleSaveDraft() {
+    if (!name.trim() || botId === '') return
+
+    const campaignData = {
+      name: name.trim(),
+      message: message.trim(),
+      audience_filter: toAudienceFilter({
+        ...audienceFilter,
+        bot_id: botId as number,
+      }),
+      media_url: mediaUrl || undefined,
+    }
+
+    if (editingDraftId) {
+      // Update existing draft
+      updateCampaignMutation.mutate(
+        { id: editingDraftId, data: campaignData },
+        { onSuccess: () => revalidateCampaigns() },
+      )
+    } else {
+      // Create new draft
+      createCampaignMutation.mutate(
+        { bot_id: botId as number, ...campaignData },
+        {
+          onSuccess: (created) => {
+            setEditingDraftId(created.id)
+            revalidateCampaigns()
+          },
+        },
+      )
+    }
+  }
+
+  function loadDraft(draft: Campaign) {
     setEditingDraftId(draft.id)
+    setFormat('manual')
     setName(draft.name)
-    setFormat(draft.format)
-    setBotId(draft.botId)
+    setBotId(draft.bot_id)
     setMessage(draft.message)
-    setAudienceFilter(draft.audienceFilter)
-    setTriggerType(draft.triggerType)
-    setTriggerDays(draft.triggerDays)
-    setTriggerCount(draft.triggerCount)
-    setTriggerThreshold(draft.triggerThreshold)
-    setTriggerDate(draft.triggerDate)
-    setDaysBefore(draft.daysBefore)
-    setDaysAfter(draft.daysAfter)
-    setMediaUrl(draft.mediaUrl)
+    setMediaUrl(draft.media_url || '')
+    if (draft.audience_filter) {
+      const af = draft.audience_filter
+      const sf: SegmentFilter = {}
+      if (af.bot_id) sf.bot_id = af.bot_id
+      if (af.tags) sf.tags = af.tags
+      if (af.level_id) sf.level_id = af.level_id
+      setAudienceFilter(sf)
+    }
     setActiveTab('create')
   }
 
-  function deleteDraft(draftId: string) {
-    setDrafts((prev) => {
-      const updated = prev.filter((d) => d.id !== draftId)
-      saveDrafts(updated)
-      return updated
+  function handleDeleteDraft(id: number) {
+    deleteCampaignMutation.mutate(id, {
+      onSuccess: () => {
+        if (editingDraftId === id) resetForm()
+        revalidateCampaigns()
+      },
     })
-    if (editingDraftId === draftId) setEditingDraftId(null)
   }
 
   // ── File attachment ─────────────────────────────────────────────────────────
@@ -342,25 +310,51 @@ export default function CreateCampaignPage() {
     if (!isValid) return
 
     if (isManual) {
-      createCampaignMutation.mutate(
-        {
-          bot_id: botId as number,
-          name: name.trim(),
-          message: message.trim(),
-          audience_filter: toAudienceFilter({
-            ...audienceFilter,
-            bot_id: botId as number,
-          }),
-          media_url: mediaUrl || undefined,
-        },
-        {
-          onSuccess: () => {
-            // Remove draft on success
-            if (editingDraftId) deleteDraft(editingDraftId)
-            navigate('/dashboard/campaigns')
+      if (editingDraftId) {
+        // Update draft then send
+        updateCampaignMutation.mutate(
+          {
+            id: editingDraftId,
+            data: {
+              name: name.trim(),
+              message: message.trim(),
+              audience_filter: toAudienceFilter({
+                ...audienceFilter,
+                bot_id: botId as number,
+              }),
+              media_url: mediaUrl || undefined,
+            },
           },
-        },
-      )
+          {
+            onSuccess: () => {
+              sendCampaignMutation.mutate(editingDraftId, {
+                onSuccess: () => navigate('/dashboard/campaigns'),
+              })
+            },
+          },
+        )
+      } else {
+        // Create new campaign (status=draft), then send
+        createCampaignMutation.mutate(
+          {
+            bot_id: botId as number,
+            name: name.trim(),
+            message: message.trim(),
+            audience_filter: toAudienceFilter({
+              ...audienceFilter,
+              bot_id: botId as number,
+            }),
+            media_url: mediaUrl || undefined,
+          },
+          {
+            onSuccess: (created) => {
+              sendCampaignMutation.mutate(created.id, {
+                onSuccess: () => navigate('/dashboard/campaigns'),
+              })
+            },
+          },
+        )
+      }
     } else {
       const timing: { days_before?: number; days_after?: number } = {}
       if (daysBefore !== '') timing.days_before = daysBefore
@@ -376,14 +370,17 @@ export default function CreateCampaignPage() {
           timing: Object.keys(timing).length > 0 ? timing : undefined,
         },
         {
-          onSuccess: () => {
-            if (editingDraftId) deleteDraft(editingDraftId)
-            navigate('/dashboard/campaigns')
-          },
+          onSuccess: () => navigate('/dashboard/campaigns'),
         },
       )
     }
   }
+
+  const isSaving =
+    createCampaignMutation.isPending ||
+    updateCampaignMutation.isPending ||
+    sendCampaignMutation.isPending ||
+    createScenarioMutation.isPending
 
   return (
     <div className="max-w-2xl">
@@ -454,18 +451,18 @@ export default function CreateCampaignPage() {
                     {draft.name || 'Без названия'}
                   </p>
                   <p className="text-xs text-neutral-400 mt-0.5">
-                    {draft.format === 'manual' ? 'Ручная' : 'Авто-сценарий'} &middot;{' '}
-                    {new Date(draft.updatedAt).toLocaleDateString('ru-RU', {
+                    {new Date(draft.updated_at).toLocaleDateString('ru-RU', {
                       day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                     })}
                   </p>
                 </button>
                 <button
                   type="button"
-                  onClick={() => deleteDraft(draft.id)}
-                  className="p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  onClick={() => handleDeleteDraft(draft.id)}
+                  disabled={deleteCampaignMutation.isPending}
+                  className="p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
                 >
-                  <X className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ))
@@ -474,6 +471,22 @@ export default function CreateCampaignPage() {
       ) : (
         /* ── Create Tab ──────────────────────────────────────────── */
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Editing draft indicator */}
+          {editingDraftId && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+              <span className="text-xs text-amber-700">
+                Редактирование черновика #{editingDraftId}
+              </span>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="ml-auto text-xs text-amber-600 hover:text-amber-800 underline"
+              >
+                Новая рассылка
+              </button>
+            </div>
+          )}
+
           {/* ── Block 1: Создать ─────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 space-y-5">
             <p className={blockHeaderClass}>Создать</p>
@@ -505,7 +518,13 @@ export default function CreateCampaignPage() {
               <select
                 id="format"
                 value={format}
-                onChange={(e) => setFormat(e.target.value as Format)}
+                onChange={(e) => {
+                  setFormat(e.target.value as Format)
+                  // Clear server draft when switching to auto (no drafts for scenarios)
+                  if (e.target.value === 'auto' && editingDraftId) {
+                    setEditingDraftId(null)
+                  }
+                }}
                 className={inputClass}
               >
                 <option value="manual">Ручная рассылка</option>
@@ -792,20 +811,22 @@ export default function CreateCampaignPage() {
 
           {/* ── Bottom Actions ───────────────────────────────────── */}
           <div className="flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              disabled={!name.trim()}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
-                'border border-neutral-200 text-neutral-700',
-                'hover:bg-neutral-50 transition-colors',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-              )}
-            >
-              <Save className="w-4 h-4" />
-              Сохранить черновик
-            </button>
+            {isManual && (
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={!name.trim() || botId === '' || isSaving}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
+                  'border border-neutral-200 text-neutral-700',
+                  'hover:bg-neutral-50 transition-colors',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                )}
+              >
+                <Save className="w-4 h-4" />
+                {updateCampaignMutation.isPending ? 'Сохранение...' : 'Сохранить черновик'}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => navigate('/dashboard/campaigns')}
@@ -819,7 +840,7 @@ export default function CreateCampaignPage() {
             </button>
             <button
               type="submit"
-              disabled={!isValid || activeMutation.isPending}
+              disabled={!isValid || isSaving}
               className={cn(
                 'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
                 'bg-accent text-white',
@@ -834,15 +855,15 @@ export default function CreateCampaignPage() {
               ) : (
                 <Zap className="w-4 h-4" />
               )}
-              {activeMutation.isPending
+              {isSaving
                 ? 'Создание...'
                 : isManual
-                  ? 'Создать рассылку'
+                  ? 'Отправить рассылку'
                   : 'Создать авто-сценарий'}
             </button>
           </div>
 
-          {activeMutation.isError && (
+          {(activeMutation.isError || sendCampaignMutation.isError) && (
             <p className="text-sm text-red-600 mt-3 text-right">
               {isManual
                 ? 'Не удалось создать рассылку. Попробуйте ещё раз.'
