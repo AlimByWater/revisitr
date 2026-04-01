@@ -9,6 +9,7 @@ import {
 } from '@/features/campaigns/queries'
 import { ArrowLeft, RotateCcw, Trash2, Zap, Power } from 'lucide-react'
 import type { AutoScenario } from '@/features/campaigns/types'
+import { TelegramPreview } from '@/features/telegram-preview'
 
 const triggerLabels: Record<AutoScenario['trigger_type'], string> = {
   inactive_days: 'Не был N дней',
@@ -127,14 +128,21 @@ export default function ScenarioDetailPage() {
         </span>
       </div>
 
-      {/* Message */}
+      {/* Message Preview */}
       <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 mb-4">
         <h2 className="text-sm font-medium text-neutral-400 uppercase tracking-wider mb-4">
           Сообщение
         </h2>
-        <p className="text-sm text-neutral-900 whitespace-pre-wrap bg-neutral-50 rounded-lg p-3">
-          {scenario.message || '(нет сообщения)'}
-        </p>
+        {scenario.message ? (
+          <div className="flex justify-center">
+            <TelegramPreview
+              content={{ parts: [{ type: 'text', text: scenario.message }] }}
+              botName={scenario.name}
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-neutral-400 text-center py-4">(нет сообщения)</p>
+        )}
       </div>
 
       {/* Trigger info */}

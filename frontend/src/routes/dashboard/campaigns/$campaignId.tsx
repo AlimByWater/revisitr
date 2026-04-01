@@ -7,6 +7,8 @@ import {
 } from '@/features/campaigns/queries'
 import { ArrowLeft, Send, Trash2, Users, CheckCircle, XCircle, RotateCcw } from 'lucide-react'
 import type { Campaign } from '@/features/campaigns/types'
+import { TelegramPreview } from '@/features/telegram-preview'
+import type { MessageContent } from '@/features/telegram-preview'
 
 const statusConfig: Record<
   Campaign['status'],
@@ -128,9 +130,19 @@ export default function CampaignDetailPage() {
         <div className="space-y-4">
           <div>
             <p className="text-xs text-neutral-400 mb-1">Сообщение</p>
-            <p className="text-sm text-neutral-900 whitespace-pre-wrap bg-neutral-50 rounded-lg p-3">
-              {campaign.message}
-            </p>
+            <div className="flex justify-center mt-2">
+              <TelegramPreview
+                content={
+                  campaign.content && campaign.content.parts?.length > 0
+                    ? campaign.content
+                    : { parts: [
+                        ...(campaign.media_url ? [{ type: 'photo' as const, media_url: campaign.media_url }] : []),
+                        { type: 'text' as const, text: campaign.message || '' },
+                      ] }
+                }
+                botName={campaign.name}
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

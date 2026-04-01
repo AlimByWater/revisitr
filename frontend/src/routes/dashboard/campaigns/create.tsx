@@ -12,12 +12,14 @@ import {
   useCreateScenarioMutation,
   usePreviewAudienceMutation,
   useScenarioQuery,
-  useUploadFileMutation,
 } from '@/features/campaigns/queries'
-import { ArrowLeft, Send, Zap, Upload, X, FileText, Save, Trash2 } from 'lucide-react'
+import { campaignsApi } from '@/features/campaigns/api'
+import { ArrowLeft, Send, Zap, Save, Trash2 } from 'lucide-react'
 import type { SegmentFilter } from '@/features/segments/types'
 import type { AudienceFilter, Campaign } from '@/features/campaigns/types'
 import { ClientFilterBuilder } from '@/components/filters/ClientFilterBuilder'
+import { MessageContentEditor, TelegramPreview } from '@/features/telegram-preview'
+import type { MessageContent } from '@/features/telegram-preview'
 
 type Format = 'manual' | 'auto'
 
@@ -65,15 +67,15 @@ export default function CreateCampaignPage() {
   const sendCampaignMutation = useSendCampaignMutation()
   const createScenarioMutation = useCreateScenarioMutation()
   const previewMutation = usePreviewAudienceMutation()
-  const uploadMutation = useUploadFileMutation()
+
+  const emptyContent: MessageContent = { parts: [{ type: 'text', text: '' }] }
 
   const [activeTab, setActiveTab] = useState<TabType>('create')
   const [format, setFormat] = useState<Format>('manual')
   const [name, setName] = useState('')
   const [botId, setBotId] = useState<number | ''>('')
-  const [message, setMessage] = useState('')
+  const [content, setContent] = useState<MessageContent>(emptyContent)
   const [audienceFilter, setAudienceFilter] = useState<SegmentFilter>({})
-  const [mediaUrl, setMediaUrl] = useState('')
 
   // Auto-scenario state
   const [triggerType, setTriggerType] = useState<TriggerType>('inactive_days')
@@ -107,8 +109,17 @@ export default function CreateCampaignPage() {
       setFormat('manual')
       setName(`${cloneCampaign.name} (копия)`)
       setBotId(cloneCampaign.bot_id)
-      setMessage(cloneCampaign.message)
-      setMediaUrl(cloneCampaign.media_url || '')
+      // Load composite content or build from legacy fields
+      if (cloneCampaign.content && cloneCampaign.content.parts?.length > 0) {
+        setContent(cloneCampaign.content)
+      } else {
+        const parts: MessageContent['parts'] = []
+        if (cloneCampaign.media_url) {
+          parts.push({ type: 'photo', media_url: cloneCampaign.media_url })
+        }
+        parts.push({ type: 'text', text: cloneCampaign.message || '' })
+        setContent({ parts })
+      }
       if (cloneCampaign.audience_filter) {
         const af = cloneCampaign.audience_filter
         const sf: SegmentFilter = {}
@@ -126,7 +137,7 @@ export default function CreateCampaignPage() {
       setFormat('auto')
       setName(`${cloneScenario.name} (копия)`)
       setBotId(cloneScenario.bot_id)
-      setMessage(cloneScenario.message)
+      setContent({ parts: [{ type: 'text', text: cloneScenario.message || '' }] })
       const tt = cloneScenario.trigger_type === 'holiday' ? 'date' : cloneScenario.trigger_type
       setTriggerType(tt as TriggerType)
       const tc = cloneScenario.trigger_config
@@ -149,7 +160,10 @@ export default function CreateCampaignPage() {
   const isManual = format === 'manual'
   const activeMutation = isManual ? createCampaignMutation : createScenarioMutation
 
-  const baseValid = name.trim() !== '' && botId !== '' && message.trim() !== ''
+  const contentHasData = content.parts.some(
+    (p) => (p.text && p.text.trim() !== '') || p.media_url,
+  )
+  const baseValid = name.trim() !== '' && botId !== '' && contentHasData
   const isValid = isManual ? baseValid : baseValid && isTriggerConfigValid()
 
   function isTriggerConfigValid(): boolean {
@@ -214,9 +228,8 @@ export default function CreateCampaignPage() {
     setName('')
     setFormat('manual')
     setBotId('')
-    setMessage('')
+    setContent({ parts: [{ type: 'text', text: '' }] })
     setAudienceFilter({})
-    setMediaUrl('')
     setTriggerType('inactive_days')
     setTriggerDays('')
     setTriggerCount('')
@@ -231,14 +244,16 @@ export default function CreateCampaignPage() {
   function handleSaveDraft() {
     if (!name.trim() || botId === '') return
 
+    // Extract first text part as legacy message field for backward compat
+    const legacyMessage = content.parts.find((p) => p.type === 'text')?.text?.trim() || ''
     const campaignData = {
       name: name.trim(),
-      message: message.trim(),
+      message: legacyMessage,
+      content,
       audience_filter: toAudienceFilter({
         ...audienceFilter,
         bot_id: botId as number,
       }),
-      media_url: mediaUrl || undefined,
     }
 
     if (editingDraftId) {
@@ -266,8 +281,17 @@ export default function CreateCampaignPage() {
     setFormat('manual')
     setName(draft.name)
     setBotId(draft.bot_id)
-    setMessage(draft.message)
-    setMediaUrl(draft.media_url || '')
+    // Load composite content or build from legacy fields
+    if (draft.content && draft.content.parts?.length > 0) {
+      setContent(draft.content)
+    } else {
+      const parts: MessageContent['parts'] = []
+      if (draft.media_url) {
+        parts.push({ type: 'photo', media_url: draft.media_url })
+      }
+      parts.push({ type: 'text', text: draft.message || '' })
+      setContent({ parts })
+    }
     if (draft.audience_filter) {
       const af = draft.audience_filter
       const sf: SegmentFilter = {}
@@ -288,26 +312,14 @@ export default function CreateCampaignPage() {
     })
   }
 
-  // ── File attachment ─────────────────────────────────────────────────────────
-
-  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    uploadMutation.mutate(file, {
-      onSuccess: (url) => setMediaUrl(url),
-    })
-    e.target.value = ''
-  }
-
-  function isImageUrl(url: string) {
-    return /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)
-  }
-
   // ── Submit ──────────────────────────────────────────────────────────────────
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!isValid) return
+
+    const legacyMsg = content.parts.find((p) => p.type === 'text')?.text?.trim() || ''
+    const af = toAudienceFilter({ ...audienceFilter, bot_id: botId as number })
 
     if (isManual) {
       if (editingDraftId) {
@@ -317,12 +329,9 @@ export default function CreateCampaignPage() {
             id: editingDraftId,
             data: {
               name: name.trim(),
-              message: message.trim(),
-              audience_filter: toAudienceFilter({
-                ...audienceFilter,
-                bot_id: botId as number,
-              }),
-              media_url: mediaUrl || undefined,
+              message: legacyMsg,
+              content,
+              audience_filter: af,
             },
           },
           {
@@ -339,12 +348,9 @@ export default function CreateCampaignPage() {
           {
             bot_id: botId as number,
             name: name.trim(),
-            message: message.trim(),
-            audience_filter: toAudienceFilter({
-              ...audienceFilter,
-              bot_id: botId as number,
-            }),
-            media_url: mediaUrl || undefined,
+            message: legacyMsg,
+            content,
+            audience_filter: af,
           },
           {
             onSuccess: (created) => {
@@ -366,7 +372,7 @@ export default function CreateCampaignPage() {
           name: name.trim(),
           trigger_type: triggerType === 'date' ? 'holiday' : triggerType,
           trigger_config: buildTriggerConfig(),
-          message: message.trim(),
+          message: legacyMsg,
           timing: Object.keys(timing).length > 0 ? timing : undefined,
         },
         {
@@ -383,7 +389,7 @@ export default function CreateCampaignPage() {
     createScenarioMutation.isPending
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button
@@ -721,91 +727,22 @@ export default function CreateCampaignPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 space-y-5">
             <p className={blockHeaderClass}>Редактировать сообщение</p>
 
-            {/* Message textarea */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label htmlFor="message" className="block text-sm font-medium text-neutral-700">
-                  Текст сообщения
-                </label>
-                <span
-                  className={cn(
-                    'text-xs tabular-nums',
-                    message.length > 3800 ? 'text-red-500' : 'text-neutral-400',
-                  )}
-                >
-                  {message.length} / 4096
-                </span>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Editor */}
+              <div className="min-w-0">
+                <MessageContentEditor
+                  value={content}
+                  onChange={setContent}
+                  onUpload={campaignsApi.uploadFile}
+                  maxParts={10}
+                />
               </div>
-              <textarea
-                id="message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={6}
-                maxLength={4096}
-                placeholder="Текст сообщения. Поддерживается форматирование Telegram: *жирный*, _курсив_"
-                className={cn(
-                  'w-full px-3 py-2.5 rounded-lg border border-neutral-200',
-                  'text-sm text-neutral-900 placeholder:text-neutral-400 resize-none',
-                  'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
-                )}
-              />
-            </div>
-
-            {/* File attachment */}
-            <div>
-              <p className="text-sm font-medium text-neutral-700 mb-2">Вложение</p>
-              {mediaUrl ? (
-                <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
-                  {isImageUrl(mediaUrl) ? (
-                    <img
-                      src={mediaUrl}
-                      alt="Вложение"
-                      className="w-12 h-12 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-lg bg-neutral-200 flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-neutral-500" />
-                    </div>
-                  )}
-                  <span className="flex-1 text-sm text-neutral-700 truncate">
-                    {mediaUrl.split('/').pop()}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setMediaUrl('')}
-                    className="p-1.5 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <label
-                  className={cn(
-                    'flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-neutral-300',
-                    'text-sm text-neutral-500 cursor-pointer',
-                    'hover:bg-neutral-50 hover:border-neutral-400 transition-colors',
-                    uploadMutation.isPending && 'opacity-50 pointer-events-none',
-                  )}
-                >
-                  {uploadMutation.isPending ? (
-                    <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
-                  ) : (
-                    <Upload className="w-4 h-4" />
-                  )}
-                  {uploadMutation.isPending ? 'Загрузка...' : 'Прикрепить файл'}
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*,.pdf,.doc,.docx"
-                    onChange={handleFileUpload}
-                    disabled={uploadMutation.isPending}
-                  />
-                  <span className="ml-auto text-xs text-neutral-400">до 50 МБ</span>
-                </label>
-              )}
-              {uploadMutation.isError && (
-                <p className="text-xs text-red-500 mt-1">Не удалось загрузить файл</p>
-              )}
+              {/* Live preview */}
+              <div className="min-w-0 flex justify-center">
+                <TelegramPreview content={content} botName={
+                  bots?.find((b) => b.id === botId)?.name || 'Bot'
+                } />
+              </div>
             </div>
           </div>
 

@@ -167,6 +167,7 @@ export interface CreateCampaignRequest {
   message: string
   audience_filter: AudienceFilter
   media_url?: string
+  content?: import('@/features/telegram-preview').MessageContent
   scheduled_at?: string
 }
 
@@ -175,6 +176,7 @@ export interface UpdateCampaignRequest {
   message?: string
   audience_filter?: AudienceFilter
   media_url?: string
+  content?: import('@/features/telegram-preview').MessageContent
   scheduled_at?: string
 }
 
