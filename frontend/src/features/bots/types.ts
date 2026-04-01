@@ -17,6 +17,7 @@ export interface BotSettings {
   buttons: BotButton[]
   registration_form: FormField[]
   welcome_message: string
+  welcome_content?: import('@/features/telegram-preview').MessageContent
 }
 
 export interface BotButton {

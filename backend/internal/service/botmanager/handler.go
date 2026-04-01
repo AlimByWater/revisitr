@@ -9,24 +9,27 @@ import (
 	"strings"
 
 	"revisitr/internal/entity"
+	tgService "revisitr/internal/service/telegram"
 
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
 )
 
 type handler struct {
-	mgr    *Manager
-	bot    *telego.Bot
-	info   entity.Bot
-	logger *slog.Logger
+	mgr      *Manager
+	bot      *telego.Bot
+	info     *entity.Bot // pointer to botInstance.info — updated on hot reload
+	tgSender *tgService.Sender
+	logger   *slog.Logger
 }
 
-func newHandler(mgr *Manager, bot *telego.Bot, info entity.Bot) *handler {
+func newHandler(mgr *Manager, bot *telego.Bot, info *entity.Bot) *handler {
 	return &handler{
-		mgr:    mgr,
-		bot:    bot,
-		info:   info,
-		logger: mgr.logger.With("bot_id", info.ID, "bot_name", info.Name),
+		mgr:      mgr,
+		bot:      bot,
+		info:     info,
+		tgSender: mgr.tgSender,
+		logger:   mgr.logger.With("bot_id", info.ID, "bot_name", info.Name),
 	}
 }
 
@@ -85,11 +88,8 @@ func (h *handler) handleStart(ctx context.Context, msg *telego.Message) {
 		return
 	}
 
-	// New user — start registration
-	welcome := h.info.Settings.WelcomeMessage
-	if welcome == "" {
-		welcome = fmt.Sprintf("Добро пожаловать в %s! 🎉", h.info.Name)
-	}
+	// New user — send welcome content first, then handle registration
+	h.sendWelcomeContent(ctx, chatID)
 
 	// If registration form requires phone, ask for it
 	needsPhone := false
@@ -101,7 +101,7 @@ func (h *handler) handleStart(ctx context.Context, msg *telego.Message) {
 	}
 
 	if needsPhone {
-		h.sendWithKeyboard(chatID, welcome+"\n\nДля регистрации поделитесь номером телефона:", buildContactRequest())
+		h.sendWithKeyboard(chatID, "Для регистрации поделитесь номером телефона:", buildContactRequest())
 	} else {
 		// Auto-register from Telegram profile
 		h.autoRegister(ctx, msg)
@@ -324,6 +324,26 @@ func (h *handler) awardWelcomeBonus(ctx context.Context, client *entity.BotClien
 
 func (h *handler) sendMainMenu(_ context.Context, chatID int64, text string) {
 	h.sendWithKeyboard(chatID, text, buildMainMenu(h.info.Settings))
+}
+
+// sendWelcomeContent sends the composite welcome message if available.
+func (h *handler) sendWelcomeContent(ctx context.Context, chatID int64) {
+	settings := h.info.Settings
+
+	// Priority: new format → legacy → default
+	if h.tgSender != nil && settings.WelcomeContent != nil && len(settings.WelcomeContent.Parts) > 0 {
+		if err := h.tgSender.SendContent(ctx, h.bot, chatID, *settings.WelcomeContent); err != nil {
+			h.logger.Error("send welcome content", "error", err, "chat_id", chatID)
+		}
+		return
+	}
+
+	// Legacy text welcome
+	welcome := settings.WelcomeMessage
+	if welcome == "" {
+		welcome = fmt.Sprintf("Добро пожаловать в %s! 🎉", h.info.Name)
+	}
+	h.sendText(chatID, welcome)
 }
 
 func (h *handler) sendText(chatID int64, text string) {

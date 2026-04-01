@@ -122,15 +122,38 @@ type Campaign struct {
 	Type           string          `db:"type" json:"type"`
 	Status         string          `db:"status" json:"status"`
 	AudienceFilter AudienceFilter  `db:"audience_filter" json:"audience_filter"`
-	Message        string          `db:"message" json:"message"`
-	MediaURL       *string         `db:"media_url" json:"media_url,omitempty"`
+	Message        string          `db:"message" json:"message"`            // Legacy
+	MediaURL       *string         `db:"media_url" json:"media_url,omitempty"` // Legacy
 	Buttons        CampaignButtons `db:"buttons" json:"buttons"`
+	Content        *MessageContent `db:"content" json:"content,omitempty"`  // New: composite
 	TrackingMode   string          `db:"tracking_mode" json:"tracking_mode"`
 	ScheduledAt    *time.Time      `db:"scheduled_at" json:"scheduled_at,omitempty"`
 	SentAt         *time.Time      `db:"sent_at" json:"sent_at,omitempty"`
 	Stats          CampaignStats   `db:"stats" json:"stats"`
 	CreatedAt      time.Time       `db:"created_at" json:"created_at"`
 	UpdatedAt      time.Time       `db:"updated_at" json:"updated_at"`
+}
+
+// GetContent returns the composite content, falling back to legacy fields.
+func (c *Campaign) GetContent() MessageContent {
+	if c.Content != nil && len(c.Content.Parts) > 0 {
+		return *c.Content
+	}
+	// Fallback: build content from legacy fields
+	part := MessagePart{Type: PartText, Text: c.Message, ParseMode: "Markdown"}
+	if c.MediaURL != nil && *c.MediaURL != "" {
+		part.Type = PartPhoto
+		part.MediaURL = *c.MediaURL
+	}
+	mc := MessageContent{Parts: []MessagePart{part}}
+	if len(c.Buttons) > 0 {
+		var row []InlineButton
+		for _, b := range c.Buttons {
+			row = append(row, InlineButton{Text: b.Text, URL: b.URL})
+		}
+		mc.Buttons = [][]InlineButton{row}
+	}
+	return mc
 }
 
 type CampaignMessage struct {
@@ -154,6 +177,7 @@ type CampaignVariant struct {
 	Message    string          `db:"message" json:"message"`
 	MediaURL   *string         `db:"media_url" json:"media_url,omitempty"`
 	Buttons    CampaignButtons `db:"buttons" json:"buttons"`
+	Content    *MessageContent `db:"content" json:"content,omitempty"`
 	Stats      CampaignStats   `db:"stats" json:"stats"`
 	IsWinner   bool            `db:"is_winner" json:"is_winner"`
 	CreatedAt  time.Time       `db:"created_at" json:"created_at"`
@@ -192,19 +216,20 @@ type VariantResult struct {
 // ── Campaign Templates ───────────────────────────────────────────────────────
 
 type CampaignTemplate struct {
-	ID             int            `db:"id" json:"id"`
-	OrgID          *int           `db:"org_id" json:"org_id,omitempty"`
-	Name           string         `db:"name" json:"name"`
-	Category       string         `db:"category" json:"category"`
-	Description    *string        `db:"description" json:"description,omitempty"`
-	Message        string         `db:"message" json:"message"`
-	MediaURL       *string        `db:"media_url" json:"media_url,omitempty"`
+	ID             int             `db:"id" json:"id"`
+	OrgID          *int            `db:"org_id" json:"org_id,omitempty"`
+	Name           string          `db:"name" json:"name"`
+	Category       string          `db:"category" json:"category"`
+	Description    *string         `db:"description" json:"description,omitempty"`
+	Message        string          `db:"message" json:"message"`
+	MediaURL       *string         `db:"media_url" json:"media_url,omitempty"`
 	Buttons        CampaignButtons `db:"buttons" json:"buttons"`
-	AudienceFilter AudienceFilter `db:"audience_filter" json:"audience_filter"`
-	TrackingMode   string         `db:"tracking_mode" json:"tracking_mode"`
-	IsSystem       bool           `db:"is_system" json:"is_system"`
-	CreatedAt      time.Time      `db:"created_at" json:"created_at"`
-	UpdatedAt      time.Time      `db:"updated_at" json:"updated_at"`
+	Content        *MessageContent `db:"content" json:"content,omitempty"`
+	AudienceFilter AudienceFilter  `db:"audience_filter" json:"audience_filter"`
+	TrackingMode   string          `db:"tracking_mode" json:"tracking_mode"`
+	IsSystem       bool            `db:"is_system" json:"is_system"`
+	CreatedAt      time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt      time.Time       `db:"updated_at" json:"updated_at"`
 }
 
 type CreateCampaignTemplateRequest struct {

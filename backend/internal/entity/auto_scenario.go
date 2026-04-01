@@ -149,7 +149,8 @@ type AutoScenario struct {
 	Name          string          `db:"name" json:"name"`
 	TriggerType   string          `db:"trigger_type" json:"trigger_type"`
 	TriggerConfig TriggerConfig   `db:"trigger_config" json:"trigger_config"`
-	Message       string          `db:"message" json:"message"`
+	Message       string          `db:"message" json:"message"`         // Legacy
+	Content       *MessageContent `db:"content" json:"content,omitempty"` // New: composite
 	Actions       ActionDefs      `db:"actions" json:"actions"`
 	Timing        ActionTiming    `db:"timing" json:"timing"`
 	Conditions    ActionCondition `db:"conditions" json:"conditions"`
@@ -158,6 +159,17 @@ type AutoScenario struct {
 	IsActive      bool            `db:"is_active" json:"is_active"`
 	CreatedAt     time.Time       `db:"created_at" json:"created_at"`
 	UpdatedAt     time.Time       `db:"updated_at" json:"updated_at"`
+}
+
+// GetContent returns the composite content, falling back to legacy Message field.
+func (s *AutoScenario) GetContent() MessageContent {
+	if s.Content != nil && len(s.Content.Parts) > 0 {
+		return *s.Content
+	}
+	if s.Message != "" {
+		return TextContent(s.Message, "Markdown")
+	}
+	return MessageContent{}
 }
 
 type CreateScenarioRequest struct {

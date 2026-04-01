@@ -10,8 +10,11 @@ import (
 	"revisitr/internal/application/config"
 	"revisitr/internal/application/env"
 	pgRepo "revisitr/internal/repository/postgres"
+	redisRepo "revisitr/internal/repository/redis"
 	"revisitr/internal/service/botmanager"
 	"revisitr/internal/service/campaign"
+	"revisitr/internal/service/eventbus"
+	tgService "revisitr/internal/service/telegram"
 )
 
 func main() {
@@ -37,6 +40,14 @@ func main() {
 	}
 	defer pg.Close()
 
+	// Init Redis
+	rds := redisRepo.New(&redisConfig{cfg: cfg})
+	if err := rds.Init(ctx, logger); err != nil {
+		logger.Error("redis init failed", "error", err)
+		os.Exit(1)
+	}
+	defer rds.Close()
+
 	// Create repositories
 	botsRepo := pgRepo.NewBots(pg)
 	botClientsRepo := pgRepo.NewBotClients(pg)
@@ -46,8 +57,14 @@ func main() {
 	campaignsRepo := pgRepo.NewCampaigns(pg)
 	scenariosRepo := pgRepo.NewAutoScenarios(pg)
 
+	// Create Telegram sender for rich messages
+	baseURL := cfg.GetBaseURL()
+	tgSender := tgService.NewSender(baseURL, logger)
+
 	// Create and start bot manager
-	mgr := botmanager.New(botsRepo, botClientsRepo, loyaltyRepo, posRepo, logger)
+	mgr := botmanager.New(botsRepo, botClientsRepo, loyaltyRepo, posRepo, logger,
+		botmanager.WithTelegramSender(tgSender),
+	)
 
 	if err := mgr.Start(ctx); err != nil {
 		logger.Error("bot manager start failed", "error", err)
@@ -56,12 +73,18 @@ func main() {
 
 	logger.Info("bot service started", "active_bots", mgr.ActiveCount())
 
+	// Start event bus subscriber (listens for hot reload events from API server)
+	subscriber := eventbus.NewSubscriber(rds.Client(), logger)
+	go subscriber.Listen(ctx, mgr)
+
 	// Start auto-scenario scheduler
 	scheduler := campaign.NewScheduler(scenariosRepo, botsRepo, botClientsRepo, loyaltyRepo, logger)
 	go scheduler.Run(ctx)
 
-	// Campaign sender available for use
-	_ = campaign.NewSender(campaignsRepo, botsRepo, botClientsRepo, logger)
+	// Campaign sender with rich message support
+	_ = campaign.NewSender(campaignsRepo, botsRepo, botClientsRepo, logger,
+		campaign.WithTelegramSender(tgSender),
+	)
 
 	<-ctx.Done()
 	logger.Info("shutting down bot service")
@@ -77,3 +100,9 @@ func (c *postgresConfig) GetUser() string     { return c.cfg.Postgres.User }
 func (c *postgresConfig) GetPassword() string { return c.cfg.Postgres.Password }
 func (c *postgresConfig) GetDatabase() string { return c.cfg.Postgres.Database }
 func (c *postgresConfig) GetSSLMode() string  { return c.cfg.Postgres.SSLMode }
+
+type redisConfig struct{ cfg *config.Module }
+
+func (c *redisConfig) GetHost() string     { return c.cfg.Redis.Host }
+func (c *redisConfig) GetPort() string     { return c.cfg.Redis.Port }
+func (c *redisConfig) GetPassword() string { return c.cfg.Redis.Password }

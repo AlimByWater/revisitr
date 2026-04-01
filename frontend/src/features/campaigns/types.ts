@@ -28,6 +28,7 @@ export interface Campaign {
   message: string
   media_url?: string
   buttons: CampaignButton[]
+  content?: import('@/features/telegram-preview').MessageContent
   tracking_mode: 'utm' | 'buttons' | 'both' | 'none'
   scheduled_at?: string
   sent_at?: string

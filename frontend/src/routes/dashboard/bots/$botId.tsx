@@ -38,6 +38,8 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import type { Bot, BotSettings, BotButton, FormField } from '@/features/bots/types'
 import type { POSLocation } from '@/features/pos/types'
+import { TelegramPreview, MessageContentEditor } from '@/features/telegram-preview'
+import { campaignsApi } from '@/features/campaigns/api'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -219,6 +221,7 @@ export default function BotDetailPage() {
     if (bot?.settings) {
       setSettings({
         welcome_message: bot.settings.welcome_message ?? '',
+        welcome_content: bot.settings.welcome_content,
         modules: bot.settings.modules ?? [],
         buttons: bot.settings.buttons ?? [],
         registration_form: bot.settings.registration_form ?? [],
@@ -325,7 +328,7 @@ export default function BotDetailPage() {
           <>
             {activeTab === 'connection' && <ConnectionTab bot={bot} botId={id} />}
             {activeTab === 'general' && (
-              <GeneralTab botId={id} settings={settings} setSettings={setSettings} />
+              <GeneralTab botId={id} settings={settings} setSettings={setSettings} botName={bot.name} />
             )}
             {activeTab === 'modules' && (
               <ModulesTab botId={id} settings={settings} setSettings={setSettings} />
@@ -529,16 +532,19 @@ function GeneralTab({
   botId,
   settings,
   setSettings,
+  botName,
 }: {
   botId: number
   settings: BotSettings
   setSettings: React.Dispatch<React.SetStateAction<BotSettings | null>>
+  botName: string
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const { isSaving, saveError, saveSuccess, save } = useSaveAction(botId, () =>
     botsApi.updateSettings(botId, {
       welcome_message: settings.welcome_message,
+      welcome_content: settings.welcome_content,
       buttons: settings.buttons,
       registration_form: settings.registration_form,
     }),
@@ -651,42 +657,58 @@ function GeneralTab({
     })
   }
 
+  // Welcome content state (composite message)
+  const welcomeContent: import('@/features/telegram-preview').MessageContent = settings.welcome_content
+    && settings.welcome_content.parts?.length > 0
+    ? settings.welcome_content
+    : {
+        parts: settings.welcome_message
+          ? [{ type: 'text' as const, text: settings.welcome_message, parse_mode: 'Markdown' as const }]
+          : [{ type: 'text' as const, text: '', parse_mode: 'Markdown' as const }],
+      }
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
       {/* Section 1: Welcome Message */}
       <h3 className="text-base font-semibold text-neutral-900 mb-4">Приветственное сообщение</h3>
       <p className="text-sm text-neutral-400 mb-5">
-        Сообщение, которое клиент видит при запуске бота или вводе команды /start.
+        Составное сообщение, которое клиент видит при запуске бота. Добавляйте текст, фото, видео, стикеры и кнопки.
       </p>
 
-      {/* Template variable chips */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        {TEMPLATE_VARIABLES.map((v) => (
-          <button
-            key={v}
-            type="button"
-            onClick={() => insertVariable(v)}
-            className="px-2.5 py-1 rounded-md text-xs font-mono bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
-          >
-            {v}
-          </button>
-        ))}
-      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Left: Editor */}
+        <div>
+          {/* Template variable chips */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            {TEMPLATE_VARIABLES.map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => insertVariable(v)}
+                className="px-2.5 py-1 rounded-md text-xs font-mono bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+          <MessageContentEditor
+            value={welcomeContent}
+            onChange={(content) => {
+              setSettings((s) => s ? { ...s, welcome_content: content } : s)
+            }}
+            onUpload={campaignsApi.uploadFile}
+            maxParts={5}
+          />
+        </div>
 
-      <div className="relative">
-        <textarea
-          ref={textareaRef}
-          value={settings.welcome_message}
-          onChange={(e) => setSettings((s) => (s ? { ...s, welcome_message: e.target.value } : s))}
-          placeholder="Привет! Добро пожаловать в нашу программу лояльности..."
-          rows={6}
-          maxLength={4096}
-          disabled={isSaving}
-          className={cn(inputClassName, 'resize-none')}
-        />
-        <span className="absolute bottom-2 right-3 text-[11px] text-neutral-400 tabular-nums">
-          {settings.welcome_message.length} / 4096
-        </span>
+        {/* Right: Live Preview */}
+        <div className="flex justify-center">
+          <TelegramPreview
+            botName={botName}
+            content={welcomeContent}
+            showFrame
+          />
+        </div>
       </div>
 
       {/* Section divider */}
@@ -1102,150 +1124,30 @@ function ModulesTab({
 // ===========================================================================
 
 function PreviewTab({ settings, botName }: { settings: BotSettings; botName: string }) {
-  const welcomeText = settings.welcome_message
-    .replace(/\{first_name\}/g, 'Александр')
-    .replace(/\{bonus_balance\}/g, '1 250')
-    .replace(/\{loyalty_level\}/g, 'Gold')
-
-  const now = new Date()
-  const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-
-  const initial = botName.charAt(0).toUpperCase()
+  // Build MessageContent from settings for preview
+  const content: import('@/features/telegram-preview').MessageContent =
+    settings.welcome_content && settings.welcome_content.parts?.length > 0
+      ? settings.welcome_content
+      : {
+          parts: settings.welcome_message
+            ? [{
+                type: 'text' as const,
+                text: settings.welcome_message
+                  .replace(/\{first_name\}/g, 'Александр')
+                  .replace(/\{bonus_balance\}/g, '1 250')
+                  .replace(/\{loyalty_level\}/g, 'Gold'),
+                parse_mode: 'Markdown' as const,
+              }]
+            : [],
+        }
 
   return (
     <div className="flex justify-center">
-      <div
-        className="w-[360px] rounded-[2rem] overflow-hidden shadow-xl border border-neutral-200"
-        style={{ fontFamily: "-apple-system, 'SF Pro Text', system-ui, sans-serif" }}
-      >
-        {/* Header */}
-        <div
-          className="px-4 py-3 flex items-center gap-3"
-          style={{ background: 'linear-gradient(135deg, #5B9BD5, #4A8FC7)' }}
-        >
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-semibold">
-            {initial}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-semibold truncate">{botName}</p>
-            <p className="text-white/70 text-[11px]">bot</p>
-          </div>
-        </div>
-
-        {/* Chat area */}
-        <div
-          className="p-4 min-h-[420px] flex flex-col gap-3"
-          style={{ backgroundColor: '#E8ECF0' }}
-        >
-          {/* Welcome message bubble */}
-          {welcomeText && (
-            <div className="self-start max-w-[85%]">
-              <div
-                className="bg-white px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
-                style={{
-                  borderRadius: '18px 18px 18px 4px',
-                  fontSize: '15px',
-                  lineHeight: '1.35',
-                  color: '#1A1A1A',
-                }}
-              >
-                <span style={{ whiteSpace: 'pre-wrap' }}>{welcomeText}</span>
-                <span
-                  className="float-right ml-2 mt-1"
-                  style={{ fontSize: '11px', color: '#8E8E93' }}
-                >
-                  {timeStr}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Inline keyboard buttons */}
-          {settings.buttons.length > 0 && (
-            <div className="self-start max-w-[85%] space-y-1.5">
-              {settings.buttons.map((btn, i) => (
-                <div
-                  key={i}
-                  className="text-center py-2 px-3 text-[14px] font-medium"
-                  style={{
-                    color: '#3390EC',
-                    border: '1px solid rgba(51,144,236,0.3)',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(255,255,255,0.8)',
-                  }}
-                >
-                  {btn.label || 'Кнопка'}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Form fields as bot messages */}
-          {settings.registration_form.length > 0 && (
-            <div className="self-start max-w-[85%] space-y-2 mt-2">
-              {settings.registration_form.map((field, i) => (
-                <div
-                  key={i}
-                  className="bg-white px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
-                  style={{
-                    borderRadius: '18px 18px 18px 4px',
-                    fontSize: '15px',
-                    lineHeight: '1.35',
-                    color: '#1A1A1A',
-                  }}
-                >
-                  {field.label || field.name}
-                  {field.required && (
-                    <span className="text-red-400 ml-0.5">*</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Modules badges */}
-          {settings.modules.length > 0 && (
-            <div className="mt-auto pt-4">
-              <div className="flex flex-wrap gap-1.5">
-                {settings.modules.map((mod) => {
-                  const def = MODULE_DEFS.find((d) => d.key === mod)
-                  return (
-                    <span
-                      key={mod}
-                      className="text-[11px] px-2 py-0.5 rounded-full"
-                      style={{
-                        backgroundColor: 'rgba(51,144,236,0.1)',
-                        color: '#3390EC',
-                      }}
-                    >
-                      {def?.label ?? mod}
-                    </span>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Input area */}
-        <div className="bg-white px-4 py-3 flex items-center gap-3 border-t border-neutral-200">
-          <svg className="w-5 h-5 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
-          </svg>
-          <div
-            className="flex-1 py-1.5 text-[15px]"
-            style={{ color: '#8E8E93' }}
-          >
-            Сообщение
-          </div>
-          <svg className="w-5 h-5 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-            <path d="M19 10v2a7 7 0 01-14 0v-2" />
-            <line x1="12" y1="19" x2="12" y2="23" />
-            <line x1="8" y1="23" x2="16" y2="23" />
-          </svg>
-        </div>
-      </div>
+      <TelegramPreview
+        botName={botName}
+        content={content}
+        showFrame
+      />
     </div>
   )
 }

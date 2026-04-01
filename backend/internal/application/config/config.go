@@ -54,6 +54,11 @@ type Module struct {
 	Bot      Bot
 	AdminBot AdminBot
 	MinIO    MinIO
+	BaseURL  string // Public base URL for media files (e.g., "https://elysium.fm")
+}
+
+func (m *Module) GetBaseURL() string {
+	return m.BaseURL
 }
 
 func NewFromEnv() *Module {
@@ -93,5 +98,6 @@ func NewFromEnv() *Module {
 			UseSSL:    env.GetBool("MINIO_USE_SSL", false),
 			Bucket:    env.GetString("MINIO_BUCKET", "revisitr"),
 		},
+		BaseURL: env.GetString("BASE_URL", "https://elysium.fm"),
 	}
 }

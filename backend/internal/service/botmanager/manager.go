@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"revisitr/internal/entity"
+	tgService "revisitr/internal/service/telegram"
 
 	"github.com/mymmrac/telego"
 )
@@ -44,10 +45,17 @@ type Manager struct {
 	clientsRepo botClientsRepository
 	loyaltyRepo loyaltyRepository
 	posRepo     posRepository
+	tgSender    *tgService.Sender
 	logger      *slog.Logger
 
 	mu        sync.RWMutex
 	instances map[int]*botInstance
+}
+
+type ManagerOption func(*Manager)
+
+func WithTelegramSender(ts *tgService.Sender) ManagerOption {
+	return func(m *Manager) { m.tgSender = ts }
 }
 
 func New(
@@ -56,8 +64,9 @@ func New(
 	loyaltyRepo loyaltyRepository,
 	posRepo posRepository,
 	logger *slog.Logger,
+	opts ...ManagerOption,
 ) *Manager {
-	return &Manager{
+	m := &Manager{
 		botsRepo:    botsRepo,
 		clientsRepo: clientsRepo,
 		loyaltyRepo: loyaltyRepo,
@@ -65,6 +74,10 @@ func New(
 		logger:      logger,
 		instances:   make(map[int]*botInstance),
 	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
 }
 
 func (m *Manager) Start(ctx context.Context) error {
@@ -174,7 +187,7 @@ func (m *Manager) startBot(parentCtx context.Context, b entity.Bot) error {
 	m.instances[b.ID] = inst
 	m.mu.Unlock()
 
-	handler := newHandler(m, tBot, b)
+	handler := newHandler(m, tBot, &inst.info)
 
 	go func() {
 		updates, err := tBot.UpdatesViaLongPolling(nil)
@@ -205,4 +218,44 @@ func (m *Manager) ActiveCount() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return len(m.instances)
+}
+
+// ── BotEventHandler implementation ──────────────────────────────────────────
+
+func (m *Manager) OnBotReload(ctx context.Context, botID int) error {
+	m.logger.Info("event: bot reload", "bot_id", botID)
+	return m.ReloadBot(ctx, botID)
+}
+
+func (m *Manager) OnBotStop(ctx context.Context, botID int) error {
+	m.logger.Info("event: bot stop", "bot_id", botID)
+	return m.RemoveBot(botID)
+}
+
+func (m *Manager) OnBotStart(ctx context.Context, botID int) error {
+	m.logger.Info("event: bot start", "bot_id", botID)
+	return m.AddBot(ctx, botID)
+}
+
+// OnBotSettingsChanged performs a hot update of bot settings without restarting long polling.
+func (m *Manager) OnBotSettingsChanged(ctx context.Context, botID int, field string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	inst, ok := m.instances[botID]
+	if !ok {
+		return nil // bot not running, nothing to update
+	}
+
+	bot, err := m.botsRepo.GetByID(ctx, botID)
+	if err != nil {
+		return fmt.Errorf("botmanager: hot update bot %d: %w", botID, err)
+	}
+
+	inst.info = *bot
+	m.logger.Info("event: bot settings updated",
+		"bot_id", botID,
+		"field", field,
+	)
+	return nil
 }

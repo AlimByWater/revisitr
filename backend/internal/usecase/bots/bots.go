@@ -26,10 +26,18 @@ type botClientsRepo interface {
 	CountByBotID(ctx context.Context, botID int) (int, error)
 }
 
+type botEventPublisher interface {
+	PublishBotReload(ctx context.Context, botID int) error
+	PublishBotStop(ctx context.Context, botID int) error
+	PublishBotStart(ctx context.Context, botID int) error
+	PublishBotSettings(ctx context.Context, botID int, field string) error
+}
+
 type Usecase struct {
-	bots    botsRepo
-	clients botClientsRepo
-	logger  *slog.Logger
+	bots     botsRepo
+	clients  botClientsRepo
+	eventBus botEventPublisher
+	logger   *slog.Logger
 }
 
 func New(bots botsRepo, clients botClientsRepo) *Usecase {
@@ -37,6 +45,11 @@ func New(bots botsRepo, clients botClientsRepo) *Usecase {
 		bots:    bots,
 		clients: clients,
 	}
+}
+
+// SetEventBus sets the event bus for publishing bot events. Optional.
+func (uc *Usecase) SetEventBus(eb botEventPublisher) {
+	uc.eventBus = eb
 }
 
 func (uc *Usecase) Init(_ context.Context, logger *slog.Logger) error {
@@ -102,6 +115,8 @@ func (uc *Usecase) Update(ctx context.Context, id, orgID int, req *entity.Update
 		return nil, ErrNotBotOwner
 	}
 
+	oldStatus := bot.Status
+
 	if req.Name != nil {
 		bot.Name = *req.Name
 	}
@@ -111,6 +126,16 @@ func (uc *Usecase) Update(ctx context.Context, id, orgID int, req *entity.Update
 
 	if err := uc.bots.Update(ctx, bot); err != nil {
 		return nil, fmt.Errorf("update bot: %w", err)
+	}
+
+	// Publish status change events
+	if uc.eventBus != nil && req.Status != nil && oldStatus != bot.Status {
+		switch bot.Status {
+		case "active":
+			_ = uc.eventBus.PublishBotStart(ctx, id)
+		case "inactive":
+			_ = uc.eventBus.PublishBotStop(ctx, id)
+		}
 	}
 
 	return bot, nil
@@ -128,6 +153,10 @@ func (uc *Usecase) Delete(ctx context.Context, id, orgID int) error {
 
 	if err := uc.bots.Delete(ctx, id); err != nil {
 		return fmt.Errorf("delete bot: %w", err)
+	}
+
+	if uc.eventBus != nil {
+		_ = uc.eventBus.PublishBotStop(ctx, id)
 	}
 
 	return nil
@@ -170,9 +199,31 @@ func (uc *Usecase) UpdateSettings(ctx context.Context, id, orgID int, req *entit
 	if req.WelcomeMessage != nil {
 		settings.WelcomeMessage = *req.WelcomeMessage
 	}
+	if req.WelcomeContent != nil {
+		if err := req.WelcomeContent.Validate(); err != nil {
+			return fmt.Errorf("invalid welcome content: %w", err)
+		}
+		settings.WelcomeContent = req.WelcomeContent
+	}
 
 	if err := uc.bots.UpdateSettings(ctx, id, settings); err != nil {
 		return fmt.Errorf("update bot settings: %w", err)
+	}
+
+	// Publish settings change event
+	if uc.eventBus != nil {
+		field := ""
+		switch {
+		case req.WelcomeMessage != nil || req.WelcomeContent != nil:
+			field = "welcome"
+		case req.Buttons != nil:
+			field = "buttons"
+		case req.Modules != nil:
+			field = "modules"
+		case req.RegistrationForm != nil:
+			field = "registration_form"
+		}
+		_ = uc.eventBus.PublishBotSettings(ctx, id, field)
 	}
 
 	return nil

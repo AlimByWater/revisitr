@@ -36,6 +36,7 @@ import (
 	pgRepo "revisitr/internal/repository/postgres"
 	redisRepo "revisitr/internal/repository/redis"
 	autoactionService "revisitr/internal/service/autoaction"
+	"revisitr/internal/service/eventbus"
 	posService "revisitr/internal/service/pos"
 	rfmService "revisitr/internal/service/rfm"
 	billingUC "revisitr/internal/usecase/billing"
@@ -113,10 +114,15 @@ func main() {
 	actionExecutor := autoactionService.NewActionExecutor(scenariosRepo, logger)
 	autoActionScheduler := autoactionService.NewAutoActionScheduler(scenariosRepo, actionExecutor, botClientsRepo, logger)
 
+	// ── Event Bus ─────────────────────────────────────────────────────────────
+
+	evBus := eventbus.New(rds.Client(), logger)
+
 	// ── Usecases ──────────────────────────────────────────────────────────────
 
 	authUsecase := authUC.New(&authConfig{cfg: cfg}, usersRepo, sessionsRepo)
 	botsUsecase := botsUC.New(botsRepo, botClientsRepo)
+	botsUsecase.SetEventBus(evBus)
 	loyaltyUsecase := loyaltyUC.New(loyaltyRepo)
 	clientsUsecase := clientsUC.New(clientsRepo, clientsUC.WithBotClients(botClientsRepo))
 	dashboardUsecase := dashboardUC.New(dashboardRepo)

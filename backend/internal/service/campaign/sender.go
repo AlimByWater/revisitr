@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"revisitr/internal/entity"
+	tgSender "revisitr/internal/service/telegram"
 
 	"github.com/mymmrac/telego"
-	tu "github.com/mymmrac/telego/telegoutil"
 )
 
 type campaignsRepo interface {
@@ -32,6 +32,7 @@ type Sender struct {
 	campaigns  campaignsRepo
 	bots       botsRepo
 	botClients botClientsRepo
+	tgSender   *tgSender.Sender
 	logger     *slog.Logger
 }
 
@@ -40,13 +41,24 @@ func NewSender(
 	bots botsRepo,
 	botClients botClientsRepo,
 	logger *slog.Logger,
+	opts ...SenderOption,
 ) *Sender {
-	return &Sender{
+	s := &Sender{
 		campaigns:  campaigns,
 		bots:       bots,
 		botClients: botClients,
 		logger:     logger,
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+type SenderOption func(*Sender)
+
+func WithTelegramSender(ts *tgSender.Sender) SenderOption {
+	return func(s *Sender) { s.tgSender = ts }
 }
 
 func (s *Sender) SendCampaign(ctx context.Context, campaignID int) error {
@@ -117,6 +129,9 @@ func (s *Sender) SendCampaign(ctx context.Context, campaignID int) error {
 		return fmt.Errorf("campaign sender: create messages batch: %w", err)
 	}
 
+	// Build composite content (new format with fallback to legacy)
+	content := campaign.GetContent()
+
 	// Send messages
 	stats := entity.CampaignStats{Total: len(messages)}
 	for i := range messages {
@@ -124,8 +139,16 @@ func (s *Sender) SendCampaign(ctx context.Context, campaignID int) error {
 			break
 		}
 
-		tgMsg := tu.Message(tu.ID(messages[i].TelegramID), campaign.Message)
-		_, err := tBot.SendMessage(tgMsg)
+		var err error
+		if s.tgSender != nil {
+			err = s.tgSender.SendContent(ctx, tBot, messages[i].TelegramID, content)
+		} else {
+			// Legacy fallback: plain text only
+			_, err = tBot.SendMessage((&telego.SendMessageParams{
+				ChatID: telego.ChatID{ID: messages[i].TelegramID},
+				Text:   campaign.Message,
+			}))
+		}
 
 		if err != nil {
 			stats.Failed++

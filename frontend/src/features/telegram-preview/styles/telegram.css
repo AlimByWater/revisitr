@@ -1,0 +1,155 @@
+/* Telegram iOS-style message bubbles */
+
+.tg-chat-bg {
+  background-color: #C8D1DB;
+  background-image: linear-gradient(135deg, rgba(255,255,255,0.05) 25%, transparent 25%),
+    linear-gradient(225deg, rgba(255,255,255,0.05) 25%, transparent 25%),
+    linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%),
+    linear-gradient(315deg, rgba(255,255,255,0.05) 25%, transparent 25%);
+  background-size: 20px 20px;
+}
+
+.tg-chat-bg-dark {
+  background-color: #1C2733;
+}
+
+/* Incoming message bubble (from bot) */
+.tg-bubble {
+  position: relative;
+  max-width: 85%;
+  padding: 7px 11px 6px;
+  border-radius: 16px 16px 16px 4px;
+  background: #FFFFFF;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  font-size: 15px;
+  line-height: 20px;
+  color: #000000;
+  word-wrap: break-word;
+}
+
+.tg-bubble-dark {
+  background: #182533;
+  color: #FFFFFF;
+}
+
+/* Bubble tail */
+.tg-bubble-tail::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -6px;
+  width: 11px;
+  height: 16px;
+  background: inherit;
+  clip-path: path('M 0 16 Q 0 0, 11 0 L 11 16 Z');
+}
+
+/* Media inside bubble */
+.tg-bubble-media {
+  border-radius: 14px 14px 14px 4px;
+  overflow: hidden;
+  margin: -7px -11px 4px;
+}
+
+.tg-bubble-media:last-child {
+  margin-bottom: -6px;
+}
+
+.tg-bubble-media img,
+.tg-bubble-media video {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+}
+
+/* Caption under media */
+.tg-bubble-caption {
+  padding: 4px 0 0;
+}
+
+/* Sticker (no bubble) */
+.tg-sticker {
+  width: 150px;
+  height: 150px;
+}
+
+.tg-sticker img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Inline buttons */
+.tg-inline-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: rgba(58, 142, 238, 0.1);
+  color: #3A8EEE;
+  font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: default;
+  text-decoration: none;
+  transition: background 0.15s;
+  min-height: 36px;
+}
+
+.tg-inline-btn-dark {
+  background: rgba(58, 142, 238, 0.15);
+  color: #6AB2F2;
+}
+
+/* Timestamp inside bubble */
+.tg-timestamp {
+  float: right;
+  margin: 4px 0 -4px 8px;
+  font-size: 11px;
+  color: #8E8E93;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.tg-timestamp-dark {
+  color: #6D7F8F;
+}
+
+/* Document attachment */
+.tg-document {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.tg-document-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #3A8EEE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tg-document-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #3A8EEE;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Phone frame */
+.tg-phone-frame {
+  border-radius: 40px;
+  border: 8px solid #1A1A1A;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2), inset 0 0 0 2px #333;
+  overflow: hidden;
+}

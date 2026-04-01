@@ -8,10 +8,11 @@ import (
 )
 
 type BotSettings struct {
-	Modules          []string    `json:"modules"`
-	Buttons          []BotButton `json:"buttons"`
-	RegistrationForm []FormField `json:"registration_form"`
-	WelcomeMessage   string      `json:"welcome_message"`
+	Modules          []string        `json:"modules"`
+	Buttons          []BotButton     `json:"buttons"`
+	RegistrationForm []FormField     `json:"registration_form"`
+	WelcomeMessage   string          `json:"welcome_message"`            // Legacy
+	WelcomeContent   *MessageContent `json:"welcome_content,omitempty"`  // New: composite welcome
 }
 
 func (s *BotSettings) Scan(src interface{}) error {
@@ -89,8 +90,9 @@ type UpdateBotRequest struct {
 }
 
 type UpdateBotSettingsRequest struct {
-	Modules          *[]string    `json:"modules,omitempty"`
-	Buttons          *[]BotButton `json:"buttons,omitempty"`
-	RegistrationForm *[]FormField `json:"registration_form,omitempty"`
-	WelcomeMessage   *string      `json:"welcome_message,omitempty"`
+	Modules          *[]string        `json:"modules,omitempty"`
+	Buttons          *[]BotButton     `json:"buttons,omitempty"`
+	RegistrationForm *[]FormField     `json:"registration_form,omitempty"`
+	WelcomeMessage   *string          `json:"welcome_message,omitempty"`
+	WelcomeContent   *MessageContent  `json:"welcome_content,omitempty"`
 }
