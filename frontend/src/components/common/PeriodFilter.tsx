@@ -150,14 +150,14 @@ export function PeriodFilter({ period, from, to, onPeriodChange, onRangeChange }
         <button
           type="button"
           onClick={() => { setPresetOpen(!presetOpen); setCalendarOpen(false) }}
-          className="flex items-center gap-3 border border-neutral-900 rounded px-4 py-2 text-sm font-medium text-neutral-900 bg-white cursor-pointer hover:bg-neutral-50 transition-colors w-full sm:w-[200px]"
+          className="flex items-center gap-3 border border-neutral-200 rounded px-4 py-2 text-sm font-medium text-neutral-900 bg-white cursor-pointer hover:bg-neutral-50 transition-colors w-full sm:w-[200px]"
         >
           <span className="flex-1 text-left">{selectedLabel}</span>
           <ChevronDown className={cn('w-4 h-4 text-neutral-500 transition-transform duration-200', presetOpen && 'rotate-180')} />
         </button>
 
         <div className={cn(
-          'absolute top-full left-0 mt-1 w-full sm:w-[200px] bg-white border border-neutral-900 rounded py-1 z-50',
+          'absolute top-full left-0 mt-1 w-full sm:w-[200px] bg-white border border-neutral-200 rounded py-1 z-50',
           'transition-all duration-150 origin-top',
           presetOpen
             ? 'opacity-100 scale-y-100 pointer-events-auto'
@@ -192,7 +192,7 @@ export function PeriodFilter({ period, from, to, onPeriodChange, onRangeChange }
         <button
           type="button"
           onClick={() => { setCalendarOpen(!calendarOpen); setPresetOpen(false) }}
-          className="flex items-center gap-2 border border-neutral-900 rounded px-4 py-2 text-sm text-neutral-900 bg-white cursor-pointer hover:bg-neutral-50 transition-colors w-full sm:w-auto"
+          className="flex items-center gap-2 border border-neutral-200 rounded px-4 py-2 text-sm text-neutral-900 bg-white cursor-pointer hover:bg-neutral-50 transition-colors w-full sm:w-auto"
         >
           <Calendar className="w-4 h-4 text-neutral-500 shrink-0" />
           <span className="hidden sm:inline">
@@ -308,7 +308,7 @@ function RangeCalendar({
   const today = startOfDay(new Date())
 
   return (
-    <div className="bg-white border border-neutral-900 rounded p-4 w-full select-none">
+    <div className="bg-white border border-neutral-200 rounded p-4 w-full select-none">
       {/* Month nav */}
       <div className="flex items-center justify-between mb-3">
         <button type="button" onClick={prevMonth} className="w-7 h-7 rounded flex items-center justify-center text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-colors">

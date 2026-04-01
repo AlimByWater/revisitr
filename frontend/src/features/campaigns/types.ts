@@ -28,6 +28,7 @@ export interface Campaign {
   message: string
   media_url?: string
   buttons: CampaignButton[]
+  content?: import('@/features/telegram-preview').MessageContent
   tracking_mode: 'utm' | 'buttons' | 'both' | 'none'
   scheduled_at?: string
   sent_at?: string
@@ -158,46 +159,6 @@ export interface ABTestResults {
   winner_id?: number
 }
 
-// ── Campaign Templates ───────────────────────────────────────────────────────
-
-export interface CampaignTemplate {
-  id: number
-  org_id?: number
-  name: string
-  category: string
-  description?: string
-  message: string
-  media_url?: string
-  buttons: CampaignButton[]
-  audience_filter: AudienceFilter
-  tracking_mode: string
-  is_system: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface CreateCampaignTemplateRequest {
-  name: string
-  category?: string
-  description?: string
-  message: string
-  media_url?: string
-  buttons?: CampaignButton[]
-  audience_filter?: AudienceFilter
-  tracking_mode?: string
-}
-
-export interface UpdateCampaignTemplateRequest {
-  name?: string
-  category?: string
-  description?: string
-  message?: string
-  media_url?: string
-  buttons?: CampaignButton[]
-  audience_filter?: AudienceFilter
-  tracking_mode?: string
-}
-
 // ── Campaign Requests ────────────────────────────────────────────────────────
 
 export interface CreateCampaignRequest {
@@ -206,6 +167,7 @@ export interface CreateCampaignRequest {
   message: string
   audience_filter: AudienceFilter
   media_url?: string
+  content?: import('@/features/telegram-preview').MessageContent
   scheduled_at?: string
 }
 
@@ -214,6 +176,7 @@ export interface UpdateCampaignRequest {
   message?: string
   audience_filter?: AudienceFilter
   media_url?: string
+  content?: import('@/features/telegram-preview').MessageContent
   scheduled_at?: string
 }
 

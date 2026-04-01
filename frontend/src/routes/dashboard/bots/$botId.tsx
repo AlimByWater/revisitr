@@ -1,10 +1,8 @@
 import { Link, useParams } from 'react-router-dom'
-import { useState, useEffect, useRef, useId } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { useBotQuery } from '@/features/bots/queries'
-import { CustomSelect } from '@/components/common/CustomSelect'
 import { botsApi } from '@/features/bots/api'
-import { useMenusQuery } from '@/features/menus/queries'
 import { menusApi } from '@/features/menus/api'
 import { usePOSQuery } from '@/features/pos/queries'
 import { ErrorState } from '@/components/common/ErrorState'
@@ -15,15 +13,12 @@ import {
   Trash2,
   Check,
   Settings,
-  MessageSquare,
-  LayoutGrid,
-  FileText,
   Puzzle,
-  UtensilsCrossed,
   Store,
   Eye,
   GripVertical,
   ChevronRight,
+  Link2,
 } from 'lucide-react'
 import {
   DndContext,
@@ -43,20 +38,17 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import type { Bot, BotSettings, BotButton, FormField } from '@/features/bots/types'
 import type { POSLocation } from '@/features/pos/types'
-import type { Menu } from '@/features/menus/types'
+import { TelegramPreview, MessageContentEditor } from '@/features/telegram-preview'
+import { campaignsApi } from '@/features/campaigns/api'
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const TABS = [
-  { id: 'general', label: 'Общее', icon: Settings },
-  { id: 'messages', label: 'Сообщения', icon: MessageSquare },
-  { id: 'buttons', label: 'Кнопки', icon: LayoutGrid },
-  { id: 'form', label: 'Форма', icon: FileText },
+  { id: 'connection', label: 'Подключение', icon: Link2 },
+  { id: 'general', label: 'Основное', icon: Settings },
   { id: 'modules', label: 'Модули', icon: Puzzle },
-  { id: 'menu', label: 'Меню', icon: UtensilsCrossed },
-  { id: 'pos', label: 'POS', icon: Store },
   { id: 'preview', label: 'Превью', icon: Eye },
 ] as const
 
@@ -106,7 +98,7 @@ function formatDate(dateStr: string): string {
 }
 
 /** Per-tab save hook returning state + handler */
-function useSaveAction(id: number, updater: () => Promise<void>) {
+function useSaveAction(_id: number, updater: () => Promise<void>) {
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -221,7 +213,7 @@ export default function BotDetailPage() {
   const { botId } = useParams<{ botId: string }>()
   const id = Number(botId)
   const { data: bot, isLoading, isError } = useBotQuery(isNaN(id) || id <= 0 ? 0 : id)
-  const [activeTab, setActiveTab] = useState<TabId>('general')
+  const [activeTab, setActiveTab] = useState<TabId>('connection')
 
   const [settings, setSettings] = useState<BotSettings | null>(null)
 
@@ -229,6 +221,7 @@ export default function BotDetailPage() {
     if (bot?.settings) {
       setSettings({
         welcome_message: bot.settings.welcome_message ?? '',
+        welcome_content: bot.settings.welcome_content,
         modules: bot.settings.modules ?? [],
         buttons: bot.settings.buttons ?? [],
         registration_form: bot.settings.registration_form ?? [],
@@ -333,21 +326,13 @@ export default function BotDetailPage() {
       <div className="animate-in animate-in-delay-2">
         {settings && (
           <>
-            {activeTab === 'general' && <GeneralTab bot={bot} />}
-            {activeTab === 'messages' && (
-              <MessagesTab botId={id} settings={settings} setSettings={setSettings} />
-            )}
-            {activeTab === 'buttons' && (
-              <ButtonsTab botId={id} settings={settings} setSettings={setSettings} />
-            )}
-            {activeTab === 'form' && (
-              <FormTab botId={id} settings={settings} setSettings={setSettings} />
+            {activeTab === 'connection' && <ConnectionTab bot={bot} botId={id} />}
+            {activeTab === 'general' && (
+              <GeneralTab botId={id} settings={settings} setSettings={setSettings} botName={bot.name} />
             )}
             {activeTab === 'modules' && (
               <ModulesTab botId={id} settings={settings} setSettings={setSettings} />
             )}
-            {activeTab === 'menu' && <MenuTab />}
-            {activeTab === 'pos' && <POSTab botId={id} />}
             {activeTab === 'preview' && <PreviewTab settings={settings} botName={bot.name} />}
           </>
         )}
@@ -357,14 +342,15 @@ export default function BotDetailPage() {
 }
 
 // ===========================================================================
-// Tab: Общее (General)
+// Tab: Подключение (Connection) — General info + POS
 // ===========================================================================
 
-function GeneralTab({ bot }: { bot: Bot }) {
+function ConnectionTab({ bot, botId }: { bot: Bot; botId: number }) {
   const [advanced, setAdvanced] = useState(false)
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
+      {/* Section: Bot Info */}
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-lg font-semibold text-neutral-900">
           <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">
@@ -432,6 +418,13 @@ function GeneralTab({ bot }: { bot: Bot }) {
           </>
         )}
       </div>
+
+      {/* Section divider */}
+      <div className="border-t border-surface-border my-8"></div>
+
+      {/* Section: POS */}
+      <h3 className="text-base font-semibold text-neutral-900 mb-4">POS-точки бота</h3>
+      <POSSection botId={botId} />
     </div>
   )
 }
@@ -445,115 +438,131 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-// ===========================================================================
-// Tab: Сообщения (Messages)
-// ===========================================================================
-
-function MessagesTab({
-  botId,
-  settings,
-  setSettings,
-}: {
-  botId: number
-  settings: BotSettings
-  setSettings: React.Dispatch<React.SetStateAction<BotSettings | null>>
-}) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+/** POS section embedded inside ConnectionTab */
+function POSSection({ botId }: { botId: number }) {
+  const { data: posLocations, isLoading: posLoading } = usePOSQuery()
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [loaded, setLoaded] = useState(false)
   const { isSaving, saveError, saveSuccess, save } = useSaveAction(botId, () =>
-    botsApi.updateSettings(botId, { welcome_message: settings.welcome_message }),
+    menusApi.setBotPOSLocations(botId, selectedIds),
   )
 
-  const insertVariable = (variable: string) => {
-    const ta = textareaRef.current
-    if (!ta) return
-    const start = ta.selectionStart
-    const end = ta.selectionEnd
-    const text = settings.welcome_message
-    const newText = text.substring(0, start) + variable + text.substring(end)
-    setSettings((s) => (s ? { ...s, welcome_message: newText } : s))
-    requestAnimationFrame(() => {
-      ta.focus()
-      const pos = start + variable.length
-      ta.setSelectionRange(pos, pos)
+  // Load current bindings
+  useEffect(() => {
+    if (loaded) return
+    menusApi.getBotPOSLocations(botId).then((res) => {
+      setSelectedIds(res.pos_ids ?? [])
+      setLoaded(true)
+    }).catch(() => {
+      setLoaded(true)
     })
+  }, [botId, loaded])
+
+  if (posLoading || !loaded) {
+    return <p className="text-sm text-neutral-500">Загрузка POS-точек...</p>
+  }
+
+  const locations = posLocations ?? []
+
+  if (locations.length === 0) {
+    return (
+      <div className="text-center py-6">
+        <Store className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+        <p className="text-sm text-neutral-500 mb-4">Нет POS-точек</p>
+        <Link
+          to="/dashboard/pos"
+          className={cn(
+            'inline-flex items-center gap-1.5 py-2 px-4 rounded-lg text-sm font-medium',
+            'bg-accent text-white hover:bg-accent-hover transition-colors',
+          )}
+        >
+          Управление POS
+          <ChevronRight className="w-4 h-4" />
+        </Link>
+      </div>
+    )
+  }
+
+  const togglePos = (posId: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(posId) ? prev.filter((x) => x !== posId) : [...prev, posId],
+    )
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
-      <h2 className="text-lg font-semibold text-neutral-900 mb-1">
-        <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">
-          Контент
-        </span>
-        Приветственное сообщение
-      </h2>
+    <>
       <p className="text-sm text-neutral-400 mb-5">
-        Сообщение, которое клиент видит при запуске бота или вводе команды /start.
+        Привяжите точки продаж к боту. Если выбрано несколько, гость сможет выбрать нужную точку при запуске бота через кнопки.
       </p>
 
-      {/* Template variable chips */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        {TEMPLATE_VARIABLES.map((v) => (
-          <button
-            key={v}
-            type="button"
-            onClick={() => insertVariable(v)}
-            className="px-2.5 py-1 rounded-md text-xs font-mono bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+      <div className="space-y-2">
+        {locations.map((loc: POSLocation) => (
+          <label
+            key={loc.id}
+            className={cn(
+              'flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors',
+              selectedIds.includes(loc.id) ? 'bg-accent/5 border border-accent/20' : 'bg-neutral-50 border border-transparent',
+            )}
           >
-            {v}
-          </button>
+            <input
+              type="checkbox"
+              checked={selectedIds.includes(loc.id)}
+              onChange={() => togglePos(loc.id)}
+              disabled={isSaving}
+              className="w-4 h-4 rounded border-neutral-300 text-accent focus:ring-accent/20"
+            />
+            <div>
+              <p className="text-sm font-medium text-neutral-900">{loc.name}</p>
+              {loc.address && <p className="text-xs text-neutral-500">{loc.address}</p>}
+            </div>
+          </label>
         ))}
       </div>
 
-      <div className="relative">
-        <textarea
-          ref={textareaRef}
-          value={settings.welcome_message}
-          onChange={(e) => setSettings((s) => (s ? { ...s, welcome_message: e.target.value } : s))}
-          placeholder="Привет! Добро пожаловать в нашу программу лояльности..."
-          rows={6}
-          maxLength={4096}
-          disabled={isSaving}
-          className={cn(inputClassName, 'resize-none')}
-        />
-        <span className="absolute bottom-2 right-3 text-[11px] text-neutral-400 tabular-nums">
-          {settings.welcome_message.length} / 4096
-        </span>
-      </div>
-
       <SaveButton isSaving={isSaving} saveError={saveError} saveSuccess={saveSuccess} onSave={save} />
-    </div>
+    </>
   )
 }
 
 // ===========================================================================
-// Tab: Кнопки (Buttons)
+// Tab: Основное (General) — Messages + Buttons + Form combined
 // ===========================================================================
 
-function ButtonsTab({
+function GeneralTab({
   botId,
   settings,
   setSettings,
+  botName,
 }: {
   botId: number
   settings: BotSettings
   setSettings: React.Dispatch<React.SetStateAction<BotSettings | null>>
+  botName: string
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
   const { isSaving, saveError, saveSuccess, save } = useSaveAction(botId, () =>
-    botsApi.updateSettings(botId, { buttons: settings.buttons }),
+    botsApi.updateSettings(botId, {
+      welcome_message: settings.welcome_message,
+      welcome_content: settings.welcome_content,
+      buttons: settings.buttons,
+      registration_form: settings.registration_form,
+    }),
   )
 
-  const sensors = useSensors(
+  // --- Buttons dnd ---
+  const buttonSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor),
   )
 
-  const ids = settings.buttons.map((_, i) => `btn-${i}`)
+  const buttonIds = settings.buttons.map((_, i) => `btn-${i}`)
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleButtonDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const oldIndex = ids.indexOf(String(active.id))
-    const newIndex = ids.indexOf(String(over.id))
+    const oldIndex = buttonIds.indexOf(String(active.id))
+    const newIndex = buttonIds.indexOf(String(over.id))
     setSettings((s) =>
       s ? { ...s, buttons: arrayMove(s.buttons, oldIndex, newIndex) } : s,
     )
@@ -578,149 +587,19 @@ function ButtonsTab({
     setSettings((s) => (s ? { ...s, buttons: s.buttons.filter((_, i) => i !== index) } : s))
   }
 
-  return (
-    <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-lg font-semibold text-neutral-900">
-          <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">
-            Интерфейс
-          </span>
-          Кнопки меню
-        </h2>
-        <p className="text-xs text-neutral-400 mt-1">
-          <strong className="text-neutral-500">Ссылка</strong> — открывает URL в браузере.{' '}
-          <strong className="text-neutral-500">Callback</strong> — отправляет событие боту для обработки действия.{' '}
-          <strong className="text-neutral-500">WebApp</strong> — открывает мини-приложение внутри Telegram.{' '}
-          <strong className="text-neutral-500">Команда</strong> — выполняет пользовательскую команду (/текст).
-        </p>
-        <button
-          type="button"
-          onClick={addButton}
-          disabled={isSaving || settings.buttons.length >= 10}
-          className={cn(
-            'flex items-center gap-1.5 text-sm font-medium text-accent',
-            'hover:text-accent/80 transition-colors',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-          )}
-        >
-          <Plus className="w-4 h-4" />
-          Добавить
-        </button>
-      </div>
-
-      {settings.buttons.length === 0 ? (
-        <p className="text-sm text-neutral-400 text-center py-4">Нет кнопок меню</p>
-      ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-            <div className="space-y-3">
-              {settings.buttons.map((button, index) => (
-                <SortableItem key={ids[index]} id={ids[index]}>
-                  {({ listeners, attributes }) => (
-                    <div className="flex items-start gap-3 p-3 rounded-lg bg-neutral-50">
-                      <button
-                        type="button"
-                        className="mt-2.5 text-neutral-400 hover:text-neutral-600 cursor-grab active:cursor-grabbing touch-none"
-                        {...listeners}
-                        {...attributes}
-                        aria-label="Перетащить"
-                      >
-                        <GripVertical className="w-4 h-4" />
-                      </button>
-                      <div className="flex-1 grid grid-cols-3 gap-3">
-                        <input
-                          type="text"
-                          value={button.label}
-                          onChange={(e) => updateButton(index, 'label', e.target.value)}
-                          placeholder="Название"
-                          disabled={isSaving}
-                          className={inputClassName}
-                          aria-label={`Название кнопки ${index + 1}`}
-                        />
-                        <CustomSelect
-                          value={button.type}
-                          onChange={(v) => updateButton(index, 'type', v)}
-                          options={[
-                            { value: 'url', label: 'Ссылка' },
-                            { value: 'callback', label: 'Callback' },
-                            { value: 'webapp', label: 'WebApp' },
-                            { value: 'command', label: 'Команда' },
-                          ]}
-                        />
-                        <input
-                          type="text"
-                          value={button.value}
-                          onChange={(e) => updateButton(index, 'value', e.target.value)}
-                          placeholder={
-                            button.type === 'url'
-                              ? 'https://...'
-                              : button.type === 'webapp'
-                                ? 'https://...'
-                                : button.type === 'command'
-                                  ? '/команда'
-                                  : 'callback_data'
-                          }
-                          disabled={isSaving}
-                          className={inputClassName}
-                          aria-label={`Значение кнопки ${index + 1}`}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeButton(index)}
-                        disabled={isSaving}
-                        className="mt-2.5 p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
-                        aria-label={`Удалить кнопку ${index + 1}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </SortableItem>
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      )}
-
-      {settings.buttons.length >= 10 && (
-        <p className="text-xs text-neutral-400 mt-2">Максимум 10 кнопок</p>
-      )}
-
-      <SaveButton isSaving={isSaving} saveError={saveError} saveSuccess={saveSuccess} onSave={save} />
-    </div>
-  )
-}
-
-// ===========================================================================
-// Tab: Форма (Form)
-// ===========================================================================
-
-function FormTab({
-  botId,
-  settings,
-  setSettings,
-}: {
-  botId: number
-  settings: BotSettings
-  setSettings: React.Dispatch<React.SetStateAction<BotSettings | null>>
-}) {
-  const { isSaving, saveError, saveSuccess, save } = useSaveAction(botId, () =>
-    botsApi.updateSettings(botId, { registration_form: settings.registration_form }),
-  )
-
-  const sensors = useSensors(
+  // --- Form dnd ---
+  const formSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor),
   )
 
-  const ids = settings.registration_form.map((_, i) => `field-${i}`)
+  const fieldIds = settings.registration_form.map((_, i) => `field-${i}`)
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleFieldDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const oldIndex = ids.indexOf(String(active.id))
-    const newIndex = ids.indexOf(String(over.id))
+    const oldIndex = fieldIds.indexOf(String(active.id))
+    const newIndex = fieldIds.indexOf(String(over.id))
     setSettings((s) =>
       s ? { ...s, registration_form: arrayMove(s.registration_form, oldIndex, newIndex) } : s,
     )
@@ -762,15 +641,190 @@ function FormTab({
     )
   }
 
+  // --- Template variables ---
+  const insertVariable = (variable: string) => {
+    const ta = textareaRef.current
+    if (!ta) return
+    const start = ta.selectionStart
+    const end = ta.selectionEnd
+    const text = settings.welcome_message
+    const newText = text.substring(0, start) + variable + text.substring(end)
+    setSettings((s) => (s ? { ...s, welcome_message: newText } : s))
+    requestAnimationFrame(() => {
+      ta.focus()
+      const pos = start + variable.length
+      ta.setSelectionRange(pos, pos)
+    })
+  }
+
+  // Welcome content state (composite message)
+  const welcomeContent: import('@/features/telegram-preview').MessageContent = settings.welcome_content
+    && settings.welcome_content.parts?.length > 0
+    ? settings.welcome_content
+    : {
+        parts: settings.welcome_message
+          ? [{ type: 'text' as const, text: settings.welcome_message, parse_mode: 'Markdown' as const }]
+          : [{ type: 'text' as const, text: '', parse_mode: 'Markdown' as const }],
+      }
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-lg font-semibold text-neutral-900">
-          <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">
-            Онбординг
-          </span>
-          Анкета регистрации
-        </h2>
+      {/* Section 1: Welcome Message */}
+      <h3 className="text-base font-semibold text-neutral-900 mb-4">Приветственное сообщение</h3>
+      <p className="text-sm text-neutral-400 mb-5">
+        Составное сообщение, которое клиент видит при запуске бота. Добавляйте текст, фото, видео, стикеры и кнопки.
+      </p>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Left: Editor */}
+        <div>
+          {/* Template variable chips */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            {TEMPLATE_VARIABLES.map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => insertVariable(v)}
+                className="px-2.5 py-1 rounded-md text-xs font-mono bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+          <MessageContentEditor
+            value={welcomeContent}
+            onChange={(content) => {
+              setSettings((s) => s ? { ...s, welcome_content: content } : s)
+            }}
+            onUpload={campaignsApi.uploadFile}
+            maxParts={5}
+          />
+        </div>
+
+        {/* Right: Live Preview */}
+        <div className="flex justify-center">
+          <TelegramPreview
+            botName={botName}
+            content={welcomeContent}
+            showFrame
+          />
+        </div>
+      </div>
+
+      {/* Section divider */}
+      <div className="border-t border-surface-border my-8"></div>
+
+      {/* Section 2: Buttons */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-semibold text-neutral-900">Кнопки бота</h3>
+        <button
+          type="button"
+          onClick={addButton}
+          disabled={isSaving || settings.buttons.length >= 10}
+          className={cn(
+            'flex items-center gap-1.5 text-sm font-medium text-accent',
+            'hover:text-accent/80 transition-colors',
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+          )}
+        >
+          <Plus className="w-4 h-4" />
+          Добавить
+        </button>
+      </div>
+      <p className="text-xs text-neutral-400 mb-4">
+        <strong className="text-neutral-500">Ссылка</strong> — открывает URL в браузере.{' '}
+        <strong className="text-neutral-500">Callback</strong> — отправляет событие боту для обработки действия.{' '}
+        <strong className="text-neutral-500">WebApp</strong> — открывает мини-приложение внутри Telegram.{' '}
+        <strong className="text-neutral-500">Команда</strong> — выполняет пользовательскую команду (/текст).
+      </p>
+
+      {settings.buttons.length === 0 ? (
+        <p className="text-sm text-neutral-400 text-center py-4">Нет кнопок меню</p>
+      ) : (
+        <DndContext sensors={buttonSensors} collisionDetection={closestCenter} onDragEnd={handleButtonDragEnd}>
+          <SortableContext items={buttonIds} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {settings.buttons.map((button, index) => (
+                <SortableItem key={buttonIds[index]} id={buttonIds[index]}>
+                  {({ listeners, attributes }) => (
+                    <div className="flex items-start gap-3 p-3 rounded-lg bg-neutral-50">
+                      <button
+                        type="button"
+                        className="mt-2.5 text-neutral-400 hover:text-neutral-600 cursor-grab active:cursor-grabbing touch-none"
+                        {...listeners}
+                        {...attributes}
+                        aria-label="Перетащить"
+                      >
+                        <GripVertical className="w-4 h-4" />
+                      </button>
+                      <div className="flex-1 grid grid-cols-3 gap-3">
+                        <input
+                          type="text"
+                          value={button.label}
+                          onChange={(e) => updateButton(index, 'label', e.target.value)}
+                          placeholder="Название"
+                          disabled={isSaving}
+                          className={inputClassName}
+                          aria-label={`Название кнопки ${index + 1}`}
+                        />
+                        <select
+                          value={button.type}
+                          onChange={(e) => updateButton(index, 'type', e.target.value)}
+                          disabled={isSaving}
+                          className={inputClassName}
+                          aria-label={`Тип кнопки ${index + 1}`}
+                        >
+                          <option value="url">Ссылка</option>
+                          <option value="callback">Callback</option>
+                          <option value="webapp">WebApp</option>
+                          <option value="command">Команда</option>
+                        </select>
+                        <input
+                          type="text"
+                          value={button.value}
+                          onChange={(e) => updateButton(index, 'value', e.target.value)}
+                          placeholder={
+                            button.type === 'url'
+                              ? 'https://...'
+                              : button.type === 'webapp'
+                                ? 'https://...'
+                                : button.type === 'command'
+                                  ? '/команда'
+                                  : 'callback_data'
+                          }
+                          disabled={isSaving}
+                          className={inputClassName}
+                          aria-label={`Значение кнопки ${index + 1}`}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeButton(index)}
+                        disabled={isSaving}
+                        className="mt-2.5 p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                        aria-label={`Удалить кнопку ${index + 1}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </SortableItem>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+
+      {settings.buttons.length >= 10 && (
+        <p className="text-xs text-neutral-400 mt-2">Максимум 10 кнопок</p>
+      )}
+
+      {/* Section divider */}
+      <div className="border-t border-surface-border my-8"></div>
+
+      {/* Section 3: Registration Form */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-semibold text-neutral-900">Форма регистрации</h3>
         <button
           type="button"
           onClick={addField}
@@ -808,11 +862,11 @@ function FormTab({
       {settings.registration_form.length === 0 ? (
         <p className="text-sm text-neutral-400 text-center py-4">Нет полей анкеты</p>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        <DndContext sensors={formSensors} collisionDetection={closestCenter} onDragEnd={handleFieldDragEnd}>
+          <SortableContext items={fieldIds} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
               {settings.registration_form.map((field, index) => (
-                <SortableItem key={ids[index]} id={ids[index]}>
+                <SortableItem key={fieldIds[index]} id={fieldIds[index]}>
                   {({ listeners, attributes }) => (
                     <div className="flex items-start gap-3 p-3 rounded-lg bg-neutral-50">
                       <button
@@ -843,17 +897,19 @@ function FormTab({
                           className={inputClassName}
                           aria-label={`Название поля ${index + 1}`}
                         />
-                        <CustomSelect
+                        <select
                           value={field.type}
-                          onChange={(v) => updateField(index, 'type', v)}
-                          options={[
-                            { value: 'text', label: 'Текст' },
-                            { value: 'email', label: 'Email' },
-                            { value: 'phone', label: 'Телефон' },
-                            { value: 'date', label: 'Дата' },
-                            { value: 'select', label: 'Выбор' },
-                          ]}
-                        />
+                          onChange={(e) => updateField(index, 'type', e.target.value)}
+                          disabled={isSaving}
+                          className={inputClassName}
+                          aria-label={`Тип поля ${index + 1}`}
+                        >
+                          <option value="text">Текст</option>
+                          <option value="email">Email</option>
+                          <option value="phone">Телефон</option>
+                          <option value="date">Дата</option>
+                          <option value="select">Выбор</option>
+                        </select>
                         <label className="flex items-center gap-2 px-4 py-2.5">
                           <input
                             type="checkbox"
@@ -912,6 +968,7 @@ function FormTab({
         </DndContext>
       )}
 
+      {/* Single combined save button */}
       <SaveButton isSaving={isSaving} saveError={saveError} saveSuccess={saveSuccess} onSave={save} />
     </div>
   )
@@ -956,41 +1013,54 @@ function ModulesTab({
       <div className="grid gap-3 sm:grid-cols-2">
         {MODULE_DEFS.map((mod) => {
           const isActive = settings.modules.includes(mod.key)
+          const configHref = mod.key === 'menu' ? '/dashboard/menus'
+            : mod.key === 'marketplace' ? '/dashboard/marketplace'
+            : null
           return (
             <div
               key={mod.key}
               className={cn(
-                'flex items-center justify-between p-4 rounded-xl border transition-colors',
+                'p-4 rounded-xl border transition-colors',
                 isActive
                   ? 'border-accent/30 bg-accent/5'
                   : 'border-surface-border bg-neutral-50',
               )}
             >
-              <div className="min-w-0 mr-3">
-                <p className="text-sm font-medium text-neutral-900">{mod.label}</p>
-                <p className="text-xs text-neutral-500 mt-0.5">{mod.description}</p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isActive}
-                aria-label={`${mod.label} модуль`}
-                onClick={() => toggleModule(mod.key)}
-                disabled={isSaving}
-                className={cn(
-                  'relative shrink-0 w-10 h-6 rounded-full transition-colors',
-                  'focus:outline-none focus:ring-2 focus:ring-accent/20',
-                  'disabled:opacity-50 disabled:cursor-not-allowed',
-                  isActive ? 'bg-accent' : 'bg-neutral-300',
-                )}
-              >
-                <span
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 mr-3">
+                  <p className="text-sm font-medium text-neutral-900">{mod.label}</p>
+                  <p className="text-xs text-neutral-500 mt-0.5">{mod.description}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isActive}
+                  aria-label={`${mod.label} модуль`}
+                  onClick={() => toggleModule(mod.key)}
+                  disabled={isSaving}
                   className={cn(
-                    'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform',
-                    isActive && 'translate-x-4',
+                    'relative shrink-0 w-10 h-6 rounded-full transition-colors',
+                    'focus:outline-none focus:ring-2 focus:ring-accent/20',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    isActive ? 'bg-accent' : 'bg-neutral-300',
                   )}
-                />
-              </button>
+                >
+                  <span
+                    className={cn(
+                      'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform',
+                      isActive && 'translate-x-4',
+                    )}
+                  />
+                </button>
+              </div>
+              {isActive && configHref && (
+                <Link
+                  to={configHref}
+                  className="inline-flex items-center gap-1.5 mt-3 text-xs text-accent hover:text-accent/80 font-medium transition-colors"
+                >
+                  Настроить <ChevronRight className="w-3 h-3" />
+                </Link>
+              )}
             </div>
           )
         })}
@@ -1050,303 +1120,34 @@ function ModulesTab({
 }
 
 // ===========================================================================
-// Tab: Меню (Menu)
-// ===========================================================================
-
-function MenuTab() {
-  const { data: menus, isLoading } = useMenusQuery()
-
-  if (isLoading) {
-    return <p className="text-sm text-neutral-500">Загрузка меню...</p>
-  }
-
-  const menuList = menus ?? []
-
-  if (menuList.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-8 text-center">
-        <UtensilsCrossed className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-        <p className="text-sm text-neutral-500 mb-4">Меню ещё не создано</p>
-        <Link
-          to="/dashboard/menus"
-          className={cn(
-            'inline-flex items-center gap-1.5 py-2 px-4 rounded-lg text-sm font-medium',
-            'bg-accent text-white hover:bg-accent-hover transition-colors',
-          )}
-        >
-          Перейти к меню
-          <ChevronRight className="w-4 h-4" />
-        </Link>
-      </div>
-    )
-  }
-
-  return (
-    <div className="bg-white rounded-2xl shadow-sm border border-surface-border divide-y divide-surface-border/50">
-      {menuList.map((menu: Menu) => (
-        <Link
-          key={menu.id}
-          to={`/dashboard/menus/${menu.id}`}
-          className="flex items-center justify-between px-5 py-4 hover:bg-neutral-50 transition-colors first:rounded-t-2xl last:rounded-b-2xl"
-        >
-          <div>
-            <p className="text-sm font-medium text-neutral-900">{menu.name}</p>
-            <p className="text-xs text-neutral-400 mt-0.5">
-              {menu.source === 'pos_import' ? 'Импорт из POS' : 'Ручное'}
-              {menu.categories && ` \u00b7 ${menu.categories.length} категорий`}
-            </p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-neutral-400" />
-        </Link>
-      ))}
-    </div>
-  )
-}
-
-// ===========================================================================
-// Tab: POS
-// ===========================================================================
-
-function POSTab({ botId }: { botId: number }) {
-  const { data: posLocations, isLoading: posLoading } = usePOSQuery()
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
-  const [loaded, setLoaded] = useState(false)
-  const { isSaving, saveError, saveSuccess, save } = useSaveAction(botId, () =>
-    menusApi.setBotPOSLocations(botId, selectedIds),
-  )
-
-  // Load current bindings
-  useEffect(() => {
-    if (loaded) return
-    menusApi.getBotPOSLocations(botId).then((res) => {
-      setSelectedIds(res.pos_ids ?? [])
-      setLoaded(true)
-    }).catch(() => {
-      setLoaded(true)
-    })
-  }, [botId, loaded])
-
-  if (posLoading || !loaded) {
-    return <p className="text-sm text-neutral-500">Загрузка POS-точек...</p>
-  }
-
-  const locations = posLocations ?? []
-
-  if (locations.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-8 text-center">
-        <Store className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-        <p className="text-sm text-neutral-500 mb-4">Нет POS-точек</p>
-        <Link
-          to="/dashboard/pos"
-          className={cn(
-            'inline-flex items-center gap-1.5 py-2 px-4 rounded-lg text-sm font-medium',
-            'bg-accent text-white hover:bg-accent-hover transition-colors',
-          )}
-        >
-          Управление POS
-          <ChevronRight className="w-4 h-4" />
-        </Link>
-      </div>
-    )
-  }
-
-  const togglePos = (id: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    )
-  }
-
-  return (
-    <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
-      <h2 className="text-lg font-semibold text-neutral-900 mb-1">
-        <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">
-          Привязка
-        </span>
-        POS-точки бота
-      </h2>
-      <p className="text-sm text-neutral-400 mb-5">
-        Привяжите точки продаж к боту. Если выбрано несколько, гость сможет выбрать нужную точку при запуске бота через кнопки.
-      </p>
-
-      <div className="space-y-2">
-        {locations.map((loc: POSLocation) => (
-          <label
-            key={loc.id}
-            className={cn(
-              'flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors',
-              selectedIds.includes(loc.id) ? 'bg-accent/5 border border-accent/20' : 'bg-neutral-50 border border-transparent',
-            )}
-          >
-            <input
-              type="checkbox"
-              checked={selectedIds.includes(loc.id)}
-              onChange={() => togglePos(loc.id)}
-              disabled={isSaving}
-              className="w-4 h-4 rounded border-neutral-300 text-accent focus:ring-accent/20"
-            />
-            <div>
-              <p className="text-sm font-medium text-neutral-900">{loc.name}</p>
-              {loc.address && <p className="text-xs text-neutral-500">{loc.address}</p>}
-            </div>
-          </label>
-        ))}
-      </div>
-
-      <SaveButton isSaving={isSaving} saveError={saveError} saveSuccess={saveSuccess} onSave={save} />
-    </div>
-  )
-}
-
-// ===========================================================================
 // Tab: Превью (Preview) — Telegram iOS mockup
 // ===========================================================================
 
 function PreviewTab({ settings, botName }: { settings: BotSettings; botName: string }) {
-  const welcomeText = settings.welcome_message
-    .replace(/\{first_name\}/g, 'Александр')
-    .replace(/\{bonus_balance\}/g, '1 250')
-    .replace(/\{loyalty_level\}/g, 'Gold')
-
-  const now = new Date()
-  const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-
-  const initial = botName.charAt(0).toUpperCase()
+  // Build MessageContent from settings for preview
+  const content: import('@/features/telegram-preview').MessageContent =
+    settings.welcome_content && settings.welcome_content.parts?.length > 0
+      ? settings.welcome_content
+      : {
+          parts: settings.welcome_message
+            ? [{
+                type: 'text' as const,
+                text: settings.welcome_message
+                  .replace(/\{first_name\}/g, 'Александр')
+                  .replace(/\{bonus_balance\}/g, '1 250')
+                  .replace(/\{loyalty_level\}/g, 'Gold'),
+                parse_mode: 'Markdown' as const,
+              }]
+            : [],
+        }
 
   return (
     <div className="flex justify-center">
-      <div
-        className="w-[360px] rounded-[2rem] overflow-hidden shadow-xl border border-neutral-200"
-        style={{ fontFamily: "-apple-system, 'SF Pro Text', system-ui, sans-serif" }}
-      >
-        {/* Header */}
-        <div
-          className="px-4 py-3 flex items-center gap-3"
-          style={{ background: 'linear-gradient(135deg, #5B9BD5, #4A8FC7)' }}
-        >
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-semibold">
-            {initial}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-semibold truncate">{botName}</p>
-            <p className="text-white/70 text-[11px]">bot</p>
-          </div>
-        </div>
-
-        {/* Chat area */}
-        <div
-          className="p-4 min-h-[420px] flex flex-col gap-3"
-          style={{ backgroundColor: '#E8ECF0' }}
-        >
-          {/* Welcome message bubble */}
-          {welcomeText && (
-            <div className="self-start max-w-[85%]">
-              <div
-                className="bg-white px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
-                style={{
-                  borderRadius: '18px 18px 18px 4px',
-                  fontSize: '15px',
-                  lineHeight: '1.35',
-                  color: '#1A1A1A',
-                }}
-              >
-                <span style={{ whiteSpace: 'pre-wrap' }}>{welcomeText}</span>
-                <span
-                  className="float-right ml-2 mt-1"
-                  style={{ fontSize: '11px', color: '#8E8E93' }}
-                >
-                  {timeStr}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Inline keyboard buttons */}
-          {settings.buttons.length > 0 && (
-            <div className="self-start max-w-[85%] space-y-1.5">
-              {settings.buttons.map((btn, i) => (
-                <div
-                  key={i}
-                  className="text-center py-2 px-3 text-[14px] font-medium"
-                  style={{
-                    color: '#3390EC',
-                    border: '1px solid rgba(51,144,236,0.3)',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(255,255,255,0.8)',
-                  }}
-                >
-                  {btn.label || 'Кнопка'}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Form fields as bot messages */}
-          {settings.registration_form.length > 0 && (
-            <div className="self-start max-w-[85%] space-y-2 mt-2">
-              {settings.registration_form.map((field, i) => (
-                <div
-                  key={i}
-                  className="bg-white px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
-                  style={{
-                    borderRadius: '18px 18px 18px 4px',
-                    fontSize: '15px',
-                    lineHeight: '1.35',
-                    color: '#1A1A1A',
-                  }}
-                >
-                  {field.label || field.name}
-                  {field.required && (
-                    <span className="text-red-400 ml-0.5">*</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Modules badges */}
-          {settings.modules.length > 0 && (
-            <div className="mt-auto pt-4">
-              <div className="flex flex-wrap gap-1.5">
-                {settings.modules.map((mod) => {
-                  const def = MODULE_DEFS.find((d) => d.key === mod)
-                  return (
-                    <span
-                      key={mod}
-                      className="text-[11px] px-2 py-0.5 rounded-full"
-                      style={{
-                        backgroundColor: 'rgba(51,144,236,0.1)',
-                        color: '#3390EC',
-                      }}
-                    >
-                      {def?.label ?? mod}
-                    </span>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Input area */}
-        <div className="bg-white px-4 py-3 flex items-center gap-3 border-t border-neutral-200">
-          <svg className="w-5 h-5 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
-          </svg>
-          <div
-            className="flex-1 py-1.5 text-[15px]"
-            style={{ color: '#8E8E93' }}
-          >
-            Сообщение
-          </div>
-          <svg className="w-5 h-5 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-            <path d="M19 10v2a7 7 0 01-14 0v-2" />
-            <line x1="12" y1="19" x2="12" y2="23" />
-            <line x1="8" y1="23" x2="16" y2="23" />
-          </svg>
-        </div>
-      </div>
+      <TelegramPreview
+        botName={botName}
+        content={content}
+        showFrame
+      />
     </div>
   )
 }

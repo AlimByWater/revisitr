@@ -13,9 +13,6 @@ import type {
   CampaignVariant,
   CreateABTestRequest,
   ABTestResults,
-  CampaignTemplate,
-  CreateCampaignTemplateRequest,
-  UpdateCampaignTemplateRequest,
 } from './types'
 
 export const campaignsApi = {
@@ -166,32 +163,14 @@ export const campaignsApi = {
     await api.post(`/campaigns/${campaignId}/variants/${variantId}/winner`)
   },
 
-  // Campaign templates
-  listCampaignTemplates: async (): Promise<CampaignTemplate[]> => {
-    const response = await api.get<CampaignTemplate[]>('/campaigns/templates')
-    return response.data
-  },
-
-  getCampaignTemplate: async (id: number): Promise<CampaignTemplate> => {
-    const response = await api.get<CampaignTemplate>(`/campaigns/templates/${id}`)
-    return response.data
-  },
-
-  createCampaignTemplate: async (data: CreateCampaignTemplateRequest): Promise<CampaignTemplate> => {
-    const response = await api.post<CampaignTemplate>('/campaigns/templates', data)
-    return response.data
-  },
-
-  updateCampaignTemplate: async (id: number, data: UpdateCampaignTemplateRequest): Promise<void> => {
-    await api.patch(`/campaigns/templates/${id}`, data)
-  },
-
-  deleteCampaignTemplate: async (id: number): Promise<void> => {
-    await api.delete(`/campaigns/templates/${id}`)
-  },
-
-  createFromTemplate: async (templateId: number, botId: number): Promise<Campaign> => {
-    const response = await api.post<Campaign>(`/campaigns/templates/${templateId}/use`, { bot_id: botId })
-    return response.data
+  // File upload
+  uploadFile: async (file: File): Promise<string> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await api.post<{ url: string }>('/files/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    })
+    return response.data.url
   },
 }

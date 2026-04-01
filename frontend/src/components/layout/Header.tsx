@@ -72,7 +72,12 @@ export function Header({ onMenuToggle }: HeaderProps) {
           <nav className="hidden md:flex items-center gap-6">
             <Link
               to="/dashboard"
-              className="text-sm font-medium transition-colors text-white/50 hover:text-white/90"
+              className={cn(
+                'text-sm font-medium transition-colors',
+                location.pathname.startsWith('/dashboard') && !location.pathname.startsWith('/dashboard/account')
+                  ? 'text-white'
+                  : 'text-white/50 hover:text-white/90',
+              )}
             >
               Панель управления
             </Link>

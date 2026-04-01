@@ -5,8 +5,10 @@ import {
   useSendCampaignMutation,
   useDeleteCampaignMutation,
 } from '@/features/campaigns/queries'
-import { ArrowLeft, Send, Trash2, Users, CheckCircle, XCircle } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Users, CheckCircle, XCircle, RotateCcw } from 'lucide-react'
 import type { Campaign } from '@/features/campaigns/types'
+import { TelegramPreview } from '@/features/telegram-preview'
+import type { MessageContent } from '@/features/telegram-preview'
 
 const statusConfig: Record<
   Campaign['status'],
@@ -93,7 +95,7 @@ export default function CampaignDetailPage() {
 
   const status = statusConfig[campaign.status]
   const isDraft = campaign.status === 'draft'
-  const isSent = campaign.status === 'sent'
+  const isTerminal = ['sent', 'completed', 'failed'].includes(campaign.status)
 
   return (
     <div className="max-w-3xl">
@@ -106,7 +108,7 @@ export default function CampaignDetailPage() {
           <ArrowLeft className="w-5 h-5 text-neutral-500" />
         </button>
         <div className="flex-1">
-          <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
             {campaign.name}
           </h1>
         </div>
@@ -128,9 +130,19 @@ export default function CampaignDetailPage() {
         <div className="space-y-4">
           <div>
             <p className="text-xs text-neutral-400 mb-1">Сообщение</p>
-            <p className="text-sm text-neutral-900 whitespace-pre-wrap bg-neutral-50 rounded-lg p-3">
-              {campaign.message}
-            </p>
+            <div className="flex justify-center mt-2">
+              <TelegramPreview
+                content={
+                  campaign.content && campaign.content.parts?.length > 0
+                    ? campaign.content
+                    : { parts: [
+                        ...(campaign.media_url ? [{ type: 'photo' as const, media_url: campaign.media_url }] : []),
+                        { type: 'text' as const, text: campaign.message || '' },
+                      ] }
+                }
+                botName={campaign.name}
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -151,8 +163,8 @@ export default function CampaignDetailPage() {
         </div>
       </div>
 
-      {/* Stats cards (if sent) */}
-      {isSent && (
+      {/* Stats cards (if terminal: sent/completed/failed) */}
+      {isTerminal && (
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-5">
             <div className="flex items-center gap-2 mb-2">
@@ -185,40 +197,56 @@ export default function CampaignDetailPage() {
       )}
 
       {/* Actions */}
-      {isDraft && (
-        <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3">
+        {isDraft && (
+          <>
+            <button
+              onClick={handleSend}
+              disabled={sendMutation.isPending}
+              type="button"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
+                'bg-accent text-white',
+                'hover:bg-accent/90 active:bg-accent/80',
+                'transition-colors',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'focus:outline-none focus:ring-2 focus:ring-accent/20',
+              )}
+            >
+              <Send className="w-4 h-4" />
+              {sendMutation.isPending ? 'Отправка...' : 'Отправить'}
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              type="button"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
+                'border border-red-200 text-red-600',
+                'hover:bg-red-50 transition-colors',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+              )}
+            >
+              <Trash2 className="w-4 h-4" />
+              Удалить
+            </button>
+          </>
+        )}
+        {!isDraft && (
           <button
-            onClick={handleSend}
-            disabled={sendMutation.isPending}
             type="button"
+            onClick={() => navigate(`/dashboard/campaigns/create?clone=${id}&type=campaign`)}
             className={cn(
               'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
-              'bg-accent text-white',
-              'hover:bg-accent/90 active:bg-accent/80',
-              'transition-colors',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              'focus:outline-none focus:ring-2 focus:ring-accent/20',
+              'border border-neutral-200 text-neutral-700',
+              'hover:bg-neutral-50 transition-colors',
             )}
           >
-            <Send className="w-4 h-4" />
-            {sendMutation.isPending ? 'Отправка...' : 'Отправить'}
+            <RotateCcw className="w-4 h-4" />
+            Повторить
           </button>
-          <button
-            onClick={handleDelete}
-            disabled={deleteMutation.isPending}
-            type="button"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
-              'border border-red-200 text-red-600',
-              'hover:bg-red-50 transition-colors',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-            )}
-          >
-            <Trash2 className="w-4 h-4" />
-            Удалить
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

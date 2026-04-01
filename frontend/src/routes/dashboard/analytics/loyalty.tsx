@@ -59,6 +59,7 @@ export default function LoyaltyAnalyticsPage() {
             ]}
             placeholder="Все боты"
             width="200px"
+            light
           />
         )}
       </div>

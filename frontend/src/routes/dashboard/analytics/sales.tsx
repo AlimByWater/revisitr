@@ -58,6 +58,7 @@ export default function SalesAnalyticsPage() {
             ]}
             placeholder="Все боты"
             width="200px"
+            light
           />
         )}
       </div>
@@ -109,6 +110,31 @@ export default function SalesAnalyticsPage() {
           </h3>
           {isLoading ? (
             <ChartSkeletonComponent />
+          ) : (data?.charts?.revenue ?? []).length <= 1 ? (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={data?.charts?.revenue ?? []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="day"
+                  tickFormatter={formatDay}
+                  tick={{ fontSize: 11, fill: '#a3a3a3' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: '#a3a3a3' }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={50}
+                />
+                <Tooltip
+                  labelFormatter={(l) => formatDayFull(String(l))}
+                  formatter={(v) => [formatCurrency(Number(v)), 'Выручка']}
+                  contentStyle={{ borderRadius: 4, border: '1px solid #e5e5e5', fontSize: 13 }}
+                />
+                <Bar dataKey="value" fill="#EF3219" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           ) : (
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={data?.charts?.revenue ?? []}>

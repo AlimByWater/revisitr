@@ -90,7 +90,7 @@ export default function ProgramDetailPage() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <Link
         to="/dashboard/loyalty"
         className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 transition-colors mb-4"
@@ -114,7 +114,7 @@ export default function ProgramDetailPage() {
       </div>
 
       {/* Config section */}
-      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 mb-6">
+      <div className="bg-white rounded border border-neutral-900 p-6 mb-6">
         <h2 className="text-base font-semibold mb-4">
           <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">Конфигурация</span>
           Настройки
@@ -139,7 +139,7 @@ export default function ProgramDetailPage() {
                 }))
               }
               className={cn(
-                'w-full px-4 py-2.5 rounded-lg border border-surface-border',
+                'w-full px-4 py-2.5 rounded border border-neutral-200',
                 'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                 'transition-colors',
               )}
@@ -161,7 +161,7 @@ export default function ProgramDetailPage() {
               }
               placeholder="баллы"
               className={cn(
-                'w-full px-4 py-2.5 rounded-lg border border-surface-border',
+                'w-full px-4 py-2.5 rounded border border-neutral-200',
                 'text-sm placeholder:text-neutral-400',
                 'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                 'transition-colors',
@@ -172,16 +172,16 @@ export default function ProgramDetailPage() {
       </div>
 
       {/* Levels section */}
-      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
+      <div className="bg-white rounded border border-neutral-900 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold">Уровни</h2>
           <button
             type="button"
             onClick={addLevel}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg',
-              'text-sm font-medium text-neutral-700',
-              'border border-surface-border hover:bg-neutral-50 transition-colors',
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded',
+              'text-sm font-medium text-white',
+              'bg-accent hover:bg-accent-hover active:bg-accent/80 transition-colors',
             )}
           >
             <Plus className="w-4 h-4" />
@@ -197,7 +197,7 @@ export default function ProgramDetailPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-border text-left">
+                <tr className="border-b border-neutral-200 text-left">
                   <th className="pb-2 font-medium text-neutral-500">
                     Название
                   </th>
@@ -215,7 +215,7 @@ export default function ProgramDetailPage() {
                 {levels.map((level, index) => (
                   <tr
                     key={level.id || `new-${index}`}
-                    className="border-b border-surface-border last:border-0"
+                   
                   >
                     <td className="py-2 pr-2">
                       <input
@@ -227,7 +227,7 @@ export default function ProgramDetailPage() {
                         placeholder="Название уровня"
                         aria-label="Название уровня"
                         className={cn(
-                          'w-full px-3 py-1.5 rounded-lg border border-surface-border',
+                          'w-full px-3 py-1.5 rounded border border-neutral-200',
                           'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                         )}
                       />
@@ -246,7 +246,7 @@ export default function ProgramDetailPage() {
                         }
                         aria-label="Порог"
                         className={cn(
-                          'w-24 px-3 py-1.5 rounded-lg border border-surface-border',
+                          'w-24 px-3 py-1.5 rounded border border-neutral-200',
                           'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                         )}
                       />
@@ -266,7 +266,7 @@ export default function ProgramDetailPage() {
                         }
                         aria-label="Вознаграждение в процентах"
                         className={cn(
-                          'w-24 px-3 py-1.5 rounded-lg border border-surface-border',
+                          'w-24 px-3 py-1.5 rounded border border-neutral-200',
                           'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                         )}
                       />
@@ -285,7 +285,7 @@ export default function ProgramDetailPage() {
                         }
                         aria-label="Порядок сортировки"
                         className={cn(
-                          'w-20 px-3 py-1.5 rounded-lg border border-surface-border',
+                          'w-20 px-3 py-1.5 rounded border border-neutral-200',
                           'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                         )}
                       />
@@ -294,7 +294,7 @@ export default function ProgramDetailPage() {
                       <button
                         type="button"
                         onClick={() => removeLevel(index)}
-                        className="p-1.5 text-neutral-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                        className="p-1.5 text-neutral-400 hover:text-red-600 transition-colors rounded hover:bg-red-50"
                         aria-label="Удалить уровень"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -315,7 +315,7 @@ export default function ProgramDetailPage() {
           onClick={handleSave}
           disabled={saving}
           className={cn(
-            'px-6 py-2.5 rounded-lg text-sm font-medium',
+            'px-6 py-2.5 rounded text-sm font-medium',
             'bg-accent text-white hover:bg-accent/90 transition-colors',
             'disabled:opacity-50 disabled:cursor-not-allowed',
           )}

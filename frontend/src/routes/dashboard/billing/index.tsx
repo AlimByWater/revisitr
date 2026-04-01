@@ -43,10 +43,10 @@ function TariffCard({
   return (
     <div
       className={cn(
-        'relative flex flex-col rounded-2xl border p-6 transition-all',
+        'relative flex flex-col rounded border p-6 transition-all',
         isCurrent
           ? 'border-accent/50 bg-accent/5 ring-1 ring-accent/20'
-          : 'border-surface-border bg-white hover:border-neutral-300 hover:shadow-md',
+          : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-md',
       )}
     >
       {isPro && (
@@ -81,12 +81,12 @@ function TariffCard({
       {isEnterprise ? (
         <button
           type="button"
-          className="w-full py-2.5 rounded-lg text-sm font-medium border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:border-neutral-300 transition-colors"
+          className="w-full py-2.5 rounded text-sm font-medium border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:border-neutral-300 transition-colors"
         >
           Связаться
         </button>
       ) : isCurrent ? (
-        <div className="w-full py-2.5 rounded-lg text-sm font-medium text-center text-accent">
+        <div className="w-full py-2.5 rounded text-sm font-medium text-center text-accent">
           Текущий план
         </div>
       ) : (
@@ -95,7 +95,7 @@ function TariffCard({
           onClick={() => onSelect(tariff.slug)}
           disabled={isLoading}
           className={cn(
-            'w-full py-2.5 rounded-lg text-sm font-medium transition-colors',
+            'w-full py-2.5 rounded text-sm font-medium transition-colors',
             isPro
               ? 'bg-accent text-white hover:bg-accent/90'
               : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200',
@@ -171,7 +171,7 @@ export default function BillingPage() {
 
       {/* Current subscription */}
       {subscription && (
-        <div className="rounded-2xl border border-surface-border bg-white p-6">
+        <div className="rounded border border-neutral-900 bg-white p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div>
@@ -193,7 +193,7 @@ export default function BillingPage() {
                       type="button"
                       onClick={handleCancel}
                       disabled={canceling}
-                      className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                      className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded hover:bg-red-100 transition-colors"
                     >
                       {canceling ? 'Отмена...' : 'Подтвердить'}
                     </button>
@@ -219,7 +219,7 @@ export default function BillingPage() {
           </div>
 
           {subscription.status === 'past_due' && (
-            <div className="mt-4 flex items-center gap-2 text-sm text-amber-700 bg-amber-50 rounded-lg p-3">
+            <div className="mt-4 flex items-center gap-2 text-sm text-amber-700 bg-amber-50 rounded p-3">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               Подписка просрочена. Оплатите счёт, чтобы сохранить доступ к функциям.
             </div>
@@ -231,7 +231,7 @@ export default function BillingPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="rounded-2xl border border-surface-border bg-white p-6 h-80 animate-pulse" />
+            <div key={i} className="rounded border border-neutral-900 bg-white p-6 h-80 animate-pulse" />
           ))}
         </div>
       ) : (
@@ -249,7 +249,7 @@ export default function BillingPage() {
       )}
 
       {/* Feature gating info */}
-      <div className="rounded-2xl border border-surface-border bg-white p-6">
+      <div className="rounded border border-neutral-900 bg-white p-6">
         <div className="flex items-center gap-2 mb-4">
           <Zap className="w-5 h-5 text-accent" />
           <h3 className="text-base font-semibold text-neutral-900">Как работают тарифы</h3>

@@ -66,9 +66,9 @@ export default function MenusPage() {
           type="button"
           onClick={() => setShowCreate(true)}
           className={cn(
-            'flex items-center gap-1.5 py-2 px-4 rounded-lg text-sm font-medium',
+            'flex items-center gap-1.5 py-2 px-4 rounded text-sm font-medium',
             'bg-accent text-white hover:bg-accent-hover',
-            'transition-all shadow-sm shadow-accent/20',
+            'transition-all ',
           )}
         >
           <Plus className="w-4 h-4" />
@@ -77,7 +77,7 @@ export default function MenusPage() {
       </div>
 
       {showCreate && (
-        <div className="bg-white rounded-2xl border border-surface-border p-5 mb-6 animate-in">
+        <div className="bg-white rounded border border-neutral-900 p-5 mb-6 animate-in">
           <h3 className="text-sm font-semibold text-neutral-900 mb-3">Новое меню</h3>
           <div className="flex gap-3">
             <input
@@ -86,7 +86,7 @@ export default function MenusPage() {
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Название меню"
               className={cn(
-                'flex-1 px-3 py-2 rounded-lg border border-surface-border text-sm',
+                'flex-1 px-3 py-2 rounded border border-neutral-200 text-sm',
                 'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
               )}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
@@ -96,7 +96,7 @@ export default function MenusPage() {
               onClick={handleCreate}
               disabled={createMenu.isPending || !newName.trim()}
               className={cn(
-                'py-2 px-4 rounded-lg text-sm font-medium',
+                'py-2 px-4 rounded text-sm font-medium',
                 'bg-accent text-white hover:bg-accent-hover',
                 'disabled:opacity-50 transition-all',
               )}
@@ -106,7 +106,7 @@ export default function MenusPage() {
             <button
               type="button"
               onClick={() => { setShowCreate(false); setNewName('') }}
-              className="py-2 px-3 rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
+              className="py-2 px-3 rounded text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
             >
               Отмена
             </button>
@@ -116,7 +116,7 @@ export default function MenusPage() {
 
       {!menus || menus.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded bg-neutral-100 flex items-center justify-center mb-4">
             <UtensilsCrossed className="w-8 h-8 text-neutral-400" />
           </div>
           <h3 className="font-serif text-xl font-bold text-neutral-800 mb-1.5">Нет меню</h3>
@@ -129,7 +129,7 @@ export default function MenusPage() {
           {menus.map((menu) => (
             <div
               key={menu.id}
-              className="bg-white rounded-2xl border border-surface-border p-5 hover:shadow-sm transition-shadow group"
+              className="bg-white rounded border border-neutral-900 p-5 hover: transition-shadow group"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="min-w-0 flex-1">
@@ -141,7 +141,7 @@ export default function MenusPage() {
                 <button
                   type="button"
                   onClick={(e) => { e.preventDefault(); handleDelete(menu.id) }}
-                  className="p-1.5 rounded-lg text-neutral-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                  className="p-1.5 rounded text-neutral-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
                   aria-label="Удалить меню"
                 >
                   <Trash2 className="w-4 h-4" />

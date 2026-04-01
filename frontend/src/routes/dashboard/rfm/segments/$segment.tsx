@@ -1,7 +1,18 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronUp, ChevronDown, Download, Send } from 'lucide-react'
+import { ChevronLeft, ChevronUp, ChevronDown, Download, Send, Sprout, TrendingUp, UserCheck, Crown, Gem, AlertTriangle, UserX, Users } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+
+const SEGMENT_ICONS: Record<string, LucideIcon> = {
+  new: Sprout,
+  promising: TrendingUp,
+  regular: UserCheck,
+  vip: Crown,
+  rare_valuable: Gem,
+  churn_risk: AlertTriangle,
+  lost: UserX,
+}
 import { useRFMSegmentClientsQuery } from '@/features/rfm/queries'
 import { RFM_SEGMENT_LABELS, RFM_SEGMENT_COLORS } from '@/features/rfm/types'
 import { formatMoney, formatDate, pluralClients, escapeCsvField } from '@/features/rfm/utils'
@@ -75,7 +86,7 @@ export default function SegmentDetailPage() {
   }
 
   return (
-    <div className="max-w-6xl">
+    <div>
       {/* Back + header */}
       <div className="mb-6 animate-in">
         <button
@@ -89,7 +100,10 @@ export default function SegmentDetailPage() {
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            {segmentColors && <span className="text-2xl">{segmentColors.icon}</span>}
+            {(() => {
+              const Icon = SEGMENT_ICONS[segment || '']
+              return Icon ? <Icon className="w-6 h-6 shrink-0" style={{ color: segmentColors?.color }} /> : null
+            })()}
             <div>
               <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
                 {segmentLabel}
@@ -107,8 +121,8 @@ export default function SegmentDetailPage() {
               onClick={handleExportCSV}
               disabled={!data?.clients.length}
               className={cn(
-                'flex items-center gap-2 py-2 px-4 rounded-lg',
-                'border border-neutral-200 text-sm font-medium text-neutral-600',
+                'flex items-center gap-2 py-2 px-4 rounded',
+                'border border-neutral-900 text-sm font-medium text-neutral-600',
                 'hover:bg-neutral-50 hover:border-neutral-300',
                 'transition-all duration-150',
                 'disabled:opacity-40 disabled:cursor-not-allowed',
@@ -121,11 +135,11 @@ export default function SegmentDetailPage() {
               type="button"
               onClick={() => navigate(`/dashboard/campaigns/create?segment=${segment}`)}
               className={cn(
-                'flex items-center gap-2 py-2 px-4 rounded-lg',
+                'flex items-center gap-2 py-2 px-4 rounded',
                 'bg-accent text-white text-sm font-medium',
                 'hover:bg-accent-hover active:bg-accent/80',
                 'transition-all duration-150',
-                'shadow-sm shadow-accent/20',
+                'shadow-none',
               )}
             >
               <Send className="w-4 h-4" />
@@ -141,15 +155,19 @@ export default function SegmentDetailPage() {
       ) : isError ? (
         <ErrorState title="Не удалось загрузить клиентов" onRetry={() => mutate()} />
       ) : !data?.clients.length ? (
-        <div className="bg-white rounded-2xl border border-surface-border py-16 text-center animate-in">
-          <p className="text-neutral-500">В этом сегменте пока нет клиентов</p>
+        <div className="flex flex-col items-center justify-center py-24 text-center animate-in">
+          <div className="w-16 h-16 rounded bg-neutral-100 flex items-center justify-center mb-4">
+            <Users className="w-8 h-8 text-neutral-400" />
+          </div>
+          <h3 className="font-serif text-xl font-bold text-neutral-800 mb-1.5 tracking-tight">Нет клиентов</h3>
+          <p className="text-sm text-neutral-400 max-w-xs leading-relaxed">В этом сегменте пока нет клиентов</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-surface-border overflow-hidden animate-in">
+        <div className="bg-white rounded border border-neutral-900 overflow-hidden animate-in">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-border">
+                <tr>
                   {[
                     { key: null, label: 'Имя', align: 'left' as const },
                     { key: 'r_score' as SortCol, label: 'R' },
@@ -173,16 +191,18 @@ export default function SegmentDetailPage() {
                     </th>
                   ))}
                 </tr>
+                <tr><td colSpan={7} className="p-0"><div className="mx-4 border-t border-neutral-200" /></td></tr>
               </thead>
               <tbody>
                 {data.clients.map((client, i) => (
+                  <React.Fragment key={client.id}>
                   <tr
-                    key={client.id}
                     className={cn(
-                      'border-b border-surface-border last:border-0 hover:bg-neutral-50 transition-colors',
+                      'hover:bg-neutral-50 transition-colors cursor-pointer',
                       'animate-in',
                       `animate-in-delay-${Math.min(i + 1, 5)}`,
                     )}
+                    onClick={() => window.open(`/revisitr/dashboard/clients/${client.id}`, '_blank')}
                   >
                     <td className="px-4 py-3 font-medium text-neutral-900 whitespace-nowrap">
                       {client.first_name} {client.last_name?.charAt(0)}.
@@ -206,6 +226,10 @@ export default function SegmentDetailPage() {
                       {client.total_visits_lifetime}
                     </td>
                   </tr>
+                  {i < data.clients.length - 1 && (
+                    <tr><td colSpan={7} className="p-0"><div className="mx-4 border-t border-neutral-200" /></td></tr>
+                  )}
+                </React.Fragment>
                 ))}
               </tbody>
             </table>
@@ -213,7 +237,9 @@ export default function SegmentDetailPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-3 border-t border-surface-border">
+            <>
+            <div className="mx-4 border-t border-neutral-200" />
+            <div className="flex items-center justify-between px-6 py-3">
               <span className="text-xs text-neutral-400">
                 Стр. {page} из {totalPages}
               </span>
@@ -222,7 +248,7 @@ export default function SegmentDetailPage() {
                   type="button"
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page <= 1}
-                  className="px-3 py-1.5 rounded-lg text-sm border border-neutral-200 disabled:opacity-40 hover:bg-neutral-50 transition-colors"
+                  className="px-3 py-1.5 rounded text-sm border border-neutral-900 disabled:opacity-40 hover:bg-neutral-50 transition-colors"
                 >
                   ◄
                 </button>
@@ -243,7 +269,7 @@ export default function SegmentDetailPage() {
                       type="button"
                       onClick={() => setPage(p)}
                       className={cn(
-                        'w-8 h-8 rounded-lg text-sm font-medium transition-colors',
+                        'w-8 h-8 rounded text-sm font-medium transition-colors',
                         page === p
                           ? 'bg-neutral-900 text-white'
                           : 'text-neutral-600 hover:bg-neutral-100',
@@ -257,12 +283,13 @@ export default function SegmentDetailPage() {
                   type="button"
                   onClick={() => setPage(Math.min(totalPages, page + 1))}
                   disabled={page >= totalPages}
-                  className="px-3 py-1.5 rounded-lg text-sm border border-neutral-200 disabled:opacity-40 hover:bg-neutral-50 transition-colors"
+                  className="px-3 py-1.5 rounded text-sm border border-neutral-900 disabled:opacity-40 hover:bg-neutral-50 transition-colors"
                 >
                   ►
                 </button>
               </div>
             </div>
+            </>
           )}
         </div>
       )}

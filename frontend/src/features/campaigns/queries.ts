@@ -5,11 +5,10 @@ import type {
   UpdateCampaignRequest,
   CreateScenarioRequest,
   UpdateScenarioRequest,
-  AudienceFilter,
   CreateABTestRequest,
-  CreateCampaignTemplateRequest,
-  UpdateCampaignTemplateRequest,
 } from './types'
+import type { SegmentFilter } from '@/features/segments/types'
+import { segmentsApi } from '@/features/segments/api'
 
 export function useCampaignsQuery(limit = 20, offset = 0) {
   return useApiQuery(`campaigns-${limit}-${offset}`, () =>
@@ -63,7 +62,8 @@ export function useSendCampaignMutation() {
 export function usePreviewAudienceMutation() {
   return useApiMutation(
     'campaigns/preview-audience',
-    (filter: AudienceFilter) => campaignsApi.previewAudience(filter),
+    (filter: SegmentFilter) =>
+      segmentsApi.previewCount(filter).then((r) => r.count),
   )
 }
 
@@ -169,49 +169,19 @@ export function usePickWinnerMutation() {
   )
 }
 
-// ── Campaign Templates ───────────────────────────────────────────────────────
+// ── Scenario by ID (client-side filter) ─────────────────────────────────────
 
-export function useCampaignTemplatesQuery() {
-  return useApiQuery('campaign-templates', campaignsApi.listCampaignTemplates)
+export function useScenarioQuery(id: number) {
+  const { data, ...rest } = useScenariosQuery()
+  const scenario = data?.find((s) => s.id === id)
+  return { data: scenario, ...rest }
 }
 
-export function useCampaignTemplateQuery(id: number) {
-  return useApiQuery(
-    id ? `campaign-templates-${id}` : null,
-    () => campaignsApi.getCampaignTemplate(id),
-  )
-}
+// ── File Upload ─────────────────────────────────────────────────────────────
 
-export function useCreateCampaignTemplateMutation() {
+export function useUploadFileMutation() {
   return useApiMutation(
-    'campaign-templates/create',
-    (data: CreateCampaignTemplateRequest) => campaignsApi.createCampaignTemplate(data),
-    ['campaign-templates'],
-  )
-}
-
-export function useUpdateCampaignTemplateMutation() {
-  return useApiMutation(
-    'campaign-templates/update',
-    ({ id, data }: { id: number; data: UpdateCampaignTemplateRequest }) =>
-      campaignsApi.updateCampaignTemplate(id, data),
-    ['campaign-templates'],
-  )
-}
-
-export function useDeleteCampaignTemplateMutation() {
-  return useApiMutation(
-    'campaign-templates/delete',
-    (id: number) => campaignsApi.deleteCampaignTemplate(id),
-    ['campaign-templates'],
-  )
-}
-
-export function useCreateFromTemplateMutation() {
-  return useApiMutation(
-    'campaigns/create-from-template',
-    ({ templateId, botId }: { templateId: number; botId: number }) =>
-      campaignsApi.createFromTemplate(templateId, botId),
-    ['campaigns'],
+    'files/upload',
+    (file: File) => campaignsApi.uploadFile(file),
   )
 }

@@ -125,9 +125,9 @@ function StatCard({
   icon: React.ComponentType<{ className?: string }>
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
+    <div className="bg-white rounded border border-neutral-900 p-6">
       <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+        <div className="w-10 h-10 rounded bg-neutral-100 flex items-center justify-center">
           <Icon className="w-5 h-5 text-neutral-500" />
         </div>
         <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{label}</span>
@@ -199,7 +199,7 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="max-w-6xl">
+    <div>
       <div className="flex items-center justify-between mb-6 animate-in">
         <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Клиенты</h1>
       </div>
@@ -241,7 +241,7 @@ export default function ClientsPage() {
             }}
             placeholder="Поиск по имени или телефону..."
             className={cn(
-              'w-full pl-9 pr-4 py-2.5 rounded-lg border border-surface-border',
+              'w-full pl-9 pr-4 py-2.5 rounded border border-neutral-200',
               'text-sm placeholder:text-neutral-400',
               'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
               'transition-colors',
@@ -257,12 +257,13 @@ export default function ClientsPage() {
           ]}
           placeholder="Все боты"
           width="200px"
+          light
         />
 
         {rfmSegment && (
           <div
             className={cn(
-              'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium',
+              'flex items-center gap-1.5 px-3 py-2 rounded text-sm font-medium',
               RFM_SEGMENT_COLORS[rfmSegment]?.bg ?? 'bg-neutral-100',
               RFM_SEGMENT_COLORS[rfmSegment]?.text ?? 'text-neutral-700',
             )}
@@ -300,10 +301,10 @@ export default function ClientsPage() {
         />
       ) : (
         <>
-          <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden">
+          <div className="bg-white rounded border border-neutral-900 overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-surface-border">
+                <tr className="border-b border-neutral-200">
                   {columns.map((col) => (
                     <th
                       key={col.id}
@@ -324,7 +325,7 @@ export default function ClientsPage() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-border">
+              <tbody className="divide-y divide-neutral-200">
                 {data.items.map((row) => (
                   <tr
                     key={row.id}
@@ -354,7 +355,7 @@ export default function ClientsPage() {
                 disabled={!canPreviousPage}
                 aria-label="Первая страница"
                 className={cn(
-                  'p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors',
+                  'p-2 rounded text-neutral-500 hover:bg-neutral-100 transition-colors',
                   'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
                 )}
               >
@@ -366,7 +367,7 @@ export default function ClientsPage() {
                 disabled={!canPreviousPage}
                 aria-label="Предыдущая страница"
                 className={cn(
-                  'p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors',
+                  'p-2 rounded text-neutral-500 hover:bg-neutral-100 transition-colors',
                   'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
                 )}
               >
@@ -381,7 +382,7 @@ export default function ClientsPage() {
                 disabled={!canNextPage}
                 aria-label="Следующая страница"
                 className={cn(
-                  'p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors',
+                  'p-2 rounded text-neutral-500 hover:bg-neutral-100 transition-colors',
                   'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
                 )}
               >
@@ -393,7 +394,7 @@ export default function ClientsPage() {
                 disabled={!canNextPage}
                 aria-label="Последняя страница"
                 className={cn(
-                  'p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors',
+                  'p-2 rounded text-neutral-500 hover:bg-neutral-100 transition-colors',
                   'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
                 )}
               >

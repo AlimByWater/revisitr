@@ -64,7 +64,7 @@ export default function POSDetailPage() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <Link
         to="/dashboard/pos"
         className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 transition-colors mb-4"
@@ -76,7 +76,7 @@ export default function POSDetailPage() {
       <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight mb-8">{location.name}</h1>
 
       {/* General info */}
-      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 mb-6">
+      <div className="bg-white rounded border border-neutral-900 p-6 mb-6">
         <h2 className="text-base font-semibold mb-4">
           <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">Заведение</span>
           Основная информация
@@ -95,7 +95,7 @@ export default function POSDetailPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className={cn(
-                'w-full max-w-sm px-4 py-2.5 rounded-lg border border-surface-border',
+                'w-full max-w-sm px-4 py-2.5 rounded border border-neutral-200',
                 'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                 'transition-colors',
               )}
@@ -115,7 +115,7 @@ export default function POSDetailPage() {
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Улица, дом"
               className={cn(
-                'w-full px-4 py-2.5 rounded-lg border border-surface-border',
+                'w-full px-4 py-2.5 rounded border border-neutral-200',
                 'text-sm placeholder:text-neutral-400',
                 'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                 'transition-colors',
@@ -136,7 +136,7 @@ export default function POSDetailPage() {
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+7 (999) 123-45-67"
               className={cn(
-                'w-full max-w-[220px] px-4 py-2.5 rounded-lg border border-surface-border',
+                'w-full max-w-[220px] px-4 py-2.5 rounded border border-neutral-200',
                 'text-sm placeholder:text-neutral-400',
                 'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                 'transition-colors',
@@ -147,7 +147,7 @@ export default function POSDetailPage() {
       </div>
 
       {/* Schedule */}
-      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
+      <div className="bg-white rounded border border-neutral-900 p-6">
         <h2 className="text-base font-semibold mb-4">
           <span className="block font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-normal mb-0.5">Режим работы</span>
           Расписание
@@ -188,7 +188,7 @@ export default function POSDetailPage() {
                   disabled={isClosed}
                   aria-label={`${label} открытие`}
                   className={cn(
-                    'px-3 py-1.5 rounded-lg border border-surface-border text-sm',
+                    'px-3 py-1.5 rounded border border-neutral-200 text-sm',
                     'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                     'disabled:opacity-40 disabled:cursor-not-allowed',
                   )}
@@ -201,7 +201,7 @@ export default function POSDetailPage() {
                   disabled={isClosed}
                   aria-label={`${label} закрытие`}
                   className={cn(
-                    'px-3 py-1.5 rounded-lg border border-surface-border text-sm',
+                    'px-3 py-1.5 rounded border border-neutral-200 text-sm',
                     'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                     'disabled:opacity-40 disabled:cursor-not-allowed',
                   )}
@@ -219,7 +219,7 @@ export default function POSDetailPage() {
           onClick={handleSave}
           disabled={updateMutation.isPending}
           className={cn(
-            'px-6 py-2.5 rounded-lg text-sm font-medium',
+            'px-6 py-2.5 rounded text-sm font-medium',
             'bg-accent text-white hover:bg-accent/90 transition-colors',
             'disabled:opacity-50 disabled:cursor-not-allowed',
           )}

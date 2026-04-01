@@ -14,8 +14,6 @@ import {
   Bot,
   Store,
   Workflow,
-  UtensilsCrossed,
-  ShoppingBag,
   CreditCard,
   ChevronDown,
   type LucideIcon,
@@ -47,7 +45,7 @@ const navigation: NavItem[] = [
       { label: 'Продажи', href: '/dashboard/analytics/sales' },
       { label: 'Лояльность', href: '/dashboard/analytics/loyalty' },
       { label: 'Рассылки', href: '/dashboard/analytics/mailings' },
-      { label: 'RFM-сегментация', href: '/dashboard/rfm' },
+      { label: 'RFM', href: '/dashboard/clients/segments' },
     ],
   },
   {
@@ -55,7 +53,7 @@ const navigation: NavItem[] = [
     icon: Users,
     children: [
       { label: 'Клиенты', href: '/dashboard/clients' },
-      { label: 'RFM-сегментация', href: '/dashboard/clients/segments' },
+      { label: 'RFM-сегменты', href: '/dashboard/rfm' },
       { label: 'Мои сегменты', href: '/dashboard/clients/custom-segments' },
       { label: 'Прогнозы', href: '/dashboard/clients/predictions' },
     ],
@@ -72,10 +70,8 @@ const navigation: NavItem[] = [
     label: 'Рассылки',
     icon: Mail,
     children: [
+      { label: 'Создать рассылку', href: '/dashboard/campaigns/create' },
       { label: 'Все рассылки', href: '/dashboard/campaigns' },
-      { label: 'Создать', href: '/dashboard/campaigns/create' },
-      { label: 'Шаблоны', href: '/dashboard/campaigns/templates' },
-      { label: 'Авто-сценарии', href: '/dashboard/campaigns/scenarios' },
     ],
   },
   {
@@ -96,19 +92,9 @@ const navigation: NavItem[] = [
     ],
   },
   {
-    label: 'Маркетплейс',
-    icon: ShoppingBag,
-    href: '/dashboard/marketplace',
-  },
-  {
     label: 'Точки продаж',
     icon: Store,
     href: '/dashboard/pos',
-  },
-  {
-    label: 'Меню',
-    icon: UtensilsCrossed,
-    href: '/dashboard/menus',
   },
   {
     label: 'Интеграции',
@@ -128,17 +114,33 @@ const navigation: NavItem[] = [
 // Group indices for default theme ordering:
 // Group 1 (top): Дашборд (index 0)
 // Group 2 (business): Аналитика(1), Клиенты(2), Лояльность(3), Рассылки(4), Акции(5)
-// Group 3 (config): Мои боты(6), Маркетплейс(7), Точки продаж(8), Меню(9), Интеграции(10), Биллинг(11)
+// Group 3 (config): Мои боты(6), Точки продаж(7), Интеграции(8), Биллинг(9)
 const groupBusiness = [1, 2, 3, 4, 5]
-const groupConfig = [6, 7, 8, 9, 10, 11]
+const groupConfig = [6, 7, 8, 9]
+
+// Collect ALL child hrefs across all nav groups for global best-match logic
+const allNavHrefs = navigation.flatMap(item =>
+  item.children?.map(c => c.href) ?? (item.href ? [item.href] : [])
+)
+
+/** Check if `href` is the best (longest) match for `path` among all nav hrefs */
+function isBestNavMatch(href: string, path: string): boolean {
+  if (path !== href && !path.startsWith(href + '/')) return false
+  // Ensure no other href is a longer/better match
+  return !allNavHrefs.some(other =>
+    other !== href &&
+    other.length > href.length &&
+    (path === other || path.startsWith(other + '/'))
+  )
+}
 
 function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<string, number>; isAurora: boolean }) {
   const location = useLocation()
   const currentPath = location.pathname
 
   const isActive = item.href
-    ? currentPath === item.href
-    : item.children?.some((child) => currentPath.startsWith(child.href))
+    ? isBestNavMatch(item.href, currentPath)
+    : item.children?.some((child) => isBestNavMatch(child.href, currentPath))
 
   // Default theme: collapsed by default, auto-expand only when child is active
   // Aurora: same behavior
@@ -232,7 +234,7 @@ function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<st
         )}
       >
         {item.children.map((child) => {
-          const isChildActive = currentPath === child.href
+          const isChildActive = isBestNavMatch(child.href, currentPath)
           return (
             <Link
               key={child.href}

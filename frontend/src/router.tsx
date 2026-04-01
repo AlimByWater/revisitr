@@ -25,7 +25,7 @@ import POSDetailPage from './routes/dashboard/pos/$posId'
 import CampaignsPage from './routes/dashboard/campaigns/index'
 import CreateCampaignPage from './routes/dashboard/campaigns/create'
 import CampaignDetailPage from './routes/dashboard/campaigns/$campaignId'
-import ScenariosPage from './routes/dashboard/campaigns/scenarios'
+import ScenarioDetailPage from './routes/dashboard/campaigns/scenario.$scenarioId'
 import SalesAnalyticsPage from './routes/dashboard/analytics/sales'
 import LoyaltyAnalyticsPage from './routes/dashboard/analytics/loyalty'
 import MailingsAnalyticsPage from './routes/dashboard/analytics/mailings'
@@ -42,7 +42,7 @@ import WalletPage from './routes/dashboard/loyalty/wallet'
 import MarketplacePage from './routes/dashboard/marketplace/index'
 import BillingPage from './routes/dashboard/billing/index'
 import InvoicesPage from './routes/dashboard/billing/invoices'
-import CampaignTemplatesPage from './routes/dashboard/campaigns/templates'
+import CreatePromotionPage from './routes/dashboard/promotions/create'
 import PredictionsPage from './routes/dashboard/clients/predictions'
 import RFMDashboardPage from './routes/dashboard/rfm/index'
 import RFMOnboardingPage from './routes/dashboard/rfm/onboarding'
@@ -118,8 +118,8 @@ export const router = createBrowserRouter(
             { path: 'pos/:posId', element: <POSDetailPage /> },
             { path: 'campaigns', element: <CampaignsPage /> },
             { path: 'campaigns/create', element: <CreateCampaignPage /> },
-            { path: 'campaigns/scenarios', element: <ScenariosPage /> },
-            { path: 'campaigns/templates', element: <CampaignTemplatesPage /> },
+            { path: 'campaigns/:campaignId', element: <CampaignDetailPage /> },
+            { path: 'campaigns/scenario/:scenarioId', element: <ScenarioDetailPage /> },
             { path: 'analytics/sales', element: <SalesAnalyticsPage /> },
             { path: 'analytics/loyalty', element: <LoyaltyAnalyticsPage /> },
             { path: 'analytics/mailings', element: <MailingsAnalyticsPage /> },
@@ -127,7 +127,7 @@ export const router = createBrowserRouter(
             { path: 'rfm/onboarding', element: <RFMOnboardingPage /> },
             { path: 'rfm/template', element: <RFMTemplatePage /> },
             { path: 'rfm/segments/:segment', element: <SegmentDetailPage /> },
-            { path: 'campaigns/:campaignId', element: <CampaignDetailPage /> },
+            { path: 'promotions/create', element: <CreatePromotionPage /> },
             { path: 'promotions', element: <PromotionsPage /> },
             { path: 'promotions/codes', element: <PromoCodesPage /> },
             { path: 'promotions/archive', element: <PromotionsArchivePage /> },

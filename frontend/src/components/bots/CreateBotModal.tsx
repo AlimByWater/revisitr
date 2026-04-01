@@ -3,7 +3,6 @@ import { cn, getApiErrorMessage } from '@/lib/utils'
 import { useCreateBotMutation } from '@/features/bots/queries'
 import { useProgramsQuery } from '@/features/loyalty/queries'
 import { X } from 'lucide-react'
-import { CustomSelect } from '@/components/common/CustomSelect'
 
 interface CreateBotModalProps {
   onClose: () => void
@@ -117,19 +116,28 @@ export function CreateBotModal({ onClose }: CreateBotModalProps) {
               Программа лояльности{' '}
               <span className="text-neutral-400 font-normal">(необязательно)</span>
             </label>
-            <CustomSelect
-              value={programId !== undefined ? String(programId) : ''}
-              onChange={(v) =>
-                setProgramId(v ? Number(v) : undefined)
+            <select
+              id="bot-program"
+              value={programId ?? ''}
+              onChange={(e) =>
+                setProgramId(e.target.value ? Number(e.target.value) : undefined)
               }
-              options={[
-                { value: '', label: 'Без программы' },
-                ...(programs?.map((p) => ({
-                  value: String(p.id),
-                  label: p.name,
-                })) ?? []),
-              ]}
-            />
+              disabled={createBot.isPending}
+              className={cn(
+                'w-full px-4 py-2.5 rounded-lg border border-surface-border',
+                'text-sm placeholder:text-neutral-400',
+                'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
+                'transition-colors',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+              )}
+            >
+              <option value="">Без программы</option>
+              {programs?.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {createBot.isError && (

@@ -51,9 +51,11 @@
 
 | Состояние | Стиль |
 |-----------|-------|
-| Default (editable) | `border border-neutral-900 bg-white rounded px-4 py-2.5 text-sm` |
-| Focus | `ring-2 ring-neutral-900/10` |
+| Default (editable) | `border border-neutral-200 bg-white rounded px-4 py-2.5 text-sm` |
+| Focus | `ring-2 ring-accent/20 border-accent` |
 | Disabled (read-only) | `border-neutral-300 bg-neutral-100 text-neutral-500` |
+
+**Правило вложенности**: инпуты, селекты, textarea и вложенные карточки внутри блоков с чёрной обводкой (`border-neutral-900`) используют серую обводку (`border-neutral-200`). Чёрная обводка — только на внешних контейнерах верхнего уровня.
 
 ## 6. Метрики / виджеты (StatCard)
 
@@ -68,8 +70,8 @@
 
 | Элемент | Стиль |
 |---------|-------|
-| Заголовок (h1) | `text-2xl font-bold text-neutral-900 tracking-tight` |
-| Подзаголовок (p) | `text-sm text-neutral-400 mt-1` |
+| Заголовок (h1) | `font-serif text-3xl font-bold text-neutral-900 tracking-tight` |
+| Подзаголовок (p) | `font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1` |
 
 **Запрещено**: `text-neutral-500`, `text-neutral-600`, `text-muted-foreground` для подзаголовков.
 
@@ -112,15 +114,15 @@
 
 ### Палитра RFM-сегментов (функциональная)
 
-| Сегмент | Цвет | Hex |
-|---------|------|-----|
-| new | cyan | `#06b6d4` |
-| promising | blue | `#3b82f6` |
-| regular | violet | `#8b5cf6` |
-| vip | amber | `#f59e0b` |
-| rare_valuable | purple | `#a855f7` |
-| churn_risk | yellow | `#eab308` |
-| lost | red | `#ef4444` |
+| Сегмент | Цвет | Hex | Иконка (Lucide) |
+|---------|------|-----|-----------------|
+| new | emerald | `#10b981` | Sprout |
+| promising | blue | `#3b82f6` | TrendingUp |
+| regular | violet | `#8b5cf6` | UserCheck |
+| vip | amber | `#f59e0b` | Crown |
+| rare_valuable | purple | `#a855f7` | Gem |
+| churn_risk | orange | `#f97316` | AlertTriangle |
+| lost | red | `#ef4444` | UserX |
 
 ### Статусная палитра (функциональная)
 
@@ -170,9 +172,30 @@
 - Header: прозрачный — шум виден сквозь него
 - Footer: `bg-neutral-900` + белый dot noise (инверсия)
 
-## Попапы / модалки
+## 10. Карточки / контейнеры
+
+| Элемент | Стиль |
+|---------|-------|
+| Внешний контейнер (карточка, таблица) | `bg-white rounded border border-neutral-900` |
+| Внутренние разделители | `border-neutral-200` с отступами `mx-4` или `mx-6` (не на всю ширину) |
+| Строки таблицы (разделитель) | `<div className="mx-6 border-t border-neutral-200" />` между строками |
+| Вложенные контейнеры (секции внутри карточки) | `border border-neutral-200 rounded` |
+
+**Запрещено**: `shadow-sm` на карточках, `border-surface-border`, `rounded-2xl`, `rounded-lg` на контейнерах.
+
+## 11. Попапы / модалки
 
 - Overlay: `bg-black/30`
 - Окно: `bg-white border border-neutral-900 rounded p-6 shadow-lg`
 - Через `createPortal` в `document.body`
 - Закрытие: по клику на overlay
+
+## 12. Данные / Mock API
+
+Аналитика считается из базы ~4500 транзакций (180 дней), сгенерированных с детерминированным seed.
+- Транзакции: `store.transactions` — привязаны к клиентам и ботам
+- Клиенты: `store.clients` (360) — регистрации с экспоненциальным распределением (больше новых)
+- Все analytics endpoints (`/analytics/sales`, `/analytics/loyalty`, `/dashboard/widgets`) **вычисляют** метрики из транзакций
+- Фильтры по периоду и боту реально фильтруют данные
+- Числа консистентны: сегодня < неделя < месяц
+- Включается через `VITE_MOCK_API=true` в `.env`, отключается удалением переменной

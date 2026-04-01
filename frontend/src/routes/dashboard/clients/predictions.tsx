@@ -113,7 +113,7 @@ export default function PredictionsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-surface-border">
+      <div className="flex gap-1 mb-6 border-b border-neutral-200">
         <button
           type="button"
           onClick={() => setTab('all')}
@@ -148,7 +148,7 @@ export default function PredictionsPage() {
       {/* Predictions table */}
       {!items || items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded bg-neutral-100 flex items-center justify-center mb-4">
             <BarChart3 className="w-8 h-8 text-neutral-400" />
           </div>
           <h3 className="font-serif text-xl font-bold text-neutral-800 mb-1.5">
@@ -159,11 +159,11 @@ export default function PredictionsPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-surface-border overflow-hidden">
+        <div className="bg-white rounded border border-neutral-900 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-border bg-neutral-50/50">
+                <tr className="border-b border-neutral-200 bg-neutral-50/50">
                   <th className="text-left py-3 px-4 text-xs font-medium text-neutral-500 uppercase tracking-wider">
                     ID клиента
                   </th>
@@ -187,7 +187,7 @@ export default function PredictionsPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-border">
+              <tbody className="divide-y divide-neutral-200">
                 {items.map((p) => (
                   <tr key={p.id} className="hover:bg-neutral-50/50 transition-colors">
                     <td className="py-3 px-4 font-medium text-neutral-900">#{p.client_id}</td>
@@ -249,9 +249,9 @@ function SummaryCard({
   bg: string
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-surface-border p-5">
+    <div className="bg-white rounded border border-neutral-900 p-5">
       <div className="flex items-center gap-2 mb-3">
-        <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', bg, color)}>
+        <div className={cn('w-8 h-8 rounded flex items-center justify-center', bg, color)}>
           {icon}
         </div>
         <span className="text-sm text-neutral-500">{label}</span>

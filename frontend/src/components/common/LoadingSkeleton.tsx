@@ -10,9 +10,9 @@ function Bone({ className }: SkeletonProps) {
 
 export function CardSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-surface-border p-6 space-y-4">
+    <div className="bg-white rounded border border-neutral-900 p-6 space-y-4">
       <div className="flex items-center gap-3">
-        <Bone className="w-10 h-10 rounded-xl" />
+        <Bone className="w-10 h-10 rounded" />
         <div className="space-y-2 flex-1">
           <Bone className="h-4 w-32" />
           <Bone className="h-3 w-24" />
@@ -26,7 +26,7 @@ export function CardSkeleton() {
 
 export function MetricSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-surface-border p-6">
+    <div className="bg-white rounded border border-neutral-900 p-6">
       <div className="flex items-center gap-2 mb-3">
         <Bone className="w-4 h-4 rounded" />
         <Bone className="h-3 w-16" />
@@ -39,9 +39,9 @@ export function MetricSkeleton() {
 
 export function TableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="bg-white rounded-2xl border border-surface-border overflow-hidden">
+    <div className="bg-white rounded border border-neutral-900 overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-surface-border flex gap-6">
+      <div className="px-6 py-4 border-b border-neutral-200 flex gap-6">
         <Bone className="h-3 w-20" />
         <Bone className="h-3 w-24" />
         <Bone className="h-3 w-16" />
@@ -51,7 +51,7 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className="px-6 py-4 border-b border-surface-border last:border-0 flex items-center gap-6"
+          className="px-6 py-4 border-b border-neutral-200 last:border-0 flex items-center gap-6"
           style={{ animationDelay: `${i * 0.05}s` }}
         >
           <Bone className="w-8 h-8 rounded-full" />
@@ -67,7 +67,7 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
 
 export function ChartSkeleton() {
   return (
-    <div className="h-[240px] rounded-xl flex items-end gap-1.5 px-4 pb-4 pt-8 relative overflow-hidden">
+    <div className="h-[240px] rounded flex items-end gap-1.5 px-4 pb-4 pt-8 relative overflow-hidden">
       {/* Fake grid lines */}
       <div className="absolute inset-x-0 top-8 bottom-4 flex flex-col justify-between px-4">
         {[0, 1, 2, 3].map((i) => (

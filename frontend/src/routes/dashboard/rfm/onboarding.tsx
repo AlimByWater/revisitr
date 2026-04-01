@@ -138,7 +138,7 @@ export default function RFMOnboardingPage() {
 
       {/* Template save error */}
       {templateError && (
-        <div className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg animate-in">
+        <div className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded animate-in">
           {templateError}
         </div>
       )}
@@ -146,8 +146,8 @@ export default function RFMOnboardingPage() {
       {/* Result */}
       {step === 3 && recommendation && !showAllTemplates && (
         <div className="animate-in space-y-6">
-          <div className="bg-white rounded-2xl border border-surface-border p-8 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-4">
+          <div className="bg-white rounded border border-neutral-900 p-8 text-center">
+            <div className="w-14 h-14 rounded bg-accent/10 flex items-center justify-center mx-auto mb-4">
               <Sparkles className="w-7 h-7 text-accent" />
             </div>
             <h2 className="font-serif text-xl font-bold text-neutral-900 mb-1">
@@ -163,11 +163,11 @@ export default function RFMOnboardingPage() {
                 onClick={() => handleUseTemplate(recommendation.recommended)}
                 disabled={setTemplateMutation.isPending}
                 className={cn(
-                  'flex items-center gap-2 py-2.5 px-6 rounded-lg',
+                  'flex items-center gap-2 py-2.5 px-6 rounded',
                   'bg-accent text-white text-sm font-medium',
                   'hover:bg-accent-hover active:bg-accent/80',
                   'transition-all duration-150',
-                  'shadow-sm shadow-accent/20',
+                  '',
                   'disabled:opacity-50',
                 )}
               >
@@ -183,7 +183,7 @@ export default function RFMOnboardingPage() {
                 onClick={() => setShowAllTemplates(true)}
                 disabled={setTemplateMutation.isPending}
                 className={cn(
-                  'flex items-center gap-2 py-2.5 px-5 rounded-lg',
+                  'flex items-center gap-2 py-2.5 px-5 rounded',
                   'border border-neutral-200 text-sm font-medium text-neutral-700',
                   'hover:bg-neutral-50 hover:border-neutral-300',
                   'transition-all duration-150',
@@ -240,7 +240,7 @@ export default function RFMOnboardingPage() {
                 onClick={() => handleUseTemplate(t)}
                 disabled={setTemplateMutation.isPending}
                 className={cn(
-                  'text-left bg-white rounded-2xl border border-surface-border p-5',
+                  'text-left bg-white rounded border border-neutral-900 p-5',
                   'hover:border-accent/30 hover:shadow-md',
                   'transition-all duration-200',
                   'animate-in',
@@ -294,10 +294,10 @@ function QuestionStep({
             type="button"
             onClick={() => onAnswer(answer.id)}
             className={cn(
-              'w-full text-left p-4 rounded-xl border transition-all duration-200',
+              'w-full text-left p-4 rounded border transition-all duration-200',
               selectedAnswer === answer.id
-                ? 'border-accent bg-accent/5 shadow-sm'
-                : 'border-surface-border bg-white hover:border-neutral-300 hover:shadow-sm',
+                ? 'border-accent bg-accent/5 '
+                : 'border-neutral-200 bg-white hover:border-neutral-300 hover:',
             )}
           >
             <div className="flex items-center gap-3">

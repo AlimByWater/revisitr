@@ -22,7 +22,7 @@ import {
 import { User, Shield, FileText, LogOut, Check, X, Pencil } from 'lucide-react'
 
 const inputClassName = cn(
-  'w-full px-4 py-2.5 rounded border border-neutral-900',
+  'w-full px-4 py-2.5 rounded border border-neutral-200',
   'text-sm placeholder:text-neutral-400 bg-white',
   'focus:outline-none focus:ring-2 focus:ring-neutral-900/10',
   'transition-colors',
@@ -413,7 +413,7 @@ function BillingDetailsSection() {
   hasRendered.current = true
 
   return (
-    <div className="border border-neutral-900 rounded bg-white p-6 animate-in animate-in-delay-2">
+    <div className="border border-neutral-900 rounded bg-white p-6 animate-in animate-in-delay-2 relative z-10">
       <div className="flex items-center gap-2 mb-5">
         <FileText className="w-5 h-5 text-neutral-900" />
         <h2 className="text-lg font-semibold text-neutral-900">Реквизиты</h2>
@@ -428,6 +428,7 @@ function BillingDetailsSection() {
             value: key,
             label: ENTITY_TYPE_LABELS[key],
           }))}
+          light
         />
       </div>
 
@@ -505,7 +506,7 @@ export default function AccountPage() {
       <SecuritySection />
       <BillingDetailsSection />
 
-      <div className="pt-4 animate-in animate-in-delay-3">
+      <div className="pt-4 animate-in animate-in-delay-3 relative z-0">
         <button
           type="button"
           onClick={() => setShowLogoutConfirm(true)}

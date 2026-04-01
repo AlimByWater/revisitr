@@ -163,20 +163,20 @@ export default function OnboardingPage() {
       </div>
 
       {/* Current step card */}
-      <div className="bg-white rounded-2xl border border-surface-border p-8 animate-in animate-in-delay-2">
+      <div className="bg-white rounded border border-neutral-900 p-8 animate-in animate-in-delay-2">
         <StepContent
           step={steps[currentStep]}
           stepIndex={currentStep}
           isCompleted={isStepCompleted(steps[currentStep]?.key)}
         />
 
-        <div className="flex items-center justify-between mt-8 pt-6 border-t border-surface-border">
+        <div className="flex items-center justify-between mt-8 pt-6 border-t border-neutral-200">
           <button
             type="button"
             onClick={handlePrev}
             disabled={currentStep === 0}
             className={cn(
-              'flex items-center gap-1.5 py-2 px-4 rounded-lg text-sm font-medium',
+              'flex items-center gap-1.5 py-2 px-4 rounded text-sm font-medium',
               'text-neutral-600 hover:bg-neutral-50',
               'disabled:opacity-30 disabled:cursor-not-allowed',
               'transition-colors',
@@ -203,10 +203,10 @@ export default function OnboardingPage() {
               onClick={handleComplete}
               disabled={complete.isPending}
               className={cn(
-                'flex items-center gap-1.5 py-2.5 px-6 rounded-xl text-sm font-semibold',
+                'flex items-center gap-1.5 py-2.5 px-6 rounded text-sm font-semibold',
                 'bg-green-500 text-white hover:bg-green-600',
                 'disabled:opacity-50 transition-all',
-                'shadow-sm shadow-green-500/20',
+                '',
               )}
             >
               {complete.isPending ? 'Завершение...' : 'Начать работу'}
@@ -218,10 +218,10 @@ export default function OnboardingPage() {
               onClick={handleNext}
               disabled={updateStep.isPending || isNextDisabled}
               className={cn(
-                'flex items-center gap-1.5 py-2.5 px-6 rounded-xl text-sm font-semibold',
+                'flex items-center gap-1.5 py-2.5 px-6 rounded text-sm font-semibold',
                 'bg-accent text-white hover:bg-accent-hover',
                 'disabled:opacity-50 disabled:cursor-not-allowed transition-all',
-                'shadow-sm shadow-accent/20',
+                '',
               )}
             >
               {updateStep.isPending ? 'Сохранение...' : isLastStep ? 'Завершить шаг' : 'Далее'}
@@ -313,7 +313,7 @@ function StepContent({
       <div className="text-center">
         <div
           className={cn(
-            'w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5',
+            'w-16 h-16 rounded flex items-center justify-center mx-auto mb-5',
             isCompleted ? 'bg-green-50' : 'bg-accent/10',
           )}
         >
@@ -336,7 +336,7 @@ function StepContent({
             return (
               <div
                 key={feature.title}
-                className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 text-left"
+                className="bg-neutral-50 border border-neutral-100 rounded p-4 text-left"
               >
                 <FeatureIcon className="w-5 h-5 text-accent mb-2" />
                 <p className="text-sm font-semibold text-neutral-900 mb-1">{feature.title}</p>
@@ -359,7 +359,7 @@ function StepContent({
       <div className="text-center">
         <div
           className={cn(
-            'w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5',
+            'w-16 h-16 rounded flex items-center justify-center mx-auto mb-5',
             isCompleted ? 'bg-green-50' : 'bg-accent/10',
           )}
         >
@@ -384,11 +384,11 @@ function StepContent({
                 to={item.href}
                 className={cn(
                   'group flex items-start gap-3 bg-neutral-50 border border-neutral-100',
-                  'rounded-xl p-4 text-left transition-all',
-                  'hover:border-accent/30 hover:bg-accent/5 hover:shadow-sm',
+                  'rounded p-4 text-left transition-all',
+                  'hover:border-accent/30 hover:bg-accent/5 ',
                 )}
               >
-                <div className="w-9 h-9 rounded-lg bg-white border border-neutral-100 flex items-center justify-center shrink-0 group-hover:border-accent/20">
+                <div className="w-9 h-9 rounded bg-white border border-neutral-100 flex items-center justify-center shrink-0 group-hover:border-accent/20">
                   <ActionIcon className="w-4 h-4 text-neutral-600 group-hover:text-accent transition-colors" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -413,7 +413,7 @@ function StepContent({
     <div className="text-center">
       <div
         className={cn(
-          'w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5',
+          'w-16 h-16 rounded flex items-center justify-center mx-auto mb-5',
           isCompleted ? 'bg-green-50' : 'bg-accent/10',
         )}
       >
@@ -434,8 +434,8 @@ function StepContent({
           type="button"
           onClick={() => navigate(action.href)}
           className={cn(
-            'inline-flex items-center gap-1.5 mt-5 py-2 px-4 rounded-lg text-sm font-medium',
-            'border border-surface-border text-neutral-700',
+            'inline-flex items-center gap-1.5 mt-5 py-2 px-4 rounded text-sm font-medium',
+            'border border-neutral-900 text-neutral-700',
             'hover:bg-neutral-50 transition-colors',
           )}
         >

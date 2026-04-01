@@ -12,8 +12,6 @@ import {
   Tag,
   Bot,
   Store,
-  UtensilsCrossed,
-  ShoppingBag,
   Workflow,
   CreditCard,
   ChevronRight,
@@ -41,14 +39,14 @@ const navigation: NavItem[] = [
       { label: 'Продажи', href: '/dashboard/analytics/sales' },
       { label: 'Лояльность', href: '/dashboard/analytics/loyalty' },
       { label: 'Рассылки', href: '/dashboard/analytics/mailings' },
-      { label: 'RFM-сегментация', href: '/dashboard/rfm' },
+      { label: 'RFM', href: '/dashboard/clients/segments' },
     ],
   },
   {
     label: 'Клиенты', icon: Users,
     children: [
       { label: 'Клиенты', href: '/dashboard/clients' },
-      { label: 'RFM-сегментация', href: '/dashboard/clients/segments' },
+      { label: 'RFM-сегменты', href: '/dashboard/rfm' },
       { label: 'Мои сегменты', href: '/dashboard/clients/custom-segments' },
       { label: 'Прогнозы', href: '/dashboard/clients/predictions' },
     ],
@@ -63,10 +61,8 @@ const navigation: NavItem[] = [
   {
     label: 'Рассылки', icon: Mail,
     children: [
+      { label: 'Создать рассылку', href: '/dashboard/campaigns/create' },
       { label: 'Все рассылки', href: '/dashboard/campaigns' },
-      { label: 'Создать', href: '/dashboard/campaigns/create' },
-      { label: 'Шаблоны', href: '/dashboard/campaigns/templates' },
-      { label: 'Авто-сценарии', href: '/dashboard/campaigns/scenarios' },
     ],
   },
   {
@@ -81,9 +77,7 @@ const navigation: NavItem[] = [
     label: 'Боты', icon: Bot, badgeKey: 'bots',
     children: [{ label: 'Список ботов', href: '/dashboard/bots' }],
   },
-  { label: 'Маркетплейс', icon: ShoppingBag, href: '/dashboard/marketplace' },
   { label: 'Точки продаж', icon: Store, href: '/dashboard/pos' },
-  { label: 'Меню', icon: UtensilsCrossed, href: '/dashboard/menus' },
   { label: 'Интеграции', icon: Workflow, href: '/dashboard/integrations' },
   {
     label: 'Биллинг', icon: CreditCard,

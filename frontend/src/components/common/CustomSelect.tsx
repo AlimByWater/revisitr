@@ -21,6 +21,8 @@ interface CustomSelectProps {
   disabled?: boolean
   className?: string
   width?: string
+  /** Use lighter border (border-neutral-200) for selects inside bordered containers */
+  light?: boolean
 }
 
 export function CustomSelect({
@@ -32,6 +34,7 @@ export function CustomSelect({
   disabled = false,
   className,
   width,
+  light = false,
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -72,7 +75,8 @@ export function CustomSelect({
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         className={cn(
-          'w-full flex items-center gap-3 border border-neutral-900 rounded px-4 py-2 text-sm font-medium text-neutral-900 bg-white cursor-pointer hover:bg-neutral-50 transition-colors',
+          'w-full flex items-center gap-3 border rounded px-4 py-2 text-sm font-medium text-neutral-900 bg-white cursor-pointer hover:bg-neutral-50 transition-colors',
+          light ? 'border-neutral-200' : 'border-neutral-900',
           disabled && 'cursor-not-allowed bg-neutral-100 border-neutral-300 text-neutral-500 hover:bg-neutral-100',
         )}
       >
@@ -81,7 +85,8 @@ export function CustomSelect({
       </button>
 
       <div className={cn(
-        'absolute top-full left-0 mt-1 w-full bg-white border border-neutral-900 rounded py-1 z-50',
+        'absolute top-full left-0 mt-1 w-full bg-white border rounded py-1 z-50',
+        light ? 'border-neutral-200' : 'border-neutral-900',
         'transition-all duration-150 origin-top',
         open
           ? 'opacity-100 scale-y-100 pointer-events-auto'
