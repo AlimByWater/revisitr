@@ -5,7 +5,9 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 ARG VITE_API_URL=/revisitr/api/v1
+ARG VITE_MOCK_API=false
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_MOCK_API=$VITE_MOCK_API
 RUN npm run build
 
 # Stage 2: Serve
