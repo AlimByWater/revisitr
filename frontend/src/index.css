@@ -10,10 +10,10 @@
 
 :root {
   /* Default theme (warm minimalism) */
-  --color-accent: #E85D3A;
-  --color-accent-hover: #D4502F;
-  --color-accent-light: #FFF0EC;
-  --color-accent-glow: rgba(232, 93, 58, 0.55);
+  --color-accent: #EF3219;
+  --color-accent-hover: #D42D16;
+  --color-accent-light: #FFF0ED;
+  --color-accent-glow: rgba(239, 50, 25, 0.55);
 
   --color-surface: #FAFAFA;
   --color-surface-card: #FFFFFF;
@@ -96,6 +96,10 @@
     border-color: var(--color-surface-border);
   }
 
+  input[type="checkbox"] {
+    accent-color: #171717;
+  }
+
   body {
     background-color: var(--color-surface);
     color: var(--color-text-primary);
@@ -103,20 +107,14 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transition: background-color 0.5s ease, color 0.3s ease;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect x='3' y='5' width='1' height='1' fill='%23000' opacity='0.15'/%3E%3Crect x='15' y='2' width='1' height='1' fill='%23000' opacity='0.12'/%3E%3Crect x='29' y='7' width='1' height='1' fill='%23000' opacity='0.18'/%3E%3Crect x='8' y='14' width='1' height='1' fill='%23000' opacity='0.14'/%3E%3Crect x='22' y='11' width='1' height='1' fill='%23000' opacity='0.16'/%3E%3Crect x='36' y='16' width='1' height='1' fill='%23000' opacity='0.13'/%3E%3Crect x='1' y='23' width='1' height='1' fill='%23000' opacity='0.17'/%3E%3Crect x='18' y='21' width='1' height='1' fill='%23000' opacity='0.11'/%3E%3Crect x='27' y='25' width='1' height='1' fill='%23000' opacity='0.19'/%3E%3Crect x='10' y='30' width='1' height='1' fill='%23000' opacity='0.15'/%3E%3Crect x='24' y='32' width='1' height='1' fill='%23000' opacity='0.13'/%3E%3Crect x='34' y='28' width='1' height='1' fill='%23000' opacity='0.16'/%3E%3Crect x='5' y='37' width='1' height='1' fill='%23000' opacity='0.14'/%3E%3Crect x='19' y='39' width='1' height='1' fill='%23000' opacity='0.18'/%3E%3Crect x='31' y='36' width='1' height='1' fill='%23000' opacity='0.12'/%3E%3Crect x='38' y='9' width='1' height='1' fill='%23000' opacity='0.15'/%3E%3Crect x='12' y='18' width='1' height='1' fill='%23000' opacity='0.17'/%3E%3Crect x='28' y='35' width='1' height='1' fill='%23000' opacity='0.13'/%3E%3Crect x='37' y='23' width='1' height='1' fill='%23000' opacity='0.16'/%3E%3Crect x='6' y='27' width='1' height='1' fill='%23000' opacity='0.14'/%3E%3C/svg%3E");
+    background-size: 40px 40px;
+    background-repeat: repeat;
   }
 
-  /* Noise texture — only visible in default theme */
+  /* Noise texture — disabled, replaced by sparse dot pattern on body */
   body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 9999;
-    opacity: var(--noise-opacity);
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
-    background-size: 256px 256px;
-    background-repeat: repeat;
-    transition: opacity 0.5s ease;
+    content: none;
   }
 }
 

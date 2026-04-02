@@ -37,19 +37,19 @@ export default function BotsPage() {
   const { data: bots, isLoading, isError, mutate } = useBotsQuery()
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <div className="flex items-center justify-between mb-6 animate-in">
         <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Боты</h1>
         <button
           onClick={() => setShowCreateModal(true)}
           type="button"
           className={cn(
-            'flex items-center gap-2 py-2.5 px-4 rounded-lg',
+            'flex items-center gap-2 py-2.5 px-4 rounded',
             'bg-accent text-white text-sm font-medium',
             'hover:bg-accent-hover active:bg-accent/80',
             'transition-all duration-150',
             'focus:outline-none focus:ring-2 focus:ring-accent/20',
-            'shadow-sm shadow-accent/20',
+            '',
           )}
         >
           <Plus className="w-4 h-4" />
@@ -90,7 +90,7 @@ export default function BotsPage() {
                 key={bot.id}
                 to={`/dashboard/bots/${bot.id}`}
                 className={cn(
-                  'bg-white rounded-2xl shadow-sm border border-surface-border p-6',
+                  'bg-white rounded border border-neutral-900 p-6',
                   'hover:border-neutral-300 hover:shadow-md',
                   'transition-all duration-200 group',
                   'animate-in',
@@ -99,7 +99,7 @@ export default function BotsPage() {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center group-hover:bg-accent/10 transition-colors duration-200">
+                    <div className="w-10 h-10 rounded bg-neutral-100 flex items-center justify-center group-hover:bg-accent/10 transition-colors duration-200">
                       <BotIcon className="w-5 h-5 text-neutral-500 group-hover:text-accent transition-colors duration-200" />
                     </div>
                     <div className="min-w-0">
@@ -117,7 +117,7 @@ export default function BotsPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-surface-border">
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-neutral-200">
                   <div className="flex items-center gap-1.5 text-neutral-400">
                     <Users className="w-3.5 h-3.5" />
                     <span className="font-mono text-[11px] uppercase tracking-wider tabular-nums">

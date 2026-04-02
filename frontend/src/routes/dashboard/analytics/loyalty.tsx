@@ -11,22 +11,17 @@ import {
   Pie,
   Cell,
 } from 'recharts'
-import { cn } from '@/lib/utils'
 import { useLoyaltyAnalyticsQuery } from '@/features/analytics/queries'
 import { useBotsQuery } from '@/features/bots/queries'
 import {
   MetricSkeleton,
   ChartSkeleton as ChartSkeletonComponent,
 } from '@/components/common/LoadingSkeleton'
+import { PeriodFilter } from '@/components/common/PeriodFilter'
+import { CustomSelect } from '@/components/common/CustomSelect'
 import type { AnalyticsFilter, PieSlice } from '@/features/analytics/types'
 
-const PERIODS = [
-  { value: '7d', label: '7д' },
-  { value: '30d', label: '30д' },
-  { value: '90d', label: '90д' },
-] as const
-
-const PIE_COLORS = ['#E85D3A', '#1a1a1a', '#888888', '#d4d4d4', '#a3a3a3', '#525252']
+const PIE_COLORS = ['#EF3219', '#171717', '#525252', '#a3a3a3', '#d4d4d4', '#f5f5f5']
 
 export default function LoyaltyAnalyticsPage() {
   const [filter, setFilter] = useState<AnalyticsFilter>({ period: '30d' })
@@ -36,56 +31,41 @@ export default function LoyaltyAnalyticsPage() {
   return (
     <div>
       <div className="animate-in mb-4">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 mb-1 tracking-tight">
+        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
           Лояльность
         </h1>
-        <p className="font-mono text-neutral-300 text-xs uppercase tracking-wider">
+        <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
           Клиентская база и программа лояльности
         </p>
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-3 flex-wrap mb-8">
-        <div className="flex bg-white rounded-xl border border-surface-border p-1">
-          {PERIODS.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setFilter((prev) => ({ ...prev, period: p.value }))}
-              className={cn(
-                'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
-                filter.period === p.value
-                  ? 'bg-neutral-900 text-white'
-                  : 'text-neutral-500 hover:text-neutral-700',
-              )}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+      <div className="relative z-20 flex items-center gap-3 flex-wrap mb-8 animate-in animate-in-delay-1">
+        <PeriodFilter
+          period={filter.period ?? '30d'}
+          from={filter.from}
+          to={filter.to}
+          onPeriodChange={(p) => setFilter((prev) => ({ ...prev, period: p }))}
+          onRangeChange={(from, to) => setFilter((prev) => ({ ...prev, from, to }))}
+        />
 
         {bots && bots.length > 0 && (
-          <select
-            value={filter.bot_id ?? ''}
-            onChange={(e) =>
-              setFilter((prev) => ({
-                ...prev,
-                bot_id: e.target.value ? Number(e.target.value) : undefined,
-              }))
-            }
-            className="bg-white rounded-xl border border-surface-border px-3 py-2 text-sm text-neutral-700 outline-none"
-          >
-            <option value="">Все боты</option>
-            {bots.map((bot) => (
-              <option key={bot.id} value={bot.id}>
-                {bot.name}
-              </option>
-            ))}
-          </select>
+          <CustomSelect
+            value={String(filter.bot_id ?? '')}
+            onChange={(v) => setFilter((prev) => ({ ...prev, bot_id: v ? Number(v) : undefined }))}
+            options={[
+              { value: '', label: 'Все боты' },
+              ...bots.map((bot) => ({ value: String(bot.id), label: bot.name })),
+            ]}
+            placeholder="Все боты"
+            width="200px"
+            light
+          />
         )}
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 animate-in animate-in-delay-1">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 animate-in animate-in-delay-2">
         {isLoading ? (
           <>
             <MetricSkeleton />
@@ -127,7 +107,7 @@ export default function LoyaltyAnalyticsPage() {
       {!isLoading && !isError && data && (
         <>
           {/* Demographics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in animate-in-delay-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in animate-in-delay-3">
             <PieCard
               title="По полу"
               slices={data.demographics.by_gender}
@@ -143,7 +123,7 @@ export default function LoyaltyAnalyticsPage() {
           </div>
 
           {/* Loyalty % */}
-          <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 mb-6 animate-in animate-in-delay-2">
+          <div className="bg-white rounded border border-neutral-900 p-6 mb-6 animate-in animate-in-delay-4">
             <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-1">
               Охват лояльностью
             </p>
@@ -151,9 +131,9 @@ export default function LoyaltyAnalyticsPage() {
               Доля клиентов в программе лояльности
             </h3>
             <div className="flex items-center gap-4">
-              <div className="flex-1 h-3 bg-neutral-100 rounded-full overflow-hidden">
+              <div className="flex-1 h-3 bg-neutral-100 rounded overflow-hidden">
                 <div
-                  className="h-full bg-accent rounded-full transition-all duration-700"
+                  className="h-full bg-[#EF3219] rounded transition-all duration-700"
                   style={{ width: `${data.demographics.loyalty_percent}%` }}
                 />
               </div>
@@ -165,7 +145,7 @@ export default function LoyaltyAnalyticsPage() {
 
           {/* Bot funnel */}
           {data.bot_funnel.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 animate-in animate-in-delay-3">
+            <div className="bg-white rounded border border-neutral-900 p-6 animate-in animate-in-delay-5">
               <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-0.5">
                 Воронка
               </p>
@@ -183,15 +163,16 @@ export default function LoyaltyAnalyticsPage() {
                     type="category"
                     dataKey="step"
                     tick={{ fontSize: 12, fill: '#525252' }}
-                    axisLine={false}
+                    axisLine={{ stroke: '#171717', strokeWidth: 1 }}
                     tickLine={false}
-                    width={100}
+                    width={140}
                   />
                   <Tooltip
                     formatter={(v) => [Number(v).toLocaleString('ru-RU'), 'Клиентов']}
-                    contentStyle={{ borderRadius: 12, border: '1px solid #e5e5e5', fontSize: 13 }}
+                    contentStyle={{ borderRadius: 4, border: '1px solid #e5e5e5', fontSize: 13 }}
+                    cursor={{ fill: '#f5f5f5' }}
                   />
-                  <Bar dataKey="count" fill="#E85D3A" radius={[0, 4, 4, 0]} opacity={0.85} />
+                  <Bar dataKey="count" fill="#EF3219" radius={[0, 2, 2, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -200,7 +181,7 @@ export default function LoyaltyAnalyticsPage() {
       )}
 
       {isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in animate-in-delay-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in animate-in-delay-3">
           <ChartSkeletonComponent />
           <ChartSkeletonComponent />
         </div>
@@ -219,7 +200,7 @@ function StatCard({
   icon: React.ReactNode
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(0,0,0,0.07)]">
+    <div className="bg-white rounded border border-neutral-900 p-5">
       <div className="flex items-center gap-2 text-neutral-400 mb-3">
         {icon}
         <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
@@ -234,7 +215,7 @@ function StatCard({
 function PieCard({ title, slices }: { title: string; slices: PieSlice[] }) {
   if (!slices || slices.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
+      <div className="bg-white rounded border border-neutral-900 p-6">
         <h3 className="text-sm font-semibold text-neutral-700 mb-4">{title}</h3>
         <p className="text-sm text-neutral-400 text-center py-6">Нет данных</p>
       </div>
@@ -242,7 +223,7 @@ function PieCard({ title, slices }: { title: string; slices: PieSlice[] }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
+    <div className="bg-white rounded border border-neutral-900 p-6">
       <h3 className="text-sm font-semibold text-neutral-700 mb-4">{title}</h3>
       <ResponsiveContainer width="100%" height={160}>
         <PieChart>
@@ -261,7 +242,7 @@ function PieCard({ title, slices }: { title: string; slices: PieSlice[] }) {
           </Pie>
           <Tooltip
             formatter={(v, name) => [Number(v).toLocaleString('ru-RU'), name]}
-            contentStyle={{ borderRadius: 12, border: '1px solid #e5e5e5', fontSize: 12 }}
+            contentStyle={{ borderRadius: 4, border: '1px solid #e5e5e5', fontSize: 12 }}
           />
         </PieChart>
       </ResponsiveContainer>

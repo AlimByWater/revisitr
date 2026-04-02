@@ -90,9 +90,9 @@ export default function IntegrationDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl animate-pulse space-y-4">
+      <div className="animate-pulse space-y-4">
         <div className="h-8 w-48 bg-neutral-200 rounded" />
-        <div className="h-64 bg-neutral-100 rounded-2xl" />
+        <div className="h-64 bg-neutral-100 rounded" />
       </div>
     )
   }
@@ -110,13 +110,13 @@ export default function IntegrationDetailPage() {
   const status = STATUS_STYLES[integration.status] || STATUS_STYLES.inactive
 
   return (
-    <div className="max-w-4xl">
+    <div>
       {/* Header */}
       <div className="flex items-center gap-3 mb-6 animate-in">
         <button
           type="button"
           onClick={() => navigate('/dashboard/integrations')}
-          className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
+          className="p-2 rounded text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -147,7 +147,7 @@ export default function IntegrationDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-surface-border overflow-x-auto animate-in animate-in-delay-1">
+      <div className="flex gap-1 mb-6 border-b border-neutral-200 overflow-x-auto animate-in animate-in-delay-1">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -204,7 +204,7 @@ function OverviewTab({
           onClick={() => syncMutation.mutate(integrationId)}
           disabled={syncMutation.isPending}
           className={cn(
-            'flex items-center gap-2 py-2 px-4 rounded-lg text-sm font-medium',
+            'flex items-center gap-2 py-2 px-4 rounded text-sm font-medium',
             'bg-accent text-white hover:bg-accent-hover',
             'disabled:opacity-50 transition-all',
           )}
@@ -219,8 +219,8 @@ function OverviewTab({
           onClick={() => testMutation.mutate(integrationId)}
           disabled={testMutation.isPending}
           className={cn(
-            'flex items-center gap-2 py-2 px-4 rounded-lg text-sm font-medium',
-            'border border-surface-border text-neutral-700',
+            'flex items-center gap-2 py-2 px-4 rounded text-sm font-medium',
+            'border border-neutral-900 text-neutral-700',
             'hover:bg-neutral-50 disabled:opacity-50 transition-all',
           )}
         >
@@ -234,7 +234,7 @@ function OverviewTab({
       </div>
 
       {(syncMutation.isError || testMutation.isError) && (
-        <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+        <p className="text-sm text-red-600 bg-red-50 p-3 rounded">
           {integration.type === 'iiko' || integration.type === 'rkeeper'
             ? 'Ошибка подключения к POS-системе. Проверьте настройки.'
             : 'Произошла ошибка. Попробуйте снова.'}
@@ -242,7 +242,7 @@ function OverviewTab({
       )}
 
       {syncMutation.isSuccess && (
-        <p className="text-sm text-green-700 bg-green-50 p-3 rounded-lg">
+        <p className="text-sm text-green-700 bg-green-50 p-3 rounded">
           Синхронизация завершена успешно.
         </p>
       )}
@@ -262,7 +262,7 @@ function OverviewTab({
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-white rounded-xl border border-surface-border p-4">
+    <div className="bg-white rounded border border-neutral-900 p-4">
       <p className="text-xs text-neutral-500 mb-1">{label}</p>
       <p className="text-xl font-semibold text-neutral-900">{value}</p>
     </div>
@@ -300,7 +300,7 @@ function OrdersTab({ integrationId }: { integrationId: number }) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-surface-border">
+            <tr className="border-b border-neutral-200">
               <th className="text-left py-2 px-3 text-neutral-500 font-medium">
                 ID
               </th>
@@ -322,7 +322,7 @@ function OrdersTab({ integrationId }: { integrationId: number }) {
             {orders.map((order) => (
               <tr
                 key={order.id}
-                className="border-b border-surface-border/50 hover:bg-neutral-50 transition-colors"
+                className="border-b border-neutral-200/50 hover:bg-neutral-50 transition-colors"
               >
                 <td className="py-2.5 px-3 text-neutral-600 font-mono text-xs">
                   {order.external_id}
@@ -357,7 +357,7 @@ function OrdersTab({ integrationId }: { integrationId: number }) {
             type="button"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="px-3 py-1.5 text-sm rounded-lg border border-surface-border disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+            className="px-3 py-1.5 text-sm rounded border border-neutral-900 disabled:opacity-30 hover:bg-neutral-50 transition-colors"
           >
             Назад
           </button>
@@ -368,7 +368,7 @@ function OrdersTab({ integrationId }: { integrationId: number }) {
             type="button"
             onClick={() => setPage((p) => p + 1)}
             disabled={(page + 1) * limit >= total}
-            className="px-3 py-1.5 text-sm rounded-lg border border-surface-border disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+            className="px-3 py-1.5 text-sm rounded border border-neutral-900 disabled:opacity-30 hover:bg-neutral-50 transition-colors"
           >
             Далее
           </button>
@@ -396,7 +396,7 @@ function CustomersTab({ integrationId }: { integrationId: number }) {
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Поиск по имени или телефону..."
         className={cn(
-          'w-full rounded-lg border border-surface-border px-3 py-2',
+          'w-full rounded border border-neutral-900 px-3 py-2',
           'text-sm placeholder:text-neutral-400',
           'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
         )}
@@ -412,7 +412,7 @@ function CustomersTab({ integrationId }: { integrationId: number }) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-surface-border">
+              <tr className="border-b border-neutral-200">
                 <th className="text-left py-2 px-3 text-neutral-500 font-medium">
                   Имя
                 </th>
@@ -431,7 +431,7 @@ function CustomersTab({ integrationId }: { integrationId: number }) {
               {customers.map((c) => (
                 <tr
                   key={c.external_id}
-                  className="border-b border-surface-border/50 hover:bg-neutral-50 transition-colors"
+                  className="border-b border-neutral-200/50 hover:bg-neutral-50 transition-colors"
                 >
                   <td className="py-2.5 px-3 text-neutral-900 font-medium">
                     {c.name}
@@ -476,7 +476,7 @@ function MenuTab({ integrationId }: { integrationId: number }) {
           <h3 className="text-sm font-semibold text-neutral-900 mb-2">
             {cat.name}
           </h3>
-          <div className="bg-white rounded-xl border border-surface-border divide-y divide-surface-border/50">
+          <div className="bg-white rounded border border-neutral-900 divide-y divide-neutral-200/50">
             {cat.items.map((item) => (
               <div
                 key={item.external_id}
@@ -530,7 +530,7 @@ function SettingsTab({
   return (
     <div className="space-y-6 max-w-lg">
       {/* Config display */}
-      <div className="bg-white rounded-xl border border-surface-border p-4 space-y-3">
+      <div className="bg-white rounded border border-neutral-900 p-4 space-y-3">
         <h3 className="text-sm font-semibold text-neutral-900">Конфигурация</h3>
         {integration.config.api_url && (
           <div>
@@ -554,7 +554,7 @@ function SettingsTab({
       </div>
 
       {/* Status toggle */}
-      <div className="flex items-center justify-between bg-white rounded-xl border border-surface-border p-4">
+      <div className="flex items-center justify-between bg-white rounded border border-neutral-900 p-4">
         <div>
           <p className="text-sm font-medium text-neutral-900">Статус</p>
           <p className="text-xs text-neutral-500">
@@ -568,9 +568,9 @@ function SettingsTab({
           onClick={handleStatusToggle}
           disabled={updateMutation.isPending}
           className={cn(
-            'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
+            'px-3 py-1.5 text-sm font-medium rounded transition-colors',
             integration.status === 'active'
-              ? 'text-neutral-700 border border-surface-border hover:bg-neutral-50'
+              ? 'text-neutral-700 border border-neutral-900 hover:bg-neutral-50'
               : 'bg-accent text-white hover:bg-accent-hover',
           )}
         >
@@ -579,7 +579,7 @@ function SettingsTab({
       </div>
 
       {/* Delete */}
-      <div className="bg-white rounded-xl border border-red-200 p-4">
+      <div className="bg-white rounded border border-red-200 p-4">
         <h3 className="text-sm font-semibold text-red-700 mb-1">
           Удаление интеграции
         </h3>
@@ -601,7 +601,7 @@ function SettingsTab({
               type="button"
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 text-sm font-medium rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
             >
               {deleteMutation.isPending ? 'Удаление...' : 'Подтвердить'}
             </button>

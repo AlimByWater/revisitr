@@ -24,15 +24,15 @@ export const RFM_SEGMENT_LABELS: Record<string, string> = {
 
 export const RFM_SEGMENT_COLORS: Record<
   string,
-  { bg: string; text: string; accent: string; icon: string }
+  { bg: string; text: string; accent: string; color: string }
 > = {
-  new: { bg: 'bg-cyan-50', text: 'text-cyan-700', accent: 'bg-cyan-500', icon: '🟢' },
-  promising: { bg: 'bg-blue-50', text: 'text-blue-700', accent: 'bg-blue-500', icon: '🔵' },
-  regular: { bg: 'bg-violet-50', text: 'text-violet-700', accent: 'bg-violet-500', icon: '🟣' },
-  vip: { bg: 'bg-amber-50', text: 'text-amber-700', accent: 'bg-amber-500', icon: '⭐' },
-  rare_valuable: { bg: 'bg-purple-50', text: 'text-purple-700', accent: 'bg-purple-500', icon: '💎' },
-  churn_risk: { bg: 'bg-yellow-50', text: 'text-yellow-700', accent: 'bg-yellow-500', icon: '🟡' },
-  lost: { bg: 'bg-red-50', text: 'text-red-700', accent: 'bg-red-500', icon: '🔴' },
+  new: { bg: 'bg-emerald-50', text: 'text-emerald-700', accent: 'bg-emerald-500', color: '#10b981' },
+  promising: { bg: 'bg-blue-50', text: 'text-blue-700', accent: 'bg-blue-500', color: '#3b82f6' },
+  regular: { bg: 'bg-violet-50', text: 'text-violet-700', accent: 'bg-violet-500', color: '#8b5cf6' },
+  vip: { bg: 'bg-amber-50', text: 'text-amber-700', accent: 'bg-amber-500', color: '#f59e0b' },
+  rare_valuable: { bg: 'bg-purple-50', text: 'text-purple-700', accent: 'bg-purple-500', color: '#a855f7' },
+  churn_risk: { bg: 'bg-orange-50', text: 'text-orange-700', accent: 'bg-orange-500', color: '#f97316' },
+  lost: { bg: 'bg-red-50', text: 'text-red-700', accent: 'bg-red-500', color: '#ef4444' },
 }
 
 // ── RFM Config ──────────────────────────────────────────────────────────

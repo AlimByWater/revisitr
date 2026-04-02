@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { User, Menu, LogOut, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
@@ -11,6 +11,7 @@ interface HeaderProps {
 
 export function Header({ onMenuToggle }: HeaderProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const logout = useAuthStore((s) => s.logout)
   const user = useAuthStore((s) => s.user)
   const { theme, toggleTheme } = useTheme()
@@ -24,6 +25,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
   }
 
   const isAurora = theme === 'aurora'
+  const isDashboard = location.pathname === '/dashboard' || location.pathname === '/dashboard/'
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -37,166 +39,243 @@ export function Header({ onMenuToggle }: HeaderProps) {
     return () => document.removeEventListener('mousedown', handler)
   }, [menuOpen])
 
-  return (
-    <header
-      className={cn(
-        'h-16 border-b flex items-center justify-between px-4 md:px-6 sticky top-0 z-30 transition-all duration-500',
-        isAurora ? 'header-glass' : 'bg-white/80 backdrop-blur-sm border-surface-border',
-      )}
-    >
-      <div className="flex items-center gap-4 md:gap-8">
-        {/* Mobile burger */}
-        <button
-          onClick={onMenuToggle}
-          type="button"
-          className={cn(
-            'lg:hidden w-9 h-9 rounded-lg flex items-center justify-center transition-colors',
-            isAurora
-              ? 'text-white/60 hover:text-white hover:bg-white/10'
-              : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100',
-          )}
-          aria-label="Открыть меню"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-
-        <Link to="/dashboard" className="text-xl font-bold tracking-tight group/logo select-none">
-          <span className={isAurora ? 'text-white/90' : undefined}>
-            revi
-          </span>
-          <span
-            className={cn(
-              'transition-all duration-300',
-              isAurora
-                ? 'text-violet-400 group-hover/logo:drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]'
-                : 'text-accent group-hover/logo:drop-shadow-[0_0_8px_rgba(232,93,58,0.55)]',
-            )}
+  if (isAurora) {
+    return (
+      <header
+        className="h-16 border-b flex items-center justify-between px-4 md:px-6 sticky top-0 z-30 transition-all duration-500 header-glass"
+      >
+        <div className="flex items-center gap-4 md:gap-8">
+          {/* Mobile burger */}
+          <button
+            onClick={onMenuToggle}
+            type="button"
+            className="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center transition-colors text-white/60 hover:text-white hover:bg-white/10"
+            aria-label="Открыть меню"
           >
-            s
-          </span>
-          <span className={isAurora ? 'text-white/90' : undefined}>
-            itr
-          </span>
-        </Link>
+            <Menu className="w-5 h-5" />
+          </button>
 
-        <nav className="hidden md:flex items-center gap-6">
+          <Link to="/dashboard" className="text-xl font-bold tracking-tight group/logo select-none">
+            <span className="text-white/90">
+              revi
+            </span>
+            <span
+              className="transition-all duration-300 text-violet-400 group-hover/logo:drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]"
+            >
+              s
+            </span>
+            <span className="text-white/90">
+              itr
+            </span>
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-6">
+            <Link
+              to="/dashboard"
+              className={cn(
+                'text-sm font-medium transition-colors',
+                location.pathname.startsWith('/dashboard') && !location.pathname.startsWith('/dashboard/account')
+                  ? 'text-white'
+                  : 'text-white/50 hover:text-white/90',
+              )}
+            >
+              Панель управления
+            </Link>
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-3 md:gap-5">
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            type="button"
+            className="theme-toggle"
+            title="Светлая тема"
+            aria-label="Переключить тему"
+          />
+
+          <a
+            href="#"
+            className="hidden md:block text-sm font-medium transition-colors text-white/40 hover:text-violet-400"
+          >
+            Тарифы
+          </a>
+          <a
+            href="#"
+            className="hidden md:block text-sm font-medium transition-colors text-white/40 hover:text-violet-400"
+          >
+            Поддержка
+          </a>
+
+          {/* User dropdown */}
+          <div
+            ref={menuRef}
+            className="relative flex items-center gap-2 md:gap-3 pl-3 md:pl-4 border-l border-white/10"
+          >
+            <button
+              type="button"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/10"
+            >
+              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/10">
+                <User className="w-4 h-4 text-white/60" />
+              </div>
+              <span className="text-sm font-medium hidden lg:block text-white/70">
+                {user?.name || 'Администратор'}
+              </span>
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 rounded-xl border shadow-lg py-1 z-50 bg-neutral-900 border-white/10">
+                <Link
+                  to="/dashboard/account"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-white/70 hover:bg-white/10 hover:text-white"
+                >
+                  <Settings className="w-4 h-4" />
+                  Настройки аккаунта
+                </Link>
+                <div className="my-1 border-t border-white/10" />
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm w-full transition-colors text-red-400 hover:bg-red-500/10"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Выйти
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+    )
+  }
+
+  return (
+    <header className="z-30 transition-all duration-500 px-4 sm:px-8 lg:px-16 pt-4 sm:pt-6 pb-0">
+      <div className="flex items-center">
+        {/* Left: logo area */}
+        <div className="lg:w-[220px] lg:justify-center flex items-center shrink-0">
+          {/* Mobile burger */}
+          <button
+            onClick={onMenuToggle}
+            type="button"
+            className="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center transition-colors text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-neutral-900 mr-3"
+            aria-label="Открыть меню"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <Link to="/dashboard">
+            <img src="/revisitr/logo.png" alt="Revisitr" className="h-6 sm:h-7 w-auto" />
+          </Link>
+        </div>
+
+        {/* Center: nav links */}
+        <nav className="hidden lg:flex items-center gap-6 flex-1 pl-6">
           <Link
             to="/dashboard"
             className={cn(
-              'text-sm font-medium transition-colors',
-              isAurora
-                ? 'text-white/50 hover:text-white/90'
-                : 'text-neutral-600 hover:text-neutral-900',
+              'text-sm transition-colors',
+              isDashboard
+                ? 'font-bold text-neutral-900 no-underline'
+                : 'font-medium text-neutral-600 hover:text-neutral-900',
             )}
           >
             Панель управления
           </Link>
-        </nav>
-      </div>
-
-      <div className="flex items-center gap-3 md:gap-5">
-        {/* Theme toggle */}
-        <button
-          onClick={toggleTheme}
-          type="button"
-          className="theme-toggle"
-          title={isAurora ? 'Светлая тема' : 'Aurora тема'}
-          aria-label="Переключить тему"
-        />
-
-        <a
-          href="#"
-          className={cn(
-            'hidden md:block text-sm font-medium transition-colors',
-            isAurora
-              ? 'text-white/40 hover:text-violet-400'
-              : 'text-neutral-500 hover:text-accent',
-          )}
-        >
-          Тарифы
-        </a>
-        <a
-          href="#"
-          className={cn(
-            'hidden md:block text-sm font-medium transition-colors',
-            isAurora
-              ? 'text-white/40 hover:text-violet-400'
-              : 'text-neutral-500 hover:text-accent',
-          )}
-        >
-          Поддержка
-        </a>
-
-        {/* User dropdown */}
-        <div
-          ref={menuRef}
-          className={cn(
-            'relative flex items-center gap-2 md:gap-3 pl-3 md:pl-4 border-l',
-            isAurora ? 'border-white/10' : 'border-surface-border',
-          )}
-        >
-          <button
-            type="button"
-            onClick={() => setMenuOpen(!menuOpen)}
-            className={cn(
-              'flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors',
-              isAurora
-                ? 'hover:bg-white/10'
-                : 'hover:bg-neutral-100',
-            )}
+          <a
+            href="#"
+            className="text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
           >
-            <div className={cn(
-              'w-8 h-8 rounded-full flex items-center justify-center',
-              isAurora ? 'bg-white/10' : 'bg-neutral-200',
-            )}>
-              <User className={cn('w-4 h-4', isAurora ? 'text-white/60' : 'text-neutral-500')} />
-            </div>
-            <span className={cn(
-              'text-sm font-medium hidden lg:block',
-              isAurora ? 'text-white/70' : 'text-neutral-700',
-            )}>
-              {user?.name || 'Администратор'}
-            </span>
-          </button>
+            Тарифы
+          </a>
+          <a
+            href="#"
+            className="text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
+          >
+            Поддержка
+          </a>
+          <a
+            href="#"
+            className="text-sm text-[#EF3219] font-medium hover:text-[#FF5C47] transition-colors"
+          >
+            Маркетинг &laquo;под ключ&raquo;
+          </a>
+          <a
+            href="#"
+            className="text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
+          >
+            Контакты
+          </a>
+        </nav>
 
-          {menuOpen && (
+        {/* Right: theme toggle + user */}
+        <div className="flex items-center gap-3 md:gap-5 ml-auto">
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            type="button"
+            className="theme-toggle"
+            title="Aurora тема"
+            aria-label="Переключить тему"
+          />
+
+          {/* User dropdown */}
+          <div
+            ref={menuRef}
+            className="relative flex items-center gap-2"
+          >
+            <button
+              type="button"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="flex items-center gap-2.5 rounded px-2.5 py-1.5 transition-all duration-150 hover:scale-[1.03]"
+            >
+              <div className="w-9 h-9 rounded-full flex items-center justify-center bg-white border border-neutral-900">
+                <User className="w-4 h-4 text-neutral-900" />
+              </div>
+              <div className="hidden sm:flex flex-col items-start">
+                <span className="text-sm font-bold text-neutral-900 leading-tight uppercase">
+                  {user?.name || 'GENNADY P.'}
+                </span>
+                <span className="text-[10px] font-bold text-white bg-neutral-900 rounded px-1.5 py-0.5 leading-none mt-0.5 uppercase tracking-wider">
+                  pro
+                </span>
+              </div>
+            </button>
+
             <div className={cn(
-              'absolute right-0 top-full mt-2 w-48 rounded-xl border shadow-lg py-1 z-50',
-              isAurora
-                ? 'bg-neutral-900 border-white/10'
-                : 'bg-white border-surface-border',
+              'absolute right-0 top-full mt-1 w-48 rounded border border-neutral-900 py-1 z-50 bg-white',
+              'transition-all duration-150 origin-top-right',
+              menuOpen
+                ? 'opacity-100 scale-y-100 pointer-events-auto'
+                : 'opacity-0 scale-y-95 pointer-events-none',
             )}>
-              <Link
-                to="/dashboard/account"
-                onClick={() => setMenuOpen(false)}
-                className={cn(
-                  'flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors',
-                  isAurora
-                    ? 'text-white/70 hover:bg-white/10 hover:text-white'
-                    : 'text-neutral-700 hover:bg-neutral-50',
-                )}
-              >
-                <Settings className="w-4 h-4" />
-                Настройки аккаунта
-              </Link>
-              <div className={cn('my-1 border-t', isAurora ? 'border-white/10' : 'border-neutral-100')} />
-              <button
-                type="button"
-                onClick={handleLogout}
-                className={cn(
-                  'flex items-center gap-2.5 px-4 py-2.5 text-sm w-full transition-colors',
-                  isAurora
-                    ? 'text-red-400 hover:bg-red-500/10'
-                    : 'text-red-500 hover:bg-red-50',
-                )}
-              >
-                <LogOut className="w-4 h-4" />
-                Выйти
-              </button>
-            </div>
-          )}
+                <Link
+                  to="/dashboard/account"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2 text-sm transition-colors text-neutral-700 hover:bg-neutral-50"
+                >
+                  <Settings className="w-4 h-4" />
+                  Настройки аккаунта
+                </Link>
+                <div className="my-1 mx-4 border-t border-neutral-200" />
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex items-center gap-2.5 px-4 py-2 text-sm w-full transition-colors text-red-500 hover:bg-red-50"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Выйти
+                </button>
+              </div>
+          </div>
         </div>
       </div>
+
+      {/* Bottom divider */}
+      <div className="mt-4 border-b border-neutral-900" />
     </header>
   )
 }

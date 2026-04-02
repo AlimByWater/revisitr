@@ -21,7 +21,7 @@ function formatCurrency(amount: number) {
 }
 
 const inputClassName = cn(
-  'w-full px-3 py-2 rounded-lg border border-surface-border text-sm',
+  'w-full px-3 py-2 rounded border border-neutral-200 text-sm',
   'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
 )
 
@@ -82,10 +82,10 @@ export default function MenuDetailPage() {
         Назад к списку
       </Link>
 
-      <div className="bg-white rounded-2xl border border-surface-border p-6 mb-6 animate-in">
+      <div className="bg-white rounded border border-neutral-900 p-6 mb-6 animate-in">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
+            <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight">
               {menu.name}
             </h1>
             <p className="text-xs text-neutral-400 mt-1">
@@ -97,7 +97,7 @@ export default function MenuDetailPage() {
             type="button"
             onClick={() => setShowAddCategory(true)}
             className={cn(
-              'flex items-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium',
+              'flex items-center gap-1.5 py-2 px-3 rounded text-sm font-medium',
               'bg-accent text-white hover:bg-accent-hover transition-all',
             )}
           >
@@ -108,7 +108,7 @@ export default function MenuDetailPage() {
       </div>
 
       {showAddCategory && (
-        <div className="bg-white rounded-2xl border border-surface-border p-5 mb-6 animate-in">
+        <div className="bg-white rounded border border-neutral-900 p-5 mb-6 animate-in">
           <h3 className="text-sm font-semibold text-neutral-900 mb-3">Новая категория</h3>
           <div className="flex gap-3">
             <input
@@ -124,7 +124,7 @@ export default function MenuDetailPage() {
               onClick={handleAddCategory}
               disabled={addCategory.isPending || !newCatName.trim()}
               className={cn(
-                'py-2 px-4 rounded-lg text-sm font-medium',
+                'py-2 px-4 rounded text-sm font-medium',
                 'bg-accent text-white hover:bg-accent-hover',
                 'disabled:opacity-50 transition-all',
               )}
@@ -144,7 +144,7 @@ export default function MenuDetailPage() {
 
       {categories.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-12 h-12 rounded-xl bg-neutral-100 flex items-center justify-center mb-3">
+          <div className="w-12 h-12 rounded bg-neutral-100 flex items-center justify-center mb-3">
             <Package className="w-6 h-6 text-neutral-400" />
           </div>
           <p className="text-sm text-neutral-500">Нет категорий. Добавьте первую категорию.</p>
@@ -193,7 +193,7 @@ function CategorySection({
   const items = category.items ?? []
 
   return (
-    <section className="bg-white rounded-2xl border border-surface-border overflow-hidden animate-in">
+    <section className="bg-white rounded border border-neutral-900 overflow-hidden animate-in">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
@@ -207,18 +207,18 @@ function CategorySection({
       </button>
 
       {expanded && (
-        <div className="border-t border-surface-border">
+        <div className="border-t border-neutral-200">
           {items.length === 0 ? (
             <p className="text-sm text-neutral-400 text-center py-6">Нет позиций</p>
           ) : (
-            <div className="divide-y divide-surface-border/50">
+            <div className="divide-y divide-neutral-200/50">
               {items.map((item) => (
                 <MenuItemRow key={item.id} item={item} onUpdate={onUpdate} />
               ))}
             </div>
           )}
 
-          <div className="px-6 py-3 border-t border-surface-border/50">
+          <div className="px-6 py-3 border-t border-neutral-200/50">
             {showAddItem ? (
               <div className="flex gap-2">
                 <input
@@ -239,14 +239,14 @@ function CategorySection({
                   type="button"
                   onClick={handleAddItem}
                   disabled={addItem.isPending}
-                  className="p-2 rounded-lg bg-accent text-white hover:bg-accent-hover disabled:opacity-50 transition-all"
+                  className="p-2 rounded bg-accent text-white hover:bg-accent-hover disabled:opacity-50 transition-all"
                 >
                   <Check className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
                   onClick={() => { setShowAddItem(false); setNewItem({ name: '', price: '' }) }}
-                  className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 transition-colors"
+                  className="p-2 rounded text-neutral-400 hover:text-neutral-600 transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>

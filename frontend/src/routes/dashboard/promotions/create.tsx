@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useCreatePromotionMutation } from '@/features/promotions/queries'
 import { usePreviewAudienceMutation, useUploadFileMutation } from '@/features/campaigns/queries'
 import { ClientFilterBuilder } from '@/components/filters/ClientFilterBuilder'
+import { DatePicker } from '@/components/common/DatePicker'
 import { ArrowLeft, Plus, X, Check, Upload, FileText } from 'lucide-react'
 import type { SegmentFilter } from '@/features/segments/types'
 import type {
@@ -46,7 +47,7 @@ const ACTION_TYPES = [
 // ── Styles ───────────────────────────────────────────────────────────────────
 
 const inputClass = cn(
-  'w-full px-4 py-2.5 rounded-lg border border-surface-border',
+  'w-full px-4 py-2.5 rounded border border-neutral-200',
   'text-sm placeholder:text-neutral-400',
   'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
   'transition-colors',
@@ -55,12 +56,12 @@ const inputClass = cn(
 
 const labelClass = 'block text-sm font-medium text-neutral-700 mb-1.5'
 
-const cardClass = 'bg-white rounded-2xl shadow-sm border border-surface-border p-6'
+const cardClass = 'bg-white rounded border border-neutral-900 p-6'
 
-const itemCardClass = 'bg-neutral-50 rounded-xl p-4 border border-surface-border relative'
+const itemCardClass = 'bg-neutral-50 rounded p-4 border border-neutral-200 relative'
 
 const btnPrimaryClass = cn(
-  'flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium',
+  'flex items-center gap-2 px-5 py-2.5 rounded text-sm font-medium',
   'bg-accent text-white',
   'hover:bg-accent/90 active:bg-accent/80',
   'transition-colors',
@@ -69,8 +70,8 @@ const btnPrimaryClass = cn(
 )
 
 const btnSecondaryClass = cn(
-  'px-5 py-2.5 rounded-lg text-sm font-medium',
-  'border border-surface-border text-neutral-700',
+  'px-5 py-2.5 rounded text-sm font-medium',
+  'border border-neutral-900 text-neutral-700',
   'hover:bg-neutral-50 transition-colors',
 )
 
@@ -200,7 +201,7 @@ export default function CreatePromotionPage() {
         <button
           onClick={() => navigate('/dashboard/promotions')}
           type="button"
-          className="p-2 rounded-lg hover:bg-neutral-100 transition-colors"
+          className="p-2 rounded hover:bg-neutral-100 transition-colors"
           aria-label="Назад к акциям"
         >
           <ArrowLeft className="w-5 h-5 text-neutral-500" />
@@ -226,7 +227,7 @@ export default function CreatePromotionPage() {
                   }}
                   disabled={s.num > step}
                   className={cn(
-                    'flex items-center gap-2 w-full rounded-lg px-3 py-2.5 text-left transition-colors',
+                    'flex items-center gap-2 w-full rounded px-3 py-2.5 text-left transition-colors',
                     isActive && 'bg-accent/10',
                     isCompleted && 'cursor-pointer hover:bg-neutral-50',
                     s.num > step && 'cursor-default',
@@ -428,24 +429,21 @@ function StepBasicSettings({
             <label htmlFor="promo-starts" className="block text-xs text-neutral-500 mb-1">
               Начало
             </label>
-            <input
-              id="promo-starts"
-              type="date"
+            <DatePicker
               value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
-              className={inputClass}
+              onChange={(v) => setStartsAt(v)}
+              placeholder="Выберите дату"
             />
           </div>
           <div>
             <label htmlFor="promo-ends" className="block text-xs text-neutral-500 mb-1">
               Окончание
             </label>
-            <input
-              id="promo-ends"
-              type="date"
+            <DatePicker
               value={endsAt}
-              onChange={(e) => setEndsAt(e.target.value)}
-              className={inputClass}
+              onChange={(v) => setEndsAt(v)}
+              placeholder="Выберите дату"
+              align="right"
             />
           </div>
         </div>
@@ -482,7 +480,7 @@ function StepBasicSettings({
       </div>
 
       {/* Combinable checkboxes */}
-      <div className="space-y-3 pt-2 border-t border-surface-border">
+      <div className="space-y-3 pt-2 border-t border-neutral-200">
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
@@ -866,7 +864,7 @@ function ActionCard({ action, onChange, onRemove }: ActionCardProps) {
                 maxLength={4096}
                 placeholder="Текст сообщения. Поддерживается форматирование Telegram: *жирный*, _курсив_"
                 className={cn(
-                  'w-full px-3 py-2.5 rounded-lg border border-neutral-200',
+                  'w-full px-3 py-2.5 rounded border border-neutral-200',
                   'text-sm text-neutral-900 placeholder:text-neutral-400 resize-none',
                   'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                 )}
@@ -877,15 +875,15 @@ function ActionCard({ action, onChange, onRemove }: ActionCardProps) {
             <div>
               <p className="text-sm font-medium text-neutral-700 mb-2">Вложение</p>
               {action.media_url ? (
-                <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+                <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded border border-neutral-200">
                   {isImageUrl(action.media_url) ? (
                     <img
                       src={action.media_url}
                       alt="Вложение"
-                      className="w-12 h-12 rounded-lg object-cover"
+                      className="w-12 h-12 rounded object-cover"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-lg bg-neutral-200 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded bg-neutral-200 flex items-center justify-center">
                       <FileText className="w-5 h-5 text-neutral-500" />
                     </div>
                   )}
@@ -895,7 +893,7 @@ function ActionCard({ action, onChange, onRemove }: ActionCardProps) {
                   <button
                     type="button"
                     onClick={() => onChange({ ...action, media_url: undefined })}
-                    className="p-1.5 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                    className="p-1.5 rounded text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -903,7 +901,7 @@ function ActionCard({ action, onChange, onRemove }: ActionCardProps) {
               ) : (
                 <label
                   className={cn(
-                    'flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-neutral-300',
+                    'flex items-center gap-2 px-4 py-2.5 rounded border border-dashed border-neutral-300',
                     'text-sm text-neutral-500 cursor-pointer',
                     'hover:bg-neutral-50 hover:border-neutral-400 transition-colors',
                     uploadMutation.isPending && 'opacity-50 pointer-events-none',

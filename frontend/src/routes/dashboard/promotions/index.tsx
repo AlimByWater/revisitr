@@ -5,7 +5,7 @@ import {
   useDeletePromotionMutation,
 } from '@/features/promotions/queries'
 import type { Promotion } from '@/features/promotions/types'
-import { Tag, Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Tag, Plus, Trash2 } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorState } from '@/components/common/ErrorState'
 import { TableSkeleton } from '@/components/common/LoadingSkeleton'
@@ -30,13 +30,6 @@ const typeConfig: Record<Promotion['type'], { label: string; className: string }
   },
 }
 
-const recurrenceLabels: Record<Promotion['recurrence'], string> = {
-  one_time: 'Разовая',
-  daily: 'Ежедневно',
-  weekly: 'Еженедельно',
-  monthly: 'Ежемесячно',
-}
-
 function getStatusInfo(promo: Promotion): { label: string; className: string } {
   if (!promo.active) {
     return { label: 'Неактивна', className: 'bg-neutral-100 text-neutral-500' }
@@ -55,9 +48,15 @@ function formatDate(dateStr?: string): string {
   return new Date(dateStr).toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'short',
-    year: 'numeric',
   })
 }
+
+function formatValue(promo: Promotion): string {
+  if (promo.result.discount_percent) return `${promo.result.discount_percent}%`
+  if (promo.result.bonus_amount) return `+${promo.result.bonus_amount}`
+  return ''
+}
+
 
 export default function PromotionsPage() {
   const navigate = useNavigate()
@@ -94,13 +93,13 @@ export default function PromotionsPage() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <div className="flex items-center justify-between mb-6 animate-in">
         <div>
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
             Акции
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
             Управление акциями и специальными предложениями
           </p>
         </div>
@@ -108,12 +107,11 @@ export default function PromotionsPage() {
           onClick={() => navigate('/dashboard/promotions/create')}
           type="button"
           className={cn(
-            'flex items-center gap-2 py-2.5 px-4 rounded-lg',
+            'flex items-center gap-2 py-2.5 px-4 rounded',
             'bg-accent text-white text-sm font-medium',
             'hover:bg-accent-hover active:bg-accent/80',
             'transition-all duration-150',
             'focus:outline-none focus:ring-2 focus:ring-accent/20',
-            'shadow-sm shadow-accent/20',
           )}
         >
           <Plus className="w-4 h-4" />
@@ -141,106 +139,91 @@ export default function PromotionsPage() {
           onAction={() => navigate('/dashboard/promotions/create')}
         />
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden animate-in animate-in-delay-1">
+        <div className="bg-white rounded border border-neutral-900 overflow-hidden animate-in animate-in-delay-1">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-surface-border">
+                <tr className="border-b border-neutral-200">
                   <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
                     Название
                   </th>
-                  <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
+                  <th className="text-center text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
                     Тип
                   </th>
-                  <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
+                  <th className="text-center text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
                     Статус
                   </th>
-                  <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden md:table-cell">
-                    Повторяемость
-                  </th>
-                  <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
+                  <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 hidden md:table-cell">
                     Период
                   </th>
-                  <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
-                    Действия
+                  <th className="text-right text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3 w-24">
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-border">
+              <tbody className="divide-y divide-neutral-200">
                 {activePromotions.map((promo) => {
                   const status = getStatusInfo(promo)
                   const promoType = typeConfig[promo.type]
+                  const valueStr = formatValue(promo)
                   return (
                     <tr
                       key={promo.id}
                       className="hover:bg-neutral-50 transition-colors"
                     >
                       <td className="px-6 py-4">
-                        <div>
-                          <span className="text-sm font-medium text-neutral-900">
-                            {promo.name}
-                          </span>
-                          {promo.result.discount_percent && (
-                            <p className="text-xs text-neutral-400 mt-0.5">
-                              {promo.result.discount_percent}% скидка
-                            </p>
-                          )}
-                          {promo.result.bonus_amount && (
-                            <p className="text-xs text-neutral-400 mt-0.5">
-                              +{promo.result.bonus_amount} бонусов
-                            </p>
-                          )}
-                        </div>
+                        <span className="text-sm font-medium text-neutral-900">
+                          {promo.name}
+                        </span>
+                        {valueStr && (
+                          <span className="ml-2 text-xs text-neutral-400">{valueStr}</span>
+                        )}
                       </td>
-                      <td className="px-6 py-4 hidden sm:table-cell">
+                      <td className="px-6 py-4 text-center hidden sm:table-cell">
                         <span
                           className={cn(
-                            'text-xs font-medium px-2 py-1 rounded-full',
+                            'text-xs font-medium px-2 py-1 rounded',
                             promoType.className,
                           )}
                         >
                           {promoType.label}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 text-center">
                         <span
                           className={cn(
-                            'text-xs font-medium px-2 py-1 rounded-full',
+                            'text-xs font-medium px-2 py-1 rounded',
                             status.className,
                           )}
                         >
                           {status.label}
                         </span>
                       </td>
-                      <td className="px-6 py-4 hidden md:table-cell">
-                        <span className="text-sm text-neutral-500">
-                          {recurrenceLabels[promo.recurrence]}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right hidden sm:table-cell">
-                        <span className="text-sm font-mono text-neutral-400 tabular-nums">
+                      <td className="px-6 py-4 text-right hidden md:table-cell">
+                        <span className="text-sm font-mono text-neutral-400 tabular-nums whitespace-nowrap">
                           {formatDate(promo.starts_at)} — {formatDate(promo.ends_at)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-3">
                           <button
                             type="button"
                             onClick={() => handleToggleActive(promo)}
-                            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
+                            className="relative w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                            style={{ backgroundColor: promo.active ? '#EF3219' : '#d4d4d4' }}
                             title={promo.active ? 'Деактивировать' : 'Активировать'}
                             aria-label={promo.active ? 'Деактивировать' : 'Активировать'}
                           >
-                            {promo.active ? (
-                              <ToggleRight className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <ToggleLeft className="w-4 h-4" />
-                            )}
+                            <span
+                              className={cn(
+                                'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200 shadow-sm',
+                                promo.active ? 'left-[18px]' : 'left-0.5',
+                              )}
+                            />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDelete(promo)}
-                            className="p-1.5 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            className="p-1.5 rounded text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-colors"
                             title="Удалить"
                             aria-label="Удалить"
                           >

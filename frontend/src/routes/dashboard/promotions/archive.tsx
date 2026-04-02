@@ -61,12 +61,12 @@ export default function PromotionsArchivePage() {
   })
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <div className="mb-6 animate-in">
         <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
           Архив акций
         </h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
           Завершённые и деактивированные акции
         </p>
       </div>
@@ -81,7 +81,7 @@ export default function PromotionsArchivePage() {
             {channelAnalytics.map((ch) => (
               <div
                 key={ch.channel}
-                className="bg-white rounded-xl border border-surface-border p-4"
+                className="bg-white rounded border border-neutral-900 p-4"
               >
                 <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-1">
                   {channelLabels[ch.channel] ?? ch.channel}
@@ -116,11 +116,11 @@ export default function PromotionsArchivePage() {
           description="Здесь будут отображаться завершённые и деактивированные акции."
         />
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden animate-in animate-in-delay-1">
+        <div className="bg-white rounded border border-neutral-900 overflow-hidden animate-in animate-in-delay-1">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-surface-border">
+                <tr className="border-b border-neutral-200">
                   <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
                     Название
                   </th>
@@ -138,7 +138,7 @@ export default function PromotionsArchivePage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-border">
+              <tbody className="divide-y divide-neutral-200">
                 {archivedPromotions.map((promo) => {
                   const promoType = typeConfig[promo.type]
                   const isExpired =

@@ -14,19 +14,19 @@ export default function POSListPage() {
   const [showCreate, setShowCreate] = useState(false)
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <div className="flex items-center justify-between mb-6 animate-in">
         <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Точки продаж</h1>
         <button
           type="button"
           onClick={() => setShowCreate(true)}
           className={cn(
-            'flex items-center gap-2 py-2.5 px-4 rounded-lg',
+            'flex items-center gap-2 py-2.5 px-4 rounded',
             'bg-accent text-white text-sm font-medium',
             'hover:bg-accent-hover active:bg-accent/80',
             'transition-all duration-150',
             'focus:outline-none focus:ring-2 focus:ring-accent/20',
-            'shadow-sm shadow-accent/20',
+            '',
           )}
         >
           <Plus className="w-4 h-4" />
@@ -68,7 +68,7 @@ export default function POSListPage() {
                 navigate(`/dashboard/pos/${loc.id}`)
               }
               className={cn(
-                'w-full text-left bg-white rounded-2xl shadow-sm border border-surface-border p-6',
+                'w-full text-left bg-white rounded border border-neutral-900 p-6',
                 'hover:border-neutral-300 hover:shadow-md',
                 'transition-all duration-200 group',
                 'animate-in',
@@ -81,7 +81,7 @@ export default function POSListPage() {
                     {loc.name}
                   </h3>
                   {loc.address && (
-                    <p className="text-sm text-neutral-500 mt-1">
+                    <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
                       {loc.address}
                     </p>
                   )}

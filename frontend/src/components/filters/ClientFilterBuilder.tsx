@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { ChevronDown, Eye, RotateCcw } from 'lucide-react'
+import { DatePicker } from '@/components/common/DatePicker'
 import type { SegmentFilter } from '@/features/segments/types'
 
 const RFM_SEGMENT_LABELS: Record<string, string> = {
@@ -25,7 +26,7 @@ const GENDER_OPTIONS = [
 ]
 
 const inputClassName = cn(
-  'w-full px-3 py-2 rounded-lg border border-surface-border text-sm',
+  'w-full px-3 py-2 rounded border border-neutral-200 text-sm',
   'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
   'transition-colors',
 )
@@ -76,7 +77,7 @@ function FilterGroup({ title, activeCount, children, defaultOpen = false }: Filt
   const [open, setOpen] = useState(defaultOpen)
 
   return (
-    <div className="border border-surface-border rounded-xl overflow-hidden">
+    <div className="border border-neutral-200 rounded overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -101,7 +102,7 @@ function FilterGroup({ title, activeCount, children, defaultOpen = false }: Filt
         />
       </button>
       {open && (
-        <div className="px-4 pb-4 pt-1 space-y-3 border-t border-surface-border/50">
+        <div className="px-4 pb-4 pt-1 space-y-3 border-t border-neutral-200/50">
           {children}
         </div>
       )}
@@ -187,7 +188,7 @@ export function ClientFilterBuilder({
     (!isHidden('bot_id') ? countActiveFilters(value, botKeys) : 0)
 
   return (
-    <div className={cn('bg-white rounded-2xl border border-surface-border', className)}>
+    <div className={cn('bg-white rounded border border-neutral-200', className)}>
       <div className="p-4 space-y-2">
         {/* Демография */}
         <FilterGroup
@@ -280,20 +281,20 @@ export function ClientFilterBuilder({
               </label>
               <div className="flex items-center gap-2">
                 {!isHidden('registered_from') && (
-                  <input
-                    type="date"
+                  <DatePicker
                     value={value.registered_from ?? ''}
-                    onChange={(e) => updateString('registered_from', e.target.value)}
-                    className={cn(inputClassName, 'flex-1')}
+                    onChange={(v) => updateString('registered_from', v)}
+                    placeholder="от"
+                    className="flex-1"
                   />
                 )}
                 <span className="text-neutral-400 text-sm shrink-0">&mdash;</span>
                 {!isHidden('registered_to') && (
-                  <input
-                    type="date"
+                  <DatePicker
                     value={value.registered_to ?? ''}
-                    onChange={(e) => updateString('registered_to', e.target.value)}
-                    className={cn(inputClassName, 'flex-1')}
+                    onChange={(v) => updateString('registered_to', v)}
+                    placeholder="до"
+                    className="flex-1"
                   />
                 )}
               </div>
@@ -535,7 +536,7 @@ export function ClientFilterBuilder({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-surface-border flex items-center justify-between gap-3">
+      <div className="px-4 py-3 border-t border-neutral-200 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           {onPreview && (
             <button
@@ -543,8 +544,8 @@ export function ClientFilterBuilder({
               onClick={onPreview}
               disabled={isPreviewing}
               className={cn(
-                'flex items-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium',
-                'border border-surface-border text-neutral-700',
+                'flex items-center gap-1.5 py-2 px-3 rounded text-sm font-medium',
+                'border border-neutral-200 text-neutral-700',
                 'hover:bg-neutral-50 transition-colors',
                 'disabled:opacity-50',
               )}
@@ -565,7 +566,7 @@ export function ClientFilterBuilder({
           onClick={handleReset}
           disabled={totalActive === 0}
           className={cn(
-            'flex items-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium',
+            'flex items-center gap-1.5 py-2 px-3 rounded text-sm font-medium',
             'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50 transition-colors',
             'disabled:opacity-30 disabled:cursor-not-allowed',
           )}

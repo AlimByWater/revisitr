@@ -9,6 +9,8 @@ import {
 } from '@/features/promotions/queries'
 import type { PromoCode, CreatePromoCodeRequest } from '@/features/promotions/types'
 import { Ticket, Plus, X, Ban, Copy, Sparkles } from 'lucide-react'
+import { CustomSelect } from '@/components/common/CustomSelect'
+import { DatePicker } from '@/components/common/DatePicker'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorState } from '@/components/common/ErrorState'
 import { TableSkeleton } from '@/components/common/LoadingSkeleton'
@@ -78,7 +80,7 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
   }
 
   const inputClass = cn(
-    'w-full px-4 py-2.5 rounded-lg border border-surface-border',
+    'w-full px-4 py-2.5 rounded border border-neutral-200',
     'text-sm placeholder:text-neutral-400',
     'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
     'transition-colors',
@@ -95,7 +97,7 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
       aria-modal="true"
       aria-labelledby="create-code-title"
     >
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded border border-neutral-900 p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto shadow-lg">
         <div className="flex items-center justify-between mb-6">
           <h2
             id="create-code-title"
@@ -106,7 +108,7 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
           <button
             onClick={onClose}
             type="button"
-            className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
+            className="p-1 rounded text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
             aria-label="Закрыть"
           >
             <X className="w-5 h-5" />
@@ -140,7 +142,7 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
                 onClick={handleGenerate}
                 disabled={generateCode.isPending || createCode.isPending}
                 className={cn(
-                  'px-3 py-2.5 rounded-lg border border-surface-border',
+                  'px-3 py-2.5 rounded border border-neutral-200',
                   'text-sm text-neutral-600 hover:bg-neutral-50',
                   'transition-colors flex-shrink-0',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -161,22 +163,20 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
               Привязка к акции{' '}
               <span className="text-neutral-400 font-normal">(необязательно)</span>
             </label>
-            <select
-              id="code-promotion"
+            <CustomSelect
               value={promotionId}
-              onChange={(e) => setPromotionId(e.target.value)}
-              disabled={createCode.isPending}
-              className={inputClass}
-            >
-              <option value="">Без привязки</option>
-              {promotions
-                ?.filter((p) => p.active)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-            </select>
+              onChange={(v) => setPromotionId(v)}
+              options={[
+                { value: '', label: 'Без привязки' },
+                ...(promotions
+                  ?.filter((p) => p.active)
+                  .map((p) => ({
+                    value: String(p.id),
+                    label: p.name,
+                  })) ?? []),
+              ]}
+              light
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -227,21 +227,20 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
               Канал{' '}
               <span className="text-neutral-400 font-normal">(необязательно)</span>
             </label>
-            <select
-              id="code-channel"
+            <CustomSelect
               value={channel}
-              onChange={(e) => setChannel(e.target.value)}
-              disabled={createCode.isPending}
-              className={inputClass}
-            >
-              <option value="">Не указан</option>
-              <option value="smm">SMM</option>
-              <option value="targeting">Таргетинг</option>
-              <option value="yandex_maps">Яндекс Карты</option>
-              <option value="flyer">Флаер</option>
-              <option value="partner">Партнёр</option>
-              <option value="custom">Другой</option>
-            </select>
+              onChange={(v) => setChannel(v)}
+              options={[
+                { value: '', label: 'Не указан' },
+                { value: 'smm', label: 'SMM' },
+                { value: 'targeting', label: 'Таргетинг' },
+                { value: 'yandex_maps', label: 'Яндекс Карты' },
+                { value: 'flyer', label: 'Флаер' },
+                { value: 'partner', label: 'Партнёр' },
+                { value: 'custom', label: 'Другой' },
+              ]}
+              light
+            />
           </div>
 
           <div>
@@ -331,13 +330,11 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
               >
                 Дата начала
               </label>
-              <input
-                id="code-starts-at"
-                type="date"
+              <DatePicker
                 value={startsAt}
-                onChange={(e) => setStartsAt(e.target.value)}
+                onChange={(v) => setStartsAt(v)}
+                placeholder="Выберите дату"
                 disabled={createCode.isPending}
-                className={inputClass}
               />
             </div>
             <div>
@@ -347,13 +344,12 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
               >
                 Дата окончания
               </label>
-              <input
-                id="code-ends-at"
-                type="date"
+              <DatePicker
                 value={endsAt}
-                onChange={(e) => setEndsAt(e.target.value)}
+                onChange={(v) => setEndsAt(v)}
+                placeholder="Выберите дату"
                 disabled={createCode.isPending}
-                className={inputClass}
+                align="right"
               />
             </div>
           </div>
@@ -373,8 +369,8 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
               onClick={onClose}
               disabled={createCode.isPending}
               className={cn(
-                'flex-1 py-2.5 px-4 rounded-lg',
-                'border border-surface-border text-sm font-medium text-neutral-700',
+                'flex-1 py-2.5 px-4 rounded',
+                'border border-neutral-900 text-sm font-medium text-neutral-700',
                 'hover:bg-neutral-50 active:bg-neutral-100',
                 'transition-colors',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -386,7 +382,7 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
               type="submit"
               disabled={createCode.isPending}
               className={cn(
-                'flex-1 py-2.5 px-4 rounded-lg',
+                'flex-1 py-2.5 px-4 rounded',
                 'bg-accent text-white text-sm font-medium',
                 'hover:bg-accent/90 active:bg-accent/80',
                 'transition-colors',
@@ -445,13 +441,13 @@ export default function PromoCodesPage() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <div className="flex items-center justify-between mb-6 animate-in">
         <div>
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
             Промокоды
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
             Создание и управление промокодами
           </p>
         </div>
@@ -459,12 +455,12 @@ export default function PromoCodesPage() {
           onClick={() => setShowCreateModal(true)}
           type="button"
           className={cn(
-            'flex items-center gap-2 py-2.5 px-4 rounded-lg',
+            'flex items-center gap-2 py-2.5 px-4 rounded',
             'bg-accent text-white text-sm font-medium',
             'hover:bg-accent-hover active:bg-accent/80',
             'transition-all duration-150',
             'focus:outline-none focus:ring-2 focus:ring-accent/20',
-            'shadow-sm shadow-accent/20',
+            '',
           )}
         >
           <Plus className="w-4 h-4" />
@@ -475,24 +471,19 @@ export default function PromoCodesPage() {
 
       {!isLoading && !isError && (codes ?? []).length > 0 && (
         <div className="mb-4 animate-in">
-          <select
+          <CustomSelect
             value={filterPromotionId}
-            onChange={(e) => setFilterPromotionId(e.target.value)}
-            className={cn(
-              'px-4 py-2 rounded-lg border border-surface-border',
-              'text-sm text-neutral-700',
-              'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
-              'transition-colors',
-            )}
-            aria-label="Фильтр по акции"
-          >
-            <option value="">Все акции</option>
-            {promotions?.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setFilterPromotionId(v)}
+            options={[
+              { value: '', label: 'Все акции' },
+              ...(promotions?.map((p) => ({
+                value: String(p.id),
+                label: p.name,
+              })) ?? []),
+            ]}
+            light
+            width="200px"
+          />
         </div>
       )}
 
@@ -515,11 +506,11 @@ export default function PromoCodesPage() {
           onAction={() => setShowCreateModal(true)}
         />
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden animate-in animate-in-delay-1">
+        <div className="bg-white rounded border border-neutral-900 overflow-hidden animate-in animate-in-delay-1">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-surface-border">
+                <tr className="border-b border-neutral-200">
                   <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
                     Код
                   </th>
@@ -540,7 +531,7 @@ export default function PromoCodesPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-border">
+              <tbody className="divide-y divide-neutral-200">
                 {filteredCodes.map((promoCode) => {
                   const status = getCodeStatus(promoCode)
                   return (
@@ -604,7 +595,7 @@ export default function PromoCodesPage() {
                           <button
                             type="button"
                             onClick={() => handleDeactivate(promoCode)}
-                            className="p-1.5 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            className="p-1.5 rounded text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                             title="Деактивировать"
                             aria-label={`Деактивировать код ${promoCode.code}`}
                           >

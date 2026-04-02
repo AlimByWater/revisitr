@@ -39,14 +39,14 @@ const navigation: NavItem[] = [
       { label: 'Продажи', href: '/dashboard/analytics/sales' },
       { label: 'Лояльность', href: '/dashboard/analytics/loyalty' },
       { label: 'Рассылки', href: '/dashboard/analytics/mailings' },
-      { label: 'RFM-сегментация', href: '/dashboard/rfm' },
+      { label: 'RFM', href: '/dashboard/clients/segments' },
     ],
   },
   {
     label: 'Клиенты', icon: Users,
     children: [
       { label: 'Клиенты', href: '/dashboard/clients' },
-      { label: 'RFM-сегментация', href: '/dashboard/clients/segments' },
+      { label: 'RFM-сегменты', href: '/dashboard/rfm' },
       { label: 'Мои сегменты', href: '/dashboard/clients/custom-segments' },
       { label: 'Прогнозы', href: '/dashboard/clients/predictions' },
     ],

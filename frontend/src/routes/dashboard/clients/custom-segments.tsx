@@ -10,6 +10,7 @@ import type { SegmentFilter, Segment } from '@/features/segments/types'
 import { RULE_OPERATORS } from '@/features/segments/types'
 import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 import { Plus, Trash2, Users, Filter, X, Eye } from 'lucide-react'
+import { CustomSelect } from '@/components/common/CustomSelect'
 
 // Filterable client attributes from the design doc
 const FILTER_ATTRIBUTES = [
@@ -38,7 +39,7 @@ interface FilterRule {
 }
 
 const inputClassName = cn(
-  'w-full px-3 py-2 rounded-lg border border-surface-border text-sm',
+  'w-full px-3 py-2 rounded border border-neutral-200 text-sm',
   'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
   'transition-colors',
 )
@@ -136,7 +137,7 @@ export default function CustomSegmentsPage() {
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
             Мои сегменты
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
             Создавайте пользовательские сегменты по любым параметрам клиентов
           </p>
         </div>
@@ -144,7 +145,7 @@ export default function CustomSegmentsPage() {
           type="button"
           onClick={() => setShowBuilder(!showBuilder)}
           className={cn(
-            'flex items-center gap-1.5 py-2 px-4 rounded-lg text-sm font-medium',
+            'flex items-center gap-1.5 py-2 px-4 rounded text-sm font-medium',
             'bg-accent text-white hover:bg-accent-hover transition-all',
           )}
         >
@@ -155,7 +156,7 @@ export default function CustomSegmentsPage() {
 
       {/* Filter builder */}
       {showBuilder && (
-        <div className="bg-white rounded-2xl border border-surface-border p-6 mb-6 animate-in">
+        <div className="bg-white rounded border border-neutral-900 p-6 mb-6 animate-in">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Filter className="w-5 h-5 text-accent" />
@@ -183,55 +184,75 @@ export default function CustomSegmentsPage() {
 
           <div className="space-y-3 mb-4">
             <p className="text-sm font-medium text-neutral-700">Фильтры</p>
-            {rules.map((rule, index) => (
-              <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-neutral-50">
-                <select
+            {rules.map((rule, index) => {
+              const ruleAttr = FILTER_ATTRIBUTES.find((a) => a.key === rule.attribute)
+              const isNonNumeric = ruleAttr?.type === 'select' || ruleAttr?.type === 'boolean'
+              return (
+              <div key={index} className="flex items-center gap-3 p-3 rounded bg-neutral-50">
+                <CustomSelect
                   value={rule.attribute}
-                  onChange={(e) => updateRule(index, 'attribute', e.target.value)}
-                  className={cn(inputClassName, 'w-48')}
-                >
-                  {FILTER_ATTRIBUTES.map((attr) => (
-                    <option key={attr.key} value={attr.key}>{attr.label}</option>
-                  ))}
-                </select>
+                  onChange={(v) => {
+                    const newAttr = FILTER_ATTRIBUTES.find((a) => a.key === v)
+                    const lockOp = newAttr?.type === 'select' || newAttr?.type === 'boolean'
+                    setRules(rules.map((r, i) =>
+                      i === index
+                        ? { ...r, attribute: v, value: '', ...(lockOp ? { operator: 'eq' } : {}) }
+                        : r,
+                    ))
+                  }}
+                  options={FILTER_ATTRIBUTES.map((attr) => ({
+                    value: attr.key,
+                    label: attr.label,
+                  }))}
+                  width="200px"
+                  light
+                />
 
-                <select
-                  value={rule.operator}
-                  onChange={(e) => updateRule(index, 'operator', e.target.value)}
-                  className={cn(inputClassName, 'w-28')}
-                >
-                  {Object.entries(RULE_OPERATORS).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  value={isNonNumeric ? 'eq' : rule.operator}
+                  onChange={(v) => updateRule(index, 'operator', v)}
+                  options={isNonNumeric
+                    ? [{ value: 'eq', label: '=' }]
+                    : Object.entries(RULE_OPERATORS).map(([key, label]) => ({
+                        value: key,
+                        label: label,
+                      }))
+                  }
+                  disabled={isNonNumeric}
+                  width="120px"
+                  light
+                />
 
                 {(() => {
                   const attr = FILTER_ATTRIBUTES.find((a) => a.key === rule.attribute)
                   if (attr?.type === 'select' && 'options' in attr) {
                     return (
-                      <select
+                      <CustomSelect
+                        className="flex-1"
                         value={rule.value}
-                        onChange={(e) => updateRule(index, 'value', e.target.value)}
-                        className={cn(inputClassName, 'flex-1')}
-                      >
-                        <option value="">Выберите...</option>
-                        {attr.options.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                        onChange={(v) => updateRule(index, 'value', v)}
+                        options={attr.options.map((opt) => ({
+                          value: opt,
+                          label: opt,
+                        }))}
+                        placeholder="Выберите..."
+                        light
+                      />
                     )
                   }
                   if (attr?.type === 'boolean') {
                     return (
-                      <select
+                      <CustomSelect
+                        className="flex-1"
                         value={rule.value}
-                        onChange={(e) => updateRule(index, 'value', e.target.value)}
-                        className={cn(inputClassName, 'flex-1')}
-                      >
-                        <option value="">Выберите...</option>
-                        <option value="true">Да</option>
-                        <option value="false">Нет</option>
-                      </select>
+                        onChange={(v) => updateRule(index, 'value', v)}
+                        options={[
+                          { value: 'true', label: 'Да' },
+                          { value: 'false', label: 'Нет' },
+                        ]}
+                        placeholder="Выберите..."
+                        light
+                      />
                     )
                   }
                   return (
@@ -249,12 +270,13 @@ export default function CustomSegmentsPage() {
                   type="button"
                   onClick={() => removeRule(index)}
                   disabled={rules.length <= 1}
-                  className="p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-30"
+                  className="p-2 rounded text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-30"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
-            ))}
+              )
+            })}
 
             <button
               type="button"
@@ -266,15 +288,15 @@ export default function CustomSegmentsPage() {
             </button>
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-surface-border">
+          <div className="flex items-center justify-between pt-4 border-t border-neutral-200">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={handlePreview}
                 disabled={previewing}
                 className={cn(
-                  'flex items-center gap-1.5 py-2 px-4 rounded-lg text-sm font-medium',
-                  'border border-surface-border text-neutral-700',
+                  'flex items-center gap-1.5 py-2 px-4 rounded text-sm font-medium',
+                  'border border-neutral-200 text-neutral-700',
                   'hover:bg-neutral-50 transition-colors',
                   'disabled:opacity-50',
                 )}
@@ -294,10 +316,10 @@ export default function CustomSegmentsPage() {
               onClick={handleCreate}
               disabled={createSegment.isPending || !name.trim()}
               className={cn(
-                'flex items-center gap-1.5 py-2.5 px-6 rounded-xl text-sm font-semibold',
+                'flex items-center gap-1.5 py-2.5 px-6 rounded text-sm font-semibold',
                 'bg-accent text-white hover:bg-accent-hover',
                 'disabled:opacity-50 transition-all',
-                'shadow-sm shadow-accent/20',
+                '',
               )}
             >
               {createSegment.isPending ? 'Создание...' : 'Создать сегмент'}
@@ -309,7 +331,7 @@ export default function CustomSegmentsPage() {
       {/* Segment cards */}
       {customSegments.length === 0 && !showBuilder ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded bg-neutral-100 flex items-center justify-center mb-4">
             <Users className="w-8 h-8 text-neutral-400" />
           </div>
           <h3 className="font-serif text-xl font-bold text-neutral-800 mb-1.5">
@@ -322,7 +344,7 @@ export default function CustomSegmentsPage() {
             type="button"
             onClick={() => setShowBuilder(true)}
             className={cn(
-              'flex items-center gap-1.5 py-2 px-4 rounded-lg text-sm font-medium',
+              'flex items-center gap-1.5 py-2 px-4 rounded text-sm font-medium',
               'bg-accent text-white hover:bg-accent-hover transition-all',
             )}
           >
@@ -345,7 +367,7 @@ function SegmentCard({ segment, onDelete }: { segment: Segment; onDelete: (id: n
   const filterEntries = Object.entries(segment.filter ?? {}).filter(([, v]) => v !== undefined && v !== null)
 
   return (
-    <div className="bg-white rounded-2xl border border-surface-border p-5 hover:shadow-sm transition-shadow">
+    <div className="bg-white rounded border border-neutral-900 p-5 transition-shadow">
       <div className="flex items-start justify-between mb-3">
         <div>
           <h3 className="text-sm font-semibold text-neutral-900">{segment.name}</h3>
@@ -356,7 +378,7 @@ function SegmentCard({ segment, onDelete }: { segment: Segment; onDelete: (id: n
         <button
           type="button"
           onClick={() => onDelete(segment.id)}
-          className="p-1.5 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+          className="p-1.5 rounded text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
@@ -368,7 +390,7 @@ function SegmentCard({ segment, onDelete }: { segment: Segment; onDelete: (id: n
       <span className="text-xs text-neutral-500">клиентов</span>
 
       {filterEntries.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-surface-border/50">
+        <div className="mt-3 pt-3 border-t border-neutral-200/50">
           <div className="flex flex-wrap gap-1.5">
             {filterEntries.map(([key, value]) => {
               const attr = FILTER_ATTRIBUTES.find((a) => a.key === key)

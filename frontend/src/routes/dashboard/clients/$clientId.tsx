@@ -133,7 +133,7 @@ export default function ClientDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl">
+      <div>
         <div className="flex items-center justify-center py-20">
           <div className="w-6 h-6 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
         </div>
@@ -143,7 +143,7 @@ export default function ClientDetailPage() {
 
   if (!client) {
     return (
-      <div className="max-w-4xl">
+      <div>
         <Link
           to="/dashboard/clients"
           className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 transition-colors mb-4"
@@ -151,7 +151,7 @@ export default function ClientDetailPage() {
           <ArrowLeft className="w-4 h-4" />
           Назад к клиентам
         </Link>
-        <div className="bg-white rounded-2xl border border-surface-border p-12 text-center">
+        <div className="bg-white rounded border border-neutral-900 p-12 text-center">
           <p className="text-sm text-neutral-500">Клиент не найден</p>
         </div>
       </div>
@@ -163,7 +163,7 @@ export default function ClientDetailPage() {
     .join(' ')
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <Link
         to="/dashboard/clients"
         className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 transition-colors mb-4"
@@ -172,10 +172,10 @@ export default function ClientDetailPage() {
         Назад к клиентам
       </Link>
 
-      <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight mb-6">{fullName}</h1>
+      <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight mb-6">{fullName}</h1>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-surface-border">
+      <div className="flex gap-1 mb-6 border-b border-neutral-200">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -254,11 +254,11 @@ function ProfileTab({
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Info card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
+        <div className="bg-white rounded border border-neutral-900 p-6">
           <h2 className="text-base font-semibold text-neutral-900 mb-4">
             Информация
           </h2>
-          <div className="divide-y divide-surface-border">
+          <div className="divide-y divide-neutral-200">
             <InfoRow icon={User} label="Имя" value={fullName} />
             <InfoRow icon={Phone} label="Телефон" value={client.phone} />
             <InfoRow
@@ -289,7 +289,7 @@ function ProfileTab({
         </div>
 
         {/* Loyalty card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
+        <div className="bg-white rounded border border-neutral-900 p-6">
           <h2 className="text-base font-semibold text-neutral-900 mb-4">
             Лояльность
           </h2>
@@ -304,7 +304,7 @@ function ProfileTab({
               </div>
             )}
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-neutral-50 rounded-xl p-4">
+              <div className="bg-neutral-50 rounded p-4">
                 <div className="flex items-center gap-2 mb-1">
                   <Wallet className="w-4 h-4 text-neutral-400" />
                   <span className="text-xs text-neutral-500">Баланс</span>
@@ -313,7 +313,7 @@ function ProfileTab({
                   {formatBalance(client.loyalty_balance)}
                 </p>
               </div>
-              <div className="bg-neutral-50 rounded-xl p-4">
+              <div className="bg-neutral-50 rounded p-4">
                 <div className="flex items-center gap-2 mb-1">
                   <TrendingUp className="w-4 h-4 text-neutral-400" />
                   <span className="text-xs text-neutral-500">Покупок</span>
@@ -323,7 +323,7 @@ function ProfileTab({
                 </p>
               </div>
             </div>
-            <div className="bg-neutral-50 rounded-xl p-4">
+            <div className="bg-neutral-50 rounded p-4">
               <div className="flex items-center gap-2 mb-1">
                 <TrendingDown className="w-4 h-4 text-neutral-400" />
                 <span className="text-xs text-neutral-500">
@@ -339,7 +339,7 @@ function ProfileTab({
       </div>
 
       {/* Tags */}
-      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
+      <div className="bg-white rounded border border-neutral-900 p-6">
         <h2 className="text-base font-semibold text-neutral-900 mb-4">Теги</h2>
         <div className="flex flex-wrap items-center gap-2">
           {(client.tags ?? []).map((tag) => (
@@ -374,7 +374,7 @@ function ProfileTab({
                 placeholder="Новый тег..."
                 autoFocus
                 className={cn(
-                  'px-2.5 py-1 rounded-lg border border-surface-border text-xs',
+                  'px-2.5 py-1 rounded border border-neutral-200 text-xs',
                   'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                 )}
               />
@@ -383,7 +383,7 @@ function ProfileTab({
                 onClick={onAddTag}
                 disabled={!newTag.trim()}
                 className={cn(
-                  'px-2 py-1 rounded-lg text-xs font-medium',
+                  'px-2 py-1 rounded text-xs font-medium',
                   'bg-neutral-900 text-white hover:bg-neutral-800 transition-colors',
                   'disabled:opacity-40 disabled:cursor-not-allowed',
                 )}
@@ -415,22 +415,22 @@ function TransactionsTab({
 }) {
   if (!transactions || transactions.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-surface-border p-12 text-center">
+      <div className="bg-white rounded border border-neutral-900 p-12 text-center">
         <p className="text-sm text-neutral-500">Нет транзакций</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden">
-      <div className="px-6 py-4 border-b border-surface-border">
+    <div className="bg-white rounded border border-neutral-900 overflow-hidden">
+      <div className="px-6 py-4 border-b border-neutral-200">
         <h2 className="text-base font-semibold text-neutral-900">
           История транзакций
         </h2>
       </div>
       <table className="w-full">
         <thead>
-          <tr className="border-b border-surface-border">
+          <tr className="border-b border-neutral-200">
             <th className="text-left text-xs font-medium text-neutral-500 uppercase tracking-wider px-4 py-3">
               Дата
             </th>
@@ -448,7 +448,7 @@ function TransactionsTab({
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-surface-border">
+        <tbody className="divide-y divide-neutral-200">
           {transactions.map((tx) => {
             const config = transactionTypeConfig[tx.type]
             return (
@@ -504,20 +504,20 @@ function OrdersTab({ clientId }: { clientId: number }) {
       <div className="space-y-6">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-surface-border p-4 animate-pulse">
+            <div key={i} className="bg-white rounded border border-neutral-900 p-4 animate-pulse">
               <div className="h-3 w-20 bg-neutral-200 rounded mb-2" />
               <div className="h-6 w-16 bg-neutral-200 rounded" />
             </div>
           ))}
         </div>
-        <div className="h-48 bg-neutral-100 rounded-2xl animate-pulse" />
+        <div className="h-48 bg-neutral-100 rounded animate-pulse" />
       </div>
     )
   }
 
   if (isError) {
     return (
-      <div className="bg-white rounded-2xl border border-surface-border p-12 text-center">
+      <div className="bg-white rounded border border-neutral-900 p-12 text-center">
         <p className="text-sm text-red-600">Ошибка загрузки данных POS</p>
       </div>
     )
@@ -525,7 +525,7 @@ function OrdersTab({ clientId }: { clientId: number }) {
 
   if (!stats || stats.total_orders === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-surface-border p-12 text-center">
+      <div className="bg-white rounded border border-neutral-900 p-12 text-center">
         <ShoppingCart className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
         <p className="text-sm text-neutral-500">
           Нет данных POS. Подключите интеграцию для отображения заказов.
@@ -542,19 +542,19 @@ function OrderStatsContent({ stats }: { stats: ClientOrderStats }) {
     <div className="space-y-6">
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-surface-border p-4">
+        <div className="bg-white rounded border border-neutral-900 p-4">
           <p className="text-xs text-neutral-500 mb-1">Всего заказов</p>
           <p className="text-xl font-semibold text-neutral-900">{stats.total_orders}</p>
         </div>
-        <div className="bg-white rounded-xl border border-surface-border p-4">
+        <div className="bg-white rounded border border-neutral-900 p-4">
           <p className="text-xs text-neutral-500 mb-1">Общая сумма</p>
           <p className="text-xl font-semibold text-neutral-900">{formatCurrency(stats.total_amount)}</p>
         </div>
-        <div className="bg-white rounded-xl border border-surface-border p-4">
+        <div className="bg-white rounded border border-neutral-900 p-4">
           <p className="text-xs text-neutral-500 mb-1">Средний чек</p>
           <p className="text-xl font-semibold text-neutral-900">{formatCurrency(stats.avg_amount)}</p>
         </div>
-        <div className="bg-white rounded-xl border border-surface-border p-4">
+        <div className="bg-white rounded border border-neutral-900 p-4">
           <p className="text-xs text-neutral-500 mb-1">Последний заказ</p>
           <p className="text-xl font-semibold text-neutral-900">
             {stats.last_order_at ? formatDate(stats.last_order_at) : '—'}
@@ -564,15 +564,15 @@ function OrderStatsContent({ stats }: { stats: ClientOrderStats }) {
 
       {/* Top items table */}
       {stats.top_items && stats.top_items.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden">
-          <div className="px-6 py-4 border-b border-surface-border">
+        <div className="bg-white rounded border border-neutral-900 overflow-hidden">
+          <div className="px-6 py-4 border-b border-neutral-200">
             <h2 className="text-base font-semibold text-neutral-900">
               Популярные позиции
             </h2>
           </div>
           <table className="w-full">
             <thead>
-              <tr className="border-b border-surface-border">
+              <tr className="border-b border-neutral-200">
                 <th className="text-left text-xs font-medium text-neutral-500 uppercase tracking-wider px-4 py-3">
                   Позиция
                 </th>
@@ -587,7 +587,7 @@ function OrderStatsContent({ stats }: { stats: ClientOrderStats }) {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-surface-border">
+            <tbody className="divide-y divide-neutral-200">
               {stats.top_items.map((item) => (
                 <tr key={item.name} className="hover:bg-neutral-50 transition-colors">
                   <td className="px-4 py-3 text-sm text-neutral-900 font-medium">

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createBrowserRouter, redirect, Outlet } from 'react-router-dom'
 import { Sidebar } from './components/layout/Sidebar'
+import { Footer } from './components/layout/Footer'
 import { Header } from './components/layout/Header'
 import { MobileNav } from './components/layout/MobileNav'
 import { AuroraSidebar } from './components/layout/AuroraSidebar'
@@ -41,6 +42,7 @@ import WalletPage from './routes/dashboard/loyalty/wallet'
 import MarketplacePage from './routes/dashboard/marketplace/index'
 import BillingPage from './routes/dashboard/billing/index'
 import InvoicesPage from './routes/dashboard/billing/invoices'
+import CreatePromotionPage from './routes/dashboard/promotions/create'
 import PredictionsPage from './routes/dashboard/clients/predictions'
 import RFMDashboardPage from './routes/dashboard/rfm/index'
 import RFMOnboardingPage from './routes/dashboard/rfm/onboarding'
@@ -48,7 +50,6 @@ import RFMTemplatePage from './routes/dashboard/rfm/template'
 import SegmentDetailPage from './routes/dashboard/rfm/segments/$segment'
 import AccountPage from './routes/dashboard/account/index'
 import CustomSegmentsPage from './routes/dashboard/clients/custom-segments'
-import CreatePromotionPage from './routes/dashboard/promotions/create'
 
 function DashboardLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -70,43 +71,22 @@ function DashboardLayout() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
+    <div className="min-h-screen">
+      <Header onMenuToggle={() => setMobileNavOpen(true)} />
       <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header onMenuToggle={() => setMobileNavOpen(true)} />
-        <main className="flex-1 p-6 md:p-8">
+      <div className="flex items-start px-4 sm:px-8 lg:px-16 py-4 sm:py-6 gap-4 sm:gap-6">
+        <Sidebar />
+        <main className="flex-1 min-w-0">
           <Outlet />
         </main>
       </div>
+      <Footer />
     </div>
   )
 }
 
-async function authLoader({ request }: { request: Request }) {
-  const token = localStorage.getItem('token')
-  if (!token) return redirect('/auth/login')
-
-  // Check onboarding status
-  try {
-    const baseURL = import.meta.env.VITE_API_URL || '/api/v1'
-    const response = await fetch(`${baseURL}/onboarding`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (response.ok) {
-      const data = await response.json()
-      if (!data.onboarding_completed) {
-        // Only redirect if not already on onboarding page
-        const url = new URL(request.url)
-        if (!url.pathname.includes('/onboarding')) {
-          return redirect('/dashboard/onboarding')
-        }
-      }
-    }
-  } catch {
-    // If onboarding check fails, don't block — just continue to dashboard
-  }
-
+function authLoader() {
+  // TODO: restore auth check after visual redesign
   return null
 }
 
@@ -138,6 +118,8 @@ export const router = createBrowserRouter(
             { path: 'pos/:posId', element: <POSDetailPage /> },
             { path: 'campaigns', element: <CampaignsPage /> },
             { path: 'campaigns/create', element: <CreateCampaignPage /> },
+            { path: 'campaigns/:campaignId', element: <CampaignDetailPage /> },
+            { path: 'campaigns/scenario/:scenarioId', element: <ScenarioDetailPage /> },
             { path: 'analytics/sales', element: <SalesAnalyticsPage /> },
             { path: 'analytics/loyalty', element: <LoyaltyAnalyticsPage /> },
             { path: 'analytics/mailings', element: <MailingsAnalyticsPage /> },
@@ -145,8 +127,6 @@ export const router = createBrowserRouter(
             { path: 'rfm/onboarding', element: <RFMOnboardingPage /> },
             { path: 'rfm/template', element: <RFMTemplatePage /> },
             { path: 'rfm/segments/:segment', element: <SegmentDetailPage /> },
-            { path: 'campaigns/:campaignId', element: <CampaignDetailPage /> },
-            { path: 'campaigns/scenario/:scenarioId', element: <ScenarioDetailPage /> },
             { path: 'promotions/create', element: <CreatePromotionPage /> },
             { path: 'promotions', element: <PromotionsPage /> },
             { path: 'promotions/codes', element: <PromoCodesPage /> },

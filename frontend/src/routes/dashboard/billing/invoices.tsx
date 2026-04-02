@@ -36,24 +36,26 @@ export default function InvoicesPage() {
         </Link>
         <div>
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Счета</h1>
-          <p className="text-sm text-neutral-500 mt-1">История выставленных счетов</p>
+          <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">История выставленных счетов</p>
         </div>
       </div>
 
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="rounded-2xl border border-surface-border bg-white p-4 h-16 animate-pulse" />
+            <div key={i} className="rounded border border-neutral-900 bg-white p-4 h-16 animate-pulse" />
           ))}
         </div>
       ) : !invoices?.length ? (
-        <div className="flex flex-col items-center justify-center py-16 text-neutral-300">
-          <FileText className="w-12 h-12 mb-4" />
-          <p className="text-lg font-medium text-neutral-400">Счетов пока нет</p>
-          <p className="text-sm text-neutral-400 mt-1">Счета появятся после выбора платного тарифа</p>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="w-16 h-16 rounded bg-neutral-100 flex items-center justify-center mb-4">
+            <FileText className="w-8 h-8 text-neutral-400" />
+          </div>
+          <h3 className="font-serif text-xl font-bold text-neutral-800 mb-1.5 tracking-tight">Счетов пока нет</h3>
+          <p className="text-sm text-neutral-400 max-w-xs leading-relaxed">Счета появятся после выбора платного тарифа</p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-surface-border bg-white overflow-hidden">
+        <div className="rounded border border-neutral-900 bg-white overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-100 bg-neutral-50">

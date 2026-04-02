@@ -125,7 +125,7 @@ export default function CampaignsPage() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <div className="flex items-center justify-between mb-6 animate-in">
         <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
           Все рассылки
@@ -134,12 +134,12 @@ export default function CampaignsPage() {
           onClick={() => navigate('/dashboard/campaigns/create')}
           type="button"
           className={cn(
-            'flex items-center gap-2 py-2.5 px-4 rounded-lg',
+            'flex items-center gap-2 py-2.5 px-4 rounded',
             'bg-accent text-white text-sm font-medium',
             'hover:bg-accent-hover active:bg-accent/80',
             'transition-all duration-150',
             'focus:outline-none focus:ring-2 focus:ring-accent/20',
-            'shadow-sm shadow-accent/20',
+            '',
           )}
         >
           <Plus className="w-4 h-4" />
@@ -149,14 +149,14 @@ export default function CampaignsPage() {
       </div>
 
       {/* Tab switcher */}
-      <div className="flex gap-1 p-1 bg-neutral-100 rounded-lg w-fit mb-6 animate-in">
+      <div className="flex gap-1 p-1 bg-neutral-100 rounded w-fit mb-6 animate-in">
         <button
           type="button"
           onClick={() => setTab('active')}
           className={cn(
             'px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
             tab === 'active'
-              ? 'bg-white text-neutral-900 shadow-sm'
+              ? 'bg-white text-neutral-900 '
               : 'text-neutral-500 hover:text-neutral-700',
           )}
         >
@@ -168,7 +168,7 @@ export default function CampaignsPage() {
           className={cn(
             'px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
             tab === 'archive'
-              ? 'bg-white text-neutral-900 shadow-sm'
+              ? 'bg-white text-neutral-900 '
               : 'text-neutral-500 hover:text-neutral-700',
           )}
         >
@@ -198,11 +198,11 @@ export default function CampaignsPage() {
             variant="campaigns"
           />
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden animate-in animate-in-delay-1">
+          <div className="bg-white rounded border border-neutral-900 overflow-hidden animate-in animate-in-delay-1">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-surface-border">
+                  <tr className="border-b border-neutral-200">
                     <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
                       Название
                     </th>
@@ -217,7 +217,7 @@ export default function CampaignsPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-surface-border">
+                <tbody className="divide-y divide-neutral-200">
                   {activeCampaigns.map((c) => {
                     const status = statusConfig[c.status]
                     return (
@@ -300,11 +300,11 @@ export default function CampaignsPage() {
             description="Завершённые рассылки и неактивные сценарии появятся здесь."
           />
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-surface-border overflow-hidden animate-in animate-in-delay-1">
+          <div className="bg-white rounded border border-neutral-900 overflow-hidden animate-in animate-in-delay-1">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-surface-border">
+                  <tr className="border-b border-neutral-200">
                     <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-6 py-3">
                       Название
                     </th>
@@ -328,7 +328,7 @@ export default function CampaignsPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-surface-border">
+                <tbody className="divide-y divide-neutral-200">
                   {archiveRows.map((row) => {
                     if (row.kind === 'campaign') {
                       const c = row.data
@@ -382,7 +382,7 @@ export default function CampaignsPage() {
                                 navigate(`/dashboard/campaigns/create?clone=${c.id}&type=campaign`)
                               }}
                               className={cn(
-                                'inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg',
+                                'inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded',
                                 'text-neutral-600 bg-neutral-100 hover:bg-neutral-200',
                                 'transition-colors duration-150',
                               )}
@@ -441,7 +441,7 @@ export default function CampaignsPage() {
                               navigate(`/dashboard/campaigns/create?clone=${s.id}&type=scenario`)
                             }}
                             className={cn(
-                              'inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg',
+                              'inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded',
                               'text-neutral-600 bg-neutral-100 hover:bg-neutral-200',
                               'transition-colors duration-150',
                             )}
