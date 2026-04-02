@@ -447,7 +447,7 @@ export default function PromoCodesPage() {
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
             Промокоды
           </h1>
-          <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
+          <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
             Создание и управление промокодами
           </p>
         </div>

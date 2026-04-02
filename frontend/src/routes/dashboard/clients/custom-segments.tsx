@@ -137,7 +137,7 @@ export default function CustomSegmentsPage() {
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
             Мои сегменты
           </h1>
-          <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
+          <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
             Создавайте пользовательские сегменты по любым параметрам клиентов
           </p>
         </div>

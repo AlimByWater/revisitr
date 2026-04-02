@@ -60,7 +60,7 @@ export default function MenusPage() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Меню</h1>
-          <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">Управление меню заведений</p>
+          <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">Управление меню заведений</p>
         </div>
         <button
           type="button"

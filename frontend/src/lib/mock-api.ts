@@ -741,15 +741,24 @@ const routes: [RegExp, Handler][] = [
     { key: 'tsr', name: 'Кафе и рестораны', description: 'Средняя частота, более высокий чек. Для ресторанов с посадкой, кафе — заведений, куда гости приходят посидеть.', r_thresholds: [10, 21, 45, 90], f_thresholds: [6, 4, 3, 2] },
     { key: 'bar', name: 'Бары и пабы', description: 'Вечерний формат, событийные визиты. Для баров, пабов, караоке — заведений с вечерним и выходным трафиком.', r_thresholds: [7, 21, 45, 75], f_thresholds: [8, 5, 3, 2] },
   ] })],
-  [/^\/rfm\/template$/, () => {
+  [/^\/rfm\/template$/, ({ method, data }) => {
     const allTemplates: Record<string, any> = {
       coffeegng: { key: 'coffeegng', name: 'Кофейни и Grab&Go', description: 'Высокая частота, короткий чек.', r_thresholds: [3, 7, 14, 30], f_thresholds: [12, 8, 4, 2] },
       qsr: { key: 'qsr', name: 'Быстрое питание', description: 'Средне-высокая частота.', r_thresholds: [5, 10, 21, 45], f_thresholds: [9, 6, 3, 2] },
       tsr: { key: 'tsr', name: 'Кафе и рестораны', description: 'Средняя частота, более высокий чек.', r_thresholds: [10, 21, 45, 90], f_thresholds: [6, 4, 3, 2] },
       bar: { key: 'bar', name: 'Бары и пабы', description: 'Вечерний формат, событийные визиты.', r_thresholds: [7, 21, 45, 75], f_thresholds: [8, 5, 3, 2] },
     }
+    if (method === 'put' || method === 'post') {
+      if (data?.template_key) {
+        store.rfm.config.active_template_key = data.template_key
+        store.rfm.config.active_template_type = 'preset'
+      } else if (data?.template_type === 'custom') {
+        store.rfm.config.active_template_type = 'custom'
+        store.rfm.config.active_template_key = 'custom'
+      }
+    }
     const key = store.rfm.config.active_template_key
-    return { active_template_type: store.rfm.config.active_template_type, active_template_key: key, template: allTemplates[key] ?? allTemplates.coffeegng }
+    return { active_template_type: store.rfm.config.active_template_type, active_template_key: key, template: allTemplates[key] ?? allTemplates.coffeegng, message: 'ok' }
   }],
   [/^\/rfm\/set-template$/, ({ data }) => {
     if (data?.template_key) {

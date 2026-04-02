@@ -90,7 +90,7 @@
 
 | Назначение | Цвет |
 |------------|------|
-| Подзаголовки страниц | `font-mono text-xs text-neutral-300 uppercase tracking-wider` |
+| Подзаголовки страниц | `font-mono text-xs text-neutral-400 uppercase tracking-wider` |
 | Disabled поля ввода | `bg-neutral-100` (#F5F5F5) |
 | Disabled кнопки | `bg-neutral-300` (#D4D4D4) |
 | Разделители внутри блоков | `border-neutral-200` (#E5E5E5) |

@@ -113,7 +113,7 @@ export default function IntegrationsPage() {
                       )}
                     </div>
                     {intg.config.api_url && (
-                      <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1 truncate max-w-md">
+                      <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1 truncate max-w-md">
                         {intg.config.api_url}
                       </p>
                     )}

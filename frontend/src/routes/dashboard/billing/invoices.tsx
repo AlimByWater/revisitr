@@ -36,7 +36,7 @@ export default function InvoicesPage() {
         </Link>
         <div>
           <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Счета</h1>
-          <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">История выставленных счетов</p>
+          <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">История выставленных счетов</p>
         </div>
       </div>
 

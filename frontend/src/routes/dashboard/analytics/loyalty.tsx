@@ -31,10 +31,10 @@ export default function LoyaltyAnalyticsPage() {
   return (
     <div>
       <div className="animate-in mb-4">
-        <h1 className="text-2xl font-bold text-neutral-900 mb-1 tracking-tight">
+        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
           Лояльность
         </h1>
-        <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
+        <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
           Клиентская база и программа лояльности
         </p>
       </div>

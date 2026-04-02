@@ -75,7 +75,7 @@ export default function PredictionsPage() {
         <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
           Предиктивная аналитика
         </h1>
-        <p className="font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1">
+        <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
           Прогнозы оттока и потенциала клиентов
         </p>
       </div>
@@ -189,7 +189,11 @@ export default function PredictionsPage() {
               </thead>
               <tbody className="divide-y divide-neutral-200">
                 {items.map((p) => (
-                  <tr key={p.id} className="hover:bg-neutral-50/50 transition-colors">
+                  <tr
+                    key={p.id}
+                    className="hover:bg-neutral-50/50 transition-colors cursor-pointer"
+                    onClick={() => window.open(`/revisitr/dashboard/clients/${p.client_id}`, '_blank')}
+                  >
                     <td className="py-3 px-4 font-medium text-neutral-900">#{p.client_id}</td>
                     <td className="py-3 px-4">
                       <span
