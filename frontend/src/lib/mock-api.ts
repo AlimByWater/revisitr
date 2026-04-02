@@ -855,7 +855,7 @@ const routes: [RegExp, Handler][] = [
   // Onboarding
   [/^\/onboarding\/state$/, () => store.onboarding],
   [/^\/onboarding\/step$/, ({ data }) => {
-    if (data?.step) store.onboarding.onboarding_state.steps[data.step] = { completed: data.completed ?? false, skipped: data.skipped ?? false, entity_id: data.entity_id }
+    if (data?.step) (store.onboarding.onboarding_state.steps as Record<string, unknown>)[data.step] = { completed: data.completed ?? false, skipped: data.skipped ?? false, entity_id: data.entity_id }
     return store.onboarding
   }],
   [/^\/onboarding\/complete$/, () => { store.onboarding.onboarding_completed = true; return store.onboarding }],
