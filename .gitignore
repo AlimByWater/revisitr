@@ -27,6 +27,9 @@ frontend/src/routeTree.gen.ts
 *.swp
 *.swo
 *~
+.omc/sessions
+.omc/state
+.omc/project-memory.json
 
 # OS
 .DS_Store

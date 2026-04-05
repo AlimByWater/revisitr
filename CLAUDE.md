@@ -127,22 +127,20 @@ Production nginx routes: `/revisitr/api/*` → `:8090`, `/revisitr/*` → `:3340
 
 ## Project Docs
 
-- `userdocs/` — дизайн-документ, презентация, Figma-анализ
-- `docs/phases/` — план разработки по фазам
-- `docs/architecture.md` — архитектурные решения
-- `docs/testing.md` — стратегия и спецификация тестирования
-- `docs/phase4-analysis.md` — Phase 4 stubs and critical issues analysis
+- `docs/userdocs/` — дизайн-документ, презентация, Figma-анализ
+- `docs/e2e/` — план E2E тестов (Playwright)
 
-## Session Memory
+## AI Agent Memory
 
-Project-level session memory is persisted in `.serena/memories/`:
+Shared project knowledge for AI agents is in `.ai-memory/`:
 
-- `dev-progress.md` — текущий статус разработки, фазы, CI/CD, test coverage
-- `prod-deploy-2026-03-26.md` — первый прод-деплой: 8 багов, фиксы, lessons learned
-- `architecture/db-migration-plan.md` — план миграций
-- `design-doc/` — customer journey analysis, scenarios decisions
+- `patterns.md` — established code patterns (backend + frontend)
+- `gotchas.md` — known pitfalls, common bugs, deployment traps
+- `decisions.md` — key architecture and business logic decisions
+- `status.md` — current dev status, phases, pending work
+- `testing.md` — test coverage map, testing patterns
 
-Claude Code agent memory: `~/.claude/projects/-Users-admin-go-src-revisitr/memory/`
+Read `.ai-memory/` files when working on non-trivial tasks to avoid known pitfalls.
 
 ## Figma
 
