@@ -1,4 +1,4 @@
-package adminbot
+package masterbot
 
 import (
 	"context"

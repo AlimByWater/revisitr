@@ -130,6 +130,7 @@ type Campaign struct {
 	ScheduledAt    *time.Time      `db:"scheduled_at" json:"scheduled_at,omitempty"`
 	SentAt         *time.Time      `db:"sent_at" json:"sent_at,omitempty"`
 	Stats          CampaignStats   `db:"stats" json:"stats"`
+	PostCodeID     *int            `db:"post_code_id" json:"post_code_id,omitempty"`
 	CreatedAt      time.Time       `db:"created_at" json:"created_at"`
 	UpdatedAt      time.Time       `db:"updated_at" json:"updated_at"`
 }

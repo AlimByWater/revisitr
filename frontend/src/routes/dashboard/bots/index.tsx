@@ -1,8 +1,6 @@
-import { Link } from 'react-router-dom'
-import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useBotsQuery } from '@/features/bots/queries'
-import { CreateBotModal } from '@/components/bots/CreateBotModal'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorState } from '@/components/common/ErrorState'
 import { CardSkeleton } from '@/components/common/LoadingSkeleton'
@@ -17,6 +15,10 @@ const statusConfig: Record<Bot['status'], { label: string; className: string }> 
   inactive: {
     label: 'Неактивен',
     className: 'bg-neutral-200 text-neutral-500',
+  },
+  pending: {
+    label: 'Ожидает',
+    className: 'bg-amber-400 text-white',
   },
   error: {
     label: 'Ошибка',
@@ -33,16 +35,15 @@ function formatDate(dateStr: string): string {
 }
 
 export default function BotsPage() {
-  const [showCreateModal, setShowCreateModal] = useState(false)
+  const navigate = useNavigate()
   const { data: bots, isLoading, isError, mutate } = useBotsQuery()
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6 animate-in">
         <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Боты</h1>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          type="button"
+        <Link
+          to="/dashboard/bots/create"
           className={cn(
             'flex items-center gap-2 py-2.5 px-4 rounded',
             'bg-accent text-white text-sm font-medium',
@@ -55,7 +56,7 @@ export default function BotsPage() {
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">Создать бота</span>
           <span className="sm:hidden">Создать</span>
-        </button>
+        </Link>
       </div>
 
       {isLoading ? (
@@ -78,7 +79,7 @@ export default function BotsPage() {
           title="У вас пока нет ботов"
           description="Создайте Telegram-бота для вашего ресторана, чтобы начать работу с программой лояльности и рассылками."
           actionLabel="Создать бота"
-          onAction={() => setShowCreateModal(true)}
+          onAction={() => navigate('/dashboard/bots/create')}
           variant="bots"
         />
       ) : (
@@ -132,10 +133,6 @@ export default function BotsPage() {
             )
           })}
         </div>
-      )}
-
-      {showCreateModal && (
-        <CreateBotModal onClose={() => setShowCreateModal(false)} />
       )}
     </div>
   )

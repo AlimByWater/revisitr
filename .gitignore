@@ -48,3 +48,11 @@ coverage.out
 
 # Build artifacts
 *.tsbuildinfo
+
+# Telethon / Python
+telegram/**/*.session
+telegram/results/
+telegram/.venv/
+.omx/
+.codex/*
+

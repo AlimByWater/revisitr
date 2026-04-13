@@ -37,7 +37,7 @@ func (s *Sender) SendContent(ctx context.Context, bot *telego.Bot, chatID int64,
 			markup = s.buildInlineKeyboard(content.Buttons)
 		}
 
-		if err := s.sendPart(bot, chatID, part, markup); err != nil {
+		if err := s.sendPart(ctx, bot, chatID, part, markup); err != nil {
 			return fmt.Errorf("send part %d (%s): %w", i, part.Type, err)
 		}
 
@@ -51,6 +51,7 @@ func (s *Sender) SendContent(ctx context.Context, bot *telego.Bot, chatID int64,
 }
 
 func (s *Sender) sendPart(
+	ctx context.Context,
 	bot *telego.Bot,
 	chatID int64,
 	part entity.MessagePart,
@@ -65,7 +66,7 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			msg = msg.WithReplyMarkup(markup)
 		}
-		_, err := bot.SendMessage(msg)
+		_, err := bot.SendMessage(ctx, msg)
 		return err
 
 	case entity.PartPhoto:
@@ -79,7 +80,7 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			photo = photo.WithReplyMarkup(markup)
 		}
-		_, err := bot.SendPhoto(photo)
+		_, err := bot.SendPhoto(ctx, photo)
 		return err
 
 	case entity.PartVideo:
@@ -93,7 +94,7 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			video = video.WithReplyMarkup(markup)
 		}
-		_, err := bot.SendVideo(video)
+		_, err := bot.SendVideo(ctx, video)
 		return err
 
 	case entity.PartDocument:
@@ -104,12 +105,12 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			doc = doc.WithReplyMarkup(markup)
 		}
-		_, err := bot.SendDocument(doc)
+		_, err := bot.SendDocument(ctx, doc)
 		return err
 
 	case entity.PartSticker:
 		sticker := tu.Sticker(tu.ID(chatID), s.mediaInput(part))
-		_, err := bot.SendSticker(sticker)
+		_, err := bot.SendSticker(ctx, sticker)
 		return err
 
 	case entity.PartAnimation:
@@ -120,7 +121,7 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			anim = anim.WithReplyMarkup(markup)
 		}
-		_, err := bot.SendAnimation(anim)
+		_, err := bot.SendAnimation(ctx, anim)
 		return err
 
 	case entity.PartAudio:
@@ -131,7 +132,7 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			audio = audio.WithReplyMarkup(markup)
 		}
-		_, err := bot.SendAudio(audio)
+		_, err := bot.SendAudio(ctx, audio)
 		return err
 
 	case entity.PartVoice:
@@ -142,7 +143,7 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			voice = voice.WithReplyMarkup(markup)
 		}
-		_, err := bot.SendVoice(voice)
+		_, err := bot.SendVoice(ctx, voice)
 		return err
 
 	default:

@@ -411,6 +411,8 @@ const store = {
     { id: 2, org_id: 1, name: 'Риск оттока', type: 'rfm', filter: { rfm_category: 'churn_risk' }, auto_assign: true, client_count: 23, created_at: ago(30), updated_at: ago(2) },
   ] as any[],
 
+  postCodes: [] as any[],
+
   wallet: {
     configs: [{ id: 1, org_id: 1, platform: 'apple', is_enabled: true, design: { logo_url: '', background_color: '#171717', foreground_color: '#ffffff', label_color: '#cccccc', description: 'Карта лояльности' }, created_at: ago(30), updated_at: ago(10) }],
     stats: { total_passes: 156, apple_passes: 98, google_passes: 58, active_passes: 142 },
@@ -498,6 +500,38 @@ const routes: [RegExp, Handler][] = [
       return bot
     }
     return store.bots
+  }],
+
+  // Managed bots
+  [/^\/bots\/activation-link$/, ({ method }) => {
+    if (method === 'post') return { deep_link: 'https://t.me/revisitrbot?start=mock_token_123', expires_at: new Date(Date.now() + 900000).toISOString() }
+    return {}
+  }],
+  [/^\/bots\/create-managed$/, ({ method, data }) => {
+    if (method === 'post') {
+      const bot = { id: nextId(), org_id: 1, name: (data as Record<string, string>).name, username: (data as Record<string, string>).username, status: 'pending', is_managed: true, settings: { modules: (data as Record<string, string[]>).modules || [], buttons: [], registration_form: (data as Record<string, unknown[]>).registration_form || [], welcome_message: (data as Record<string, string>).welcome_message || '' }, created_at: now, updated_at: now, client_count: 0 }
+      store.bots.push(bot)
+      return { bot_id: bot.id, deep_link: `https://t.me/newbot/revisitrbot/${(data as Record<string, string>).username}?name=${(data as Record<string, string>).name}`, status: 'pending' }
+    }
+    return {}
+  }],
+  [/^\/bots\/(\d+)\/status$/, ({ id }) => {
+    const bot = store.bots.find(b => b.id === +id!)
+    if (bot && bot.status === 'pending') {
+      // Auto-activate after first status check (simulates Telegram confirmation)
+      bot.status = 'active'
+    }
+    return { status: bot?.status ?? 'error' }
+  }],
+
+  // Posts
+  [/^\/posts\/([A-Z0-9-]+)$/, ({ method, id }) => {
+    const idx = store.postCodes.findIndex((p: any) => p.code === id)
+    if (method === 'delete' && idx >= 0) { store.postCodes.splice(idx, 1); return {} }
+    return idx >= 0 ? store.postCodes[idx] : {}
+  }],
+  [/^\/posts$/, () => {
+    return store.postCodes
   }],
 
   // POS

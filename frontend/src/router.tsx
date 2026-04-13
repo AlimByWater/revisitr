@@ -11,11 +11,13 @@ import { useTheme } from './contexts/ThemeContext'
 // Auth pages
 import LoginPage from './routes/auth/login'
 import RegisterPage from './routes/auth/register'
+import ForgotPasswordPage from './routes/auth/forgot-password'
 
 // Dashboard pages
 import DashboardHome from './routes/dashboard/index'
 import BotsPage from './routes/dashboard/bots/index'
 import BotDetailPage from './routes/dashboard/bots/$botId'
+import CreateBotPage from './routes/dashboard/bots/create'
 import ClientsPage from './routes/dashboard/clients/index'
 import ClientDetailPage from './routes/dashboard/clients/$clientId'
 import LoyaltyProgramsPage from './routes/dashboard/loyalty/index'
@@ -85,8 +87,15 @@ function DashboardLayout() {
   )
 }
 
-function authLoader() {
-  // TODO: restore auth check after visual redesign
+export function authLoader() {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  if (!window.localStorage.getItem('token')) {
+    return redirect('/auth/login')
+  }
+
   return null
 }
 
@@ -98,6 +107,7 @@ export const router = createBrowserRouter(
         { index: true, loader: () => redirect('/dashboard') },
         { path: 'auth/login', element: <LoginPage /> },
         { path: 'auth/register', element: <RegisterPage /> },
+        { path: 'auth/forgot-password', element: <ForgotPasswordPage /> },
         {
           path: 'dashboard',
           element: <DashboardLayout />,
@@ -105,6 +115,7 @@ export const router = createBrowserRouter(
           children: [
             { index: true, element: <DashboardHome /> },
             { path: 'bots', element: <BotsPage /> },
+            { path: 'bots/create', element: <CreateBotPage /> },
             { path: 'bots/:botId', element: <BotDetailPage /> },
             { path: 'clients', element: <ClientsPage /> },
             { path: 'clients/segments', element: <SegmentsPage /> },
