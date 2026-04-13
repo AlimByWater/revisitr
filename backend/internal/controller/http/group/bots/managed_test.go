@@ -17,6 +17,10 @@ import (
 	botsUC "revisitr/internal/usecase/bots"
 )
 
+func init() {
+	gin.SetMode(gin.TestMode)
+}
+
 type managedDepsStub struct {
 	storeAuthTokenFn func(ctx context.Context, token string, data entity.MasterBotAuthToken) error
 	createPendingFn  func(ctx context.Context, orgID int, req *entity.CreateManagedBotRequest) (*entity.Bot, error)
@@ -53,8 +57,6 @@ func performManagedRequest(
 	keys map[string]any,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-
-	gin.SetMode(gin.TestMode)
 
 	var bodyReader *bytes.Reader
 	if body != nil {
