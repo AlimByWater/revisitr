@@ -383,3 +383,70 @@ cd backend && go test ./...
 - привязка / post-code paths на prod требуют применения root migrations `00033-00035`
 - configured `BOT_USERNAME=localrevisbot` всё ещё stale/offline target и остаётся xfail probe
 
+
+
+## Дополнительный live retest после GitHub Actions и SSH-диагностики
+
+После push и ожидания GitHub Actions было проведено дополнительное тестирование уже по live-серверу.
+
+### Что обнаружилось
+
+1. Master Bot workflow сначала прошёл build/test, но контейнер `infra-admin-bot-1` на сервере оказался в restart loop.
+2. Причина: на сервере в `/opt/revisitr/infra/.env.prod` отсутствовал `MASTER_BOT_TOKEN` и не было `ADMIN_BOT_TOKEN`; присутствовал только `BOT_TOKEN`.
+3. Дополнительно выяснилось, что backend migrations step ранее не применял root migrations `00033-00035`, потому что в image были только `backend/migrations`, а root `migrations/` не попадали в runtime path мигратора.
+
+### Что было сделано
+
+- Через SSH вручную добавлен `MASTER_BOT_TOKEN` на сервере на основе имеющегося `BOT_TOKEN`, после чего master bot успешно стартовал.
+- Проверено, что root migrations теперь реально применились на production БД:
+  - таблица `master_bot_links` существует
+  - таблица `post_codes` существует
+- Через live userbot был выполнен controlled E2E against `revisitrbot`.
+- После тестов test-данные были удалены с production.
+
+### Live результаты
+
+#### Без привязки
+- `/start` → отвечает корректным welcome / activation hint
+- `/help` → отвечает корректным списком команд
+- `/mybots` → корректно сообщает, что Telegram не привязан
+- `/settings` → корректно сообщает, что Telegram не привязан
+
+#### С временной test-привязкой
+На production были временно созданы:
+- test organization
+- test user
+- test bot
+- одноразовый activation token в Redis
+
+Далее через userbot проверено:
+- `/start {token}` → успешная привязка к test org
+- `/mybots` → показывает test bot
+- `/settings` → показывает summary настроек test bot
+- text message в master bot → создаётся `post_code`
+- photo + caption в master bot → создаётся `post_code`
+- в БД подтверждено:
+  - text post сохраняет `content.text`
+  - photo post сохраняет `content.media_type = photo`
+  - photo post сохраняет `media_urls` длиной 1
+
+### Cleanup
+После live проверки удалены:
+- test post codes
+- test bot
+- test link
+- test user
+- test organization
+
+Итог: продовые данные не оставлены.
+
+### Вывод после live retest
+
+На этот момент:
+- `revisitrbot` реально отвечает на базовые команды на сервере
+- activation flow реально работает
+- `/mybots` и `/settings` реально работают при наличии link
+- post-code authoring реально работает на production runtime для text и photo
+
+Самая заметная оставшаяся operational проблема:
+- `BOT_USERNAME=localrevisbot` в `telegram/.env` остаётся stale/offline target и продолжает быть только xfail probe.
