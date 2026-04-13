@@ -54,7 +54,8 @@ type Module struct {
 	Bot      Bot
 	AdminBot AdminBot
 	MinIO    MinIO
-	BaseURL  string // Public base URL for media files (e.g., "https://elysium.fm")
+	BaseURL        string // Public base URL for media files (e.g., "https://elysium.fm")
+	TelegramAPIURL string // Custom Telegram Bot API server URL (empty = default api.telegram.org)
 }
 
 func (m *Module) GetBaseURL() string {
@@ -98,6 +99,7 @@ func NewFromEnv() *Module {
 			UseSSL:    env.GetBool("MINIO_USE_SSL", false),
 			Bucket:    env.GetString("MINIO_BUCKET", "revisitr"),
 		},
-		BaseURL: env.GetString("BASE_URL", "https://elysium.fm"),
+		BaseURL:        env.GetString("BASE_URL", "https://elysium.fm"),
+		TelegramAPIURL: env.GetString("TELEGRAM_API_URL", ""),
 	}
 }

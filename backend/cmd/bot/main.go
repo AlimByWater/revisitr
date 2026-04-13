@@ -62,9 +62,13 @@ func main() {
 	tgSender := tgService.NewSender(baseURL, logger)
 
 	// Create and start bot manager
-	mgr := botmanager.New(botsRepo, botClientsRepo, loyaltyRepo, posRepo, logger,
-		botmanager.WithTelegramSender(tgSender),
-	)
+	var mgrOpts []botmanager.ManagerOption
+	mgrOpts = append(mgrOpts, botmanager.WithTelegramSender(tgSender))
+	if cfg.TelegramAPIURL != "" {
+		logger.Info("using custom Telegram API server", "url", cfg.TelegramAPIURL)
+		mgrOpts = append(mgrOpts, botmanager.WithAPIServer(cfg.TelegramAPIURL))
+	}
+	mgr := botmanager.New(botsRepo, botClientsRepo, loyaltyRepo, posRepo, logger, mgrOpts...)
 
 	if err := mgr.Start(ctx); err != nil {
 		logger.Error("bot manager start failed", "error", err)
