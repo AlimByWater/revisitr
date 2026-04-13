@@ -53,3 +53,6 @@ coverage.out
 telegram/**/*.session
 telegram/results/
 telegram/.venv/
+.omx/
+.codex/*
+
