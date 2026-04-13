@@ -30,9 +30,11 @@ type posLocationsUsecase interface {
 }
 
 type Group struct {
-	uc        botsUsecase
-	posLoc    posLocationsUsecase
-	jwtSecret string
+	uc               botsUsecase
+	posLoc           posLocationsUsecase
+	managed          managedBotDeps
+	masterBotUsername string
+	jwtSecret        string
 }
 
 type Option func(*Group)
@@ -69,6 +71,9 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 	}
 	if g.posLoc != nil {
 		handlers = append(handlers, g.handleGetPOSLocations, g.handleSetPOSLocations)
+	}
+	if g.managed != nil {
+		handlers = append(handlers, g.handleActivationLink, g.handleCreateManaged, g.handleGetBotStatus)
 	}
 	return handlers
 }

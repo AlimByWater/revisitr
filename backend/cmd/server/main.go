@@ -21,7 +21,7 @@ import (
 	"revisitr/internal/controller/http/group/health"
 	integrationsGroup "revisitr/internal/controller/http/group/integrations"
 	loyaltyGroup "revisitr/internal/controller/http/group/loyalty"
-	adminbotGroup "revisitr/internal/controller/http/group/adminbot"
+	masterbotGroup "revisitr/internal/controller/http/group/masterbot"
 	billingGroup "revisitr/internal/controller/http/group/billing"
 	menusGroup "revisitr/internal/controller/http/group/menus"
 	onboardingGroup "revisitr/internal/controller/http/group/onboarding"
@@ -208,7 +208,7 @@ func main() {
 
 	// Phase 4 groups
 	billingGrp := billingGroup.New(billingUsecase, jwtSecret)
-	adminBotGrp := adminbotGroup.New(adminBotRepo, jwtSecret)
+	masterbotGrp := masterbotGroup.New(adminBotRepo, jwtSecret)
 	walletGrp := walletGroup.New(walletUsecase, jwtSecret)
 	marketplaceGrp := marketplaceGroup.New(marketplaceUsecase, jwtSecret)
 
@@ -225,7 +225,7 @@ func main() {
 		analyticsGrp, segmentsGrp, promotionsGrp, integrationsGrp,
 		filesGrp,
 		menusGrp, rfmGrp, onboardingGrp,
-		billingGrp, adminBotGrp, walletGrp, marketplaceGrp,
+		billingGrp, masterbotGrp, walletGrp, marketplaceGrp,
 	)
 
 	// ── Scheduler ─────────────────────────────────────────────────────────────

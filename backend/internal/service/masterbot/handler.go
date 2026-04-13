@@ -1,4 +1,4 @@
-package adminbot
+package masterbot
 
 import (
 	"context"
@@ -17,34 +17,39 @@ import (
 )
 
 type handler struct {
-	bot            *telego.Bot
+	bot  *telego.Bot
+	cfg  Config
+	deps Deps
+
+	// Legacy repos (kept for admin features)
 	linksRepo      adminBotLinksRepo
 	dashboardRepo  dashboardRepository
 	campaignsRepo  campaignsRepository
 	promotionsRepo promotionsRepository
-	logger         *slog.Logger
+
+	logger *slog.Logger
 }
 
-func newHandler(
-	bot *telego.Bot,
-	linksRepo adminBotLinksRepo,
-	dashboardRepo dashboardRepository,
-	campaignsRepo campaignsRepository,
-	promotionsRepo promotionsRepository,
-	_ interface{}, // analyticsRepo placeholder for future use
-	logger *slog.Logger,
-) *handler {
+func newHandler(bot *telego.Bot, cfg Config, deps Deps, logger *slog.Logger) *handler {
 	return &handler{
 		bot:            bot,
-		linksRepo:      linksRepo,
-		dashboardRepo:  dashboardRepo,
-		campaignsRepo:  campaignsRepo,
-		promotionsRepo: promotionsRepo,
+		cfg:            cfg,
+		deps:           deps,
+		linksRepo:      deps.AdminLinks,
+		dashboardRepo:  deps.Dashboard,
+		campaignsRepo:  deps.Campaigns,
+		promotionsRepo: deps.Promotions,
 		logger:         logger,
 	}
 }
 
 func (h *handler) Handle(ctx context.Context, update telego.Update) {
+	// Handle managed bot updates (Bot API 9.6)
+	if update.ManagedBot != nil {
+		h.handleManagedBotUpdated(ctx, update)
+		return
+	}
+
 	if update.Message == nil {
 		return
 	}
@@ -59,6 +64,10 @@ func (h *handler) Handle(ctx context.Context, update telego.Update) {
 	switch {
 	case text == "/start":
 		h.handleStart(ctx, msg)
+	case strings.HasPrefix(text, "/start "):
+		// Deep link: /start {auth_token}
+		token := strings.TrimPrefix(text, "/start ")
+		h.handleStartWithToken(ctx, msg, token)
 	case strings.HasPrefix(text, "/link "):
 		h.handleLink(ctx, msg, strings.TrimPrefix(text, "/link "))
 	case text == "/stats" || text == btnStats:
@@ -69,10 +78,12 @@ func (h *handler) Handle(ctx context.Context, update telego.Update) {
 		h.handlePromotions(ctx, msg)
 	case strings.HasPrefix(text, "/promo "):
 		h.handleCreatePromo(ctx, msg, strings.TrimPrefix(text, "/promo "))
+	case text == "/mybots":
+		h.handleMyBots(ctx, msg)
 	case text == "/help" || text == btnHelp:
 		h.handleHelp(ctx, msg)
 	default:
-		// Ignore unknown messages for non-linked users; show help for linked
+		// For linked users: unknown command help
 		link := h.getLink(ctx, msg.From.ID)
 		if link != nil {
 			h.sendText(msg.Chat.ID, "Неизвестная команда. Отправьте /help для списка команд.")
@@ -80,9 +91,210 @@ func (h *handler) Handle(ctx context.Context, update telego.Update) {
 	}
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// ── Deep link auth ──────────────────────────────────────────────────────────
+
+func (h *handler) handleStartWithToken(ctx context.Context, msg *telego.Message, token string) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		h.handleStart(ctx, msg)
+		return
+	}
+
+	if h.deps.AuthTokens == nil {
+		h.handleStart(ctx, msg)
+		return
+	}
+
+	// Validate and consume one-time token
+	authData, err := h.deps.AuthTokens.ValidateAndConsume(ctx, token)
+	if err != nil {
+		h.logger.Warn("invalid auth token", "error", err, "telegram_id", msg.From.ID)
+		h.sendText(msg.Chat.ID, "❌ Ссылка недействительна или истекла.\n\nПолучите новую ссылку на сайте.")
+		return
+	}
+
+	// Create master bot link
+	link := &entity.MasterBotLink{
+		OrgID:            authData.OrgID,
+		TelegramUserID:   msg.From.ID,
+		TelegramUsername: msg.From.Username,
+	}
+
+	if err := h.deps.MasterLinks.CreateLink(ctx, link); err != nil {
+		h.logger.Error("create master bot link", "error", err, "org_id", authData.OrgID)
+		h.sendText(msg.Chat.ID, "Ошибка привязки. Попробуйте позже.")
+		return
+	}
+
+	h.logger.Info("master bot linked",
+		"org_id", authData.OrgID,
+		"telegram_id", msg.From.ID,
+		"username", msg.From.Username,
+	)
+
+	h.sendWithKeyboard(msg.Chat.ID,
+		fmt.Sprintf("✅ Вы привязаны к организации #%d.\n\nВернитесь на сайт для настройки бота.", authData.OrgID),
+		buildAdminMenu())
+}
+
+// ── Managed bot update ──────────────────────────────────────────────────────
+
+func (h *handler) handleManagedBotUpdated(ctx context.Context, update telego.Update) {
+	mbu := update.ManagedBot
+	h.logger.Info("managed bot updated",
+		"managed_bot_id", mbu.Bot.ID,
+		"managed_bot_username", mbu.Bot.Username,
+		"owner_id", mbu.User.ID,
+	)
+
+	if h.deps.Bots == nil {
+		h.logger.Warn("bots repo not configured, cannot process managed bot update")
+		return
+	}
+
+	// Get managed bot token
+	tokenPtr, err := h.bot.GetManagedBotToken(ctx, &telego.GetManagedBotTokenParams{
+		UserID: mbu.Bot.ID,
+	})
+	if err != nil {
+		h.logger.Error("get managed bot token", "error", err, "bot_id", mbu.Bot.ID)
+		return
+	}
+	if tokenPtr == nil {
+		h.logger.Error("got nil token for managed bot", "bot_id", mbu.Bot.ID)
+		return
+	}
+	botToken := *tokenPtr
+
+	// Find pending bot by username match via owner's telegram_id
+	ownerTgID := mbu.User.ID
+	masterLink, err := h.deps.MasterLinks.GetLinkByTelegramID(ctx, ownerTgID)
+	if err != nil || masterLink == nil {
+		h.logger.Error("managed bot owner not linked", "owner_telegram_id", ownerTgID)
+		return
+	}
+
+	// Find pending bot with matching username in this org
+	bots, err := h.deps.Bots.GetByOrgID(ctx, masterLink.OrgID)
+	if err != nil {
+		h.logger.Error("get org bots", "error", err, "org_id", masterLink.OrgID)
+		return
+	}
+
+	var pendingBot *entity.Bot
+	for i := range bots {
+		if bots[i].Status == "pending" && bots[i].Username == mbu.Bot.Username {
+			pendingBot = &bots[i]
+			break
+		}
+	}
+
+	if pendingBot == nil {
+		h.logger.Warn("no pending bot found for managed bot",
+			"username", mbu.Bot.Username, "org_id", masterLink.OrgID)
+		return
+	}
+
+	// Activate bot
+	managedBotID := mbu.Bot.ID
+	pendingBot.Token = botToken
+	pendingBot.Status = "active"
+	pendingBot.IsManagedBot = true
+	pendingBot.ManagedBotID = &managedBotID
+	pendingBot.CreatedByTelegramID = &ownerTgID
+
+	if err := h.deps.Bots.Update(ctx, pendingBot); err != nil {
+		h.logger.Error("activate managed bot", "error", err, "bot_id", pendingBot.ID)
+		return
+	}
+
+	h.logger.Info("managed bot activated",
+		"bot_id", pendingBot.ID,
+		"username", mbu.Bot.Username,
+		"org_id", masterLink.OrgID,
+	)
+
+	// Apply settings via Bot API
+	h.applyBotSettings(ctx, pendingBot, botToken)
+
+	// Notify owner
+	h.sendText(ownerTgID, fmt.Sprintf("✅ Бот @%s создан и активирован!\n\nВернитесь на сайт для управления.", mbu.Bot.Username))
+}
+
+func (h *handler) applyBotSettings(ctx context.Context, bot *entity.Bot, token string) {
+	tBot, err := telego.NewBot(token)
+	if err != nil {
+		h.logger.Error("create managed bot instance", "error", err)
+		return
+	}
+
+	if bot.Settings.WelcomeMessage != "" {
+		_ = tBot.SetMyDescription(ctx, &telego.SetMyDescriptionParams{
+			Description: bot.Settings.WelcomeMessage,
+		})
+	}
+
+	_ = tBot.SetMyCommands(ctx, &telego.SetMyCommandsParams{
+		Commands: []telego.BotCommand{
+			{Command: "start", Description: "Начать"},
+			{Command: "help", Description: "Помощь"},
+		},
+	})
+}
+
+// ── /mybots ─────────────────────────────────────────────────────────────────
+
+func (h *handler) handleMyBots(ctx context.Context, msg *telego.Message) {
+	if h.deps.MasterLinks == nil || h.deps.Bots == nil {
+		h.sendText(msg.Chat.ID, "Функция пока недоступна.")
+		return
+	}
+
+	masterLink, err := h.deps.MasterLinks.GetLinkByTelegramID(ctx, msg.From.ID)
+	if err != nil || masterLink == nil {
+		h.sendText(msg.Chat.ID, "⚠️ Ваш Telegram не привязан.\nАктивируйте бота через сайт.")
+		return
+	}
+
+	bots, err := h.deps.Bots.GetByOrgID(ctx, masterLink.OrgID)
+	if err != nil {
+		h.sendText(msg.Chat.ID, "Ошибка получения списка ботов.")
+		return
+	}
+
+	if len(bots) == 0 {
+		h.sendText(msg.Chat.ID, "🤖 У вас пока нет ботов.\nСоздайте первого на сайте.")
+		return
+	}
+
+	var sb strings.Builder
+	sb.WriteString("🤖 Ваши боты:\n\n")
+	for _, b := range bots {
+		status := "⏳"
+		switch b.Status {
+		case "active":
+			status = "✅"
+		case "inactive":
+			status = "⏸️"
+		case "error":
+			status = "❌"
+		}
+		username := b.Username
+		if username != "" {
+			username = "@" + username
+		}
+		sb.WriteString(fmt.Sprintf("%s %s %s\n", status, b.Name, username))
+	}
+
+	h.sendText(msg.Chat.ID, sb.String())
+}
+
+// ── Legacy auth (admin_bot_links) ───────────────────────────────────────────
 
 func (h *handler) getLink(ctx context.Context, telegramID int64) *entity.AdminBotLink {
+	if h.linksRepo == nil {
+		return nil
+	}
 	link, err := h.linksRepo.GetByTelegramID(ctx, telegramID)
 	if err != nil {
 		return nil
@@ -103,19 +315,19 @@ func (h *handler) requireAuth(ctx context.Context, msg *telego.Message) *entity.
 	return link
 }
 
-// ── Commands ──────────────────────────────────────────────────────────────────
+// ── Legacy commands ─────────────────────────────────────────────────────────
 
 func (h *handler) handleStart(ctx context.Context, msg *telego.Message) {
 	link := h.getLink(ctx, msg.From.ID)
 	if link == nil {
 		h.sendText(msg.Chat.ID,
-			"👋 Добро пожаловать в Revisitr Admin Bot!\n\n"+
-				"Этот бот позволяет управлять вашим заведением прямо из Telegram:\n"+
-				"• Смотреть статистику\n"+
-				"• Управлять рассылками и промокодами\n"+
-				"• Получать уведомления\n\n"+
-				"Для начала привяжите аккаунт:\n"+
-				"/link КОД — привязать аккаунт по коду из веб-панели")
+			"👋 Добро пожаловать в Revisitr Bot!\n\n"+
+				"Этот бот позволяет управлять заведением из Telegram:\n"+
+				"• Создавать ботов для клиентов\n"+
+				"• Готовить рассылки\n"+
+				"• Смотреть статистику\n\n"+
+				"Для привязки аккаунта активируйте бота через сайт\n"+
+				"или отправьте: /link КОД")
 		return
 	}
 
@@ -131,14 +343,12 @@ func (h *handler) handleLink(ctx context.Context, msg *telego.Message, code stri
 		return
 	}
 
-	// Check if already linked
 	existing := h.getLink(ctx, msg.From.ID)
 	if existing != nil {
 		h.sendText(msg.Chat.ID, "✅ Ваш аккаунт уже привязан.")
 		return
 	}
 
-	// Find link by code
 	link, err := h.linksRepo.GetByLinkCode(ctx, code)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), sql.ErrNoRows.Error()) {
@@ -150,14 +360,13 @@ func (h *handler) handleLink(ctx context.Context, msg *telego.Message, code stri
 		return
 	}
 
-	// Activate the link
 	if err := h.linksRepo.ActivateLink(ctx, link.ID, msg.From.ID); err != nil {
 		h.logger.Error("activate link", "error", err, "link_id", link.ID)
 		h.sendText(msg.Chat.ID, "Ошибка привязки. Попробуйте позже.")
 		return
 	}
 
-	h.logger.Info("admin bot linked", "user_id", link.UserID, "telegram_id", msg.From.ID, "org_id", link.OrgID)
+	h.logger.Info("master bot linked (legacy)", "user_id", link.UserID, "telegram_id", msg.From.ID, "org_id", link.OrgID)
 	h.sendWithKeyboard(msg.Chat.ID,
 		"✅ Аккаунт успешно привязан!\n\nТеперь вы можете управлять заведением из Telegram.",
 		buildAdminMenu())
@@ -287,7 +496,6 @@ func (h *handler) handleCreatePromo(ctx context.Context, msg *telego.Message, ar
 		return
 	}
 
-	// Generate a random code if not specified
 	code := strings.TrimSpace(args)
 	if code == "" {
 		b := make([]byte, 4)
@@ -312,9 +520,10 @@ func (h *handler) handleCreatePromo(ctx context.Context, msg *telego.Message, ar
 
 func (h *handler) handleHelp(_ context.Context, msg *telego.Message) {
 	h.sendText(msg.Chat.ID,
-		"📖 Команды Admin Bot:\n\n"+
+		"📖 Команды Revisitr Bot:\n\n"+
 			"/start — главное меню\n"+
 			"/link КОД — привязать аккаунт\n"+
+			"/mybots — список ваших ботов\n"+
 			"/stats — статистика за 7 дней\n"+
 			"/campaigns — последние рассылки\n"+
 			"/promotions — активные акции\n"+
@@ -322,7 +531,7 @@ func (h *handler) handleHelp(_ context.Context, msg *telego.Message) {
 			"/help — эта справка")
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
 func (h *handler) sendText(chatID int64, text string) {
 	msg := tu.Message(tu.ID(chatID), text)

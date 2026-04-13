@@ -34,7 +34,7 @@ type Bot struct {
 	Token string
 }
 
-type AdminBot struct {
+type MasterBot struct {
 	Token string
 }
 
@@ -52,7 +52,7 @@ type Module struct {
 	Redis    Redis
 	Auth     Auth
 	Bot      Bot
-	AdminBot AdminBot
+	MasterBot MasterBot
 	MinIO    MinIO
 	BaseURL        string // Public base URL for media files (e.g., "https://elysium.fm")
 	TelegramAPIURL string // Custom Telegram Bot API server URL (empty = default api.telegram.org)
@@ -89,8 +89,8 @@ func NewFromEnv() *Module {
 		Bot: Bot{
 			Token: env.GetString("BOT_TOKEN", ""),
 		},
-		AdminBot: AdminBot{
-			Token: env.GetString("ADMIN_BOT_TOKEN", ""),
+		MasterBot: MasterBot{
+			Token: env.GetString("MASTER_BOT_TOKEN", ""),
 		},
 		MinIO: MinIO{
 			Endpoint:  env.GetString("MINIO_ENDPOINT", "localhost:9000"),

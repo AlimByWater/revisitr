@@ -10,7 +10,8 @@ import (
 	"revisitr/internal/application/config"
 	"revisitr/internal/application/env"
 	pgRepo "revisitr/internal/repository/postgres"
-	"revisitr/internal/service/adminbot"
+	redisRepo "revisitr/internal/repository/redis"
+	"revisitr/internal/service/masterbot"
 )
 
 func main() {
@@ -36,38 +37,44 @@ func main() {
 	}
 	defer pg.Close()
 
-	// Repositories
-	adminBotRepo := pgRepo.NewAdminBot(pg)
-	dashboardRepo := pgRepo.NewDashboard(pg)
-	campaignsRepo := pgRepo.NewCampaigns(pg)
-	promotionsRepo := pgRepo.NewPromotions(pg)
+	// Init Redis
+	redis := redisRepo.New(&redisConfig{cfg: cfg})
+	if err := redis.Init(ctx, logger); err != nil {
+		logger.Error("redis init failed", "error", err)
+		os.Exit(1)
+	}
+	defer redis.Close()
 
-	// Create and start admin bot service
-	svc, err := adminbot.New(
-		cfg.AdminBot.Token,
-		adminBotRepo,
-		dashboardRepo,
-		campaignsRepo,
-		promotionsRepo,
-		nil, // analyticsRepo — placeholder for future use
+	// Create and start master bot service
+	svc, err := masterbot.New(
+		masterbot.Config{Token: cfg.MasterBot.Token},
+		masterbot.Deps{
+			AdminLinks:  pgRepo.NewAdminBot(pg),
+			Dashboard:   pgRepo.NewDashboard(pg),
+			Campaigns:   pgRepo.NewCampaigns(pg),
+			Promotions:  pgRepo.NewPromotions(pg),
+			MasterLinks: pgRepo.NewMasterBot(pg),
+			AuthTokens:  redisRepo.NewMasterBotAuth(redis),
+			Bots:        pgRepo.NewBots(pg),
+		},
 		logger,
 	)
 	if err != nil {
-		logger.Error("admin bot init failed", "error", err)
+		logger.Error("master bot init failed", "error", err)
 		os.Exit(1)
 	}
 
 	if err := svc.Start(ctx); err != nil {
-		logger.Error("admin bot start failed", "error", err)
+		logger.Error("master bot start failed", "error", err)
 		os.Exit(1)
 	}
 
-	logger.Info("admin bot service started")
+	logger.Info("master bot service started")
 
 	<-ctx.Done()
-	logger.Info("shutting down admin bot service")
+	logger.Info("shutting down master bot service")
 	svc.Shutdown()
-	logger.Info("admin bot service stopped")
+	logger.Info("master bot service stopped")
 }
 
 type postgresConfig struct{ cfg *config.Module }
@@ -78,3 +85,9 @@ func (c *postgresConfig) GetUser() string     { return c.cfg.Postgres.User }
 func (c *postgresConfig) GetPassword() string { return c.cfg.Postgres.Password }
 func (c *postgresConfig) GetDatabase() string { return c.cfg.Postgres.Database }
 func (c *postgresConfig) GetSSLMode() string  { return c.cfg.Postgres.SSLMode }
+
+type redisConfig struct{ cfg *config.Module }
+
+func (c *redisConfig) GetHost() string     { return c.cfg.Redis.Host }
+func (c *redisConfig) GetPort() string     { return c.cfg.Redis.Port }
+func (c *redisConfig) GetPassword() string { return c.cfg.Redis.Password }

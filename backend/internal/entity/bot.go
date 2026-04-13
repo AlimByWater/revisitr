@@ -57,11 +57,14 @@ type Bot struct {
 	Name      string      `db:"name" json:"name"`
 	Token     string      `db:"token" json:"-"`
 	Username  string      `db:"username" json:"username"`
-	Status    string      `db:"status" json:"status"`
+	Status    string      `db:"status" json:"status"` // "active" | "inactive" | "pending" | "error"
 	Settings  BotSettings `db:"settings" json:"settings"`
-	CreatedAt   time.Time   `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time   `db:"updated_at" json:"updated_at"`
-	TokenMasked string      `db:"-" json:"token_masked,omitempty"`
+	CreatedAt           time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt           time.Time `db:"updated_at" json:"updated_at"`
+	TokenMasked         string    `db:"-" json:"token_masked,omitempty"`
+	IsManagedBot        bool      `db:"is_managed" json:"is_managed"`
+	ManagedBotID        *int64    `db:"managed_bot_id" json:"managed_bot_id,omitempty"`
+	CreatedByTelegramID *int64    `db:"created_by_telegram_id" json:"created_by_telegram_id,omitempty"`
 }
 
 // MaskToken returns a partially masked token for safe display.

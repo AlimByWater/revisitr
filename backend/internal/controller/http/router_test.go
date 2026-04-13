@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	httpCtrl "revisitr/internal/controller/http"
-	"revisitr/internal/controller/http/group/adminbot"
+	"revisitr/internal/controller/http/group/masterbot"
 	"revisitr/internal/controller/http/group/analytics"
 	"revisitr/internal/controller/http/group/auth"
 	"revisitr/internal/controller/http/group/billing"
@@ -65,7 +65,7 @@ func TestAllGroupsRegisterWithoutPanic(t *testing.T) {
 		rfm.New(nil, jwtSecret),
 		onboarding.New(nil, jwtSecret),
 		billing.New(nil, jwtSecret),
-		adminbot.New(nil, jwtSecret),
+		masterbot.New(nil, jwtSecret),
 		wallet.New(nil, jwtSecret),
 		marketplace.New(nil, jwtSecret),
 	}

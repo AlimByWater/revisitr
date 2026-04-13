@@ -4,12 +4,12 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/admin-bot ./cmd/admin-bot
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/masterbot ./cmd/masterbot
 
 # Stage 2: Runtime
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates tzdata
 RUN adduser -D -u 1000 appuser
-COPY --from=builder /bin/admin-bot /usr/local/bin/admin-bot
+COPY --from=builder /bin/masterbot /usr/local/bin/masterbot
 USER appuser
-ENTRYPOINT ["admin-bot"]
+ENTRYPOINT ["masterbot"]
