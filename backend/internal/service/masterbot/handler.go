@@ -83,11 +83,8 @@ func (h *handler) Handle(ctx context.Context, update telego.Update) {
 	case text == "/help" || text == btnHelp:
 		h.handleHelp(ctx, msg)
 	default:
-		// For linked users: unknown command help
-		link := h.getLink(ctx, msg.From.ID)
-		if link != nil {
-			h.sendText(msg.Chat.ID, "Неизвестная команда. Отправьте /help для списка команд.")
-		}
+		// Non-command message from linked user → create post code
+		h.handleCreatePost(ctx, msg)
 	}
 }
 

@@ -46,3 +46,10 @@ type botsRepository interface {
 	Create(ctx context.Context, bot *entity.Bot) error
 	Update(ctx context.Context, bot *entity.Bot) error
 }
+
+type postCodesRepo interface {
+	Create(ctx context.Context, pc *entity.PostCode) error
+	GetByCode(ctx context.Context, orgID int, code string) (*entity.PostCode, error)
+	GetByOrgID(ctx context.Context, orgID int) ([]entity.PostCode, error)
+	UpdateContent(ctx context.Context, id int, content entity.PostCodeContent) error
+}

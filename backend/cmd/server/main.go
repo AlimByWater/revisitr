@@ -30,6 +30,7 @@ import (
 	rfmGroup "revisitr/internal/controller/http/group/rfm"
 	segmentsGroup "revisitr/internal/controller/http/group/segments"
 	marketplaceGroup "revisitr/internal/controller/http/group/marketplace"
+	postsGroup "revisitr/internal/controller/http/group/posts"
 	walletGroup "revisitr/internal/controller/http/group/wallet"
 	"revisitr/internal/controller/scheduler"
 	minioRepo "revisitr/internal/repository/minio"
@@ -97,6 +98,7 @@ func main() {
 	adminBotRepo := pgRepo.NewAdminBot(pg)
 	walletRepo := pgRepo.NewWallet(pg)
 	marketplaceRepo := pgRepo.NewMarketplace(pg)
+	postCodesRepo := pgRepo.NewPostCodes(pg)
 
 	// Phase 3 repos
 	menusRepo := pgRepo.NewMenus(pg)
@@ -211,6 +213,7 @@ func main() {
 	masterbotGrp := masterbotGroup.New(adminBotRepo, jwtSecret)
 	walletGrp := walletGroup.New(walletUsecase, jwtSecret)
 	marketplaceGrp := marketplaceGroup.New(marketplaceUsecase, jwtSecret)
+	postsGrp := postsGroup.New(postCodesRepo, jwtSecret)
 
 	// Phase 3 groups
 	menusGrp := menusGroup.New(menusUsecase, jwtSecret)
@@ -225,7 +228,7 @@ func main() {
 		analyticsGrp, segmentsGrp, promotionsGrp, integrationsGrp,
 		filesGrp,
 		menusGrp, rfmGrp, onboardingGrp,
-		billingGrp, masterbotGrp, walletGrp, marketplaceGrp,
+		billingGrp, masterbotGrp, walletGrp, marketplaceGrp, postsGrp,
 	)
 
 	// ── Scheduler ─────────────────────────────────────────────────────────────

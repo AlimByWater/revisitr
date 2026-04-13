@@ -33,6 +33,7 @@ type Deps struct {
 	MasterLinks masterBotLinksRepo
 	AuthTokens  masterBotAuthRepo
 	Bots        botsRepository
+	PostCodes   postCodesRepo
 }
 
 func New(cfg Config, deps Deps, logger *slog.Logger) (*Service, error) {
