@@ -1,8 +1,8 @@
 -- +goose Up
 
 -- Create Baratie Demo organization
-INSERT INTO organizations (name, created_at, updated_at)
-VALUES ('Baratie Demo', NOW(), NOW())
+INSERT INTO organizations (name, created_at)
+VALUES ('Baratie Demo', NOW())
 ON CONFLICT DO NOTHING;
 
 -- Create demo bot (token filled manually or via managed bots)
@@ -26,8 +26,8 @@ FROM organizations o WHERE o.name = 'Baratie Demo'
 ON CONFLICT DO NOTHING;
 
 -- Create loyalty program
-INSERT INTO loyalty_programs (org_id, name, is_active, config, created_at, updated_at)
-SELECT o.id, 'Baratie Rewards', true,
+INSERT INTO loyalty_programs (org_id, name, type, is_active, config, created_at, updated_at)
+SELECT o.id, 'Baratie Rewards', 'bonus', true,
     '{
         "currency_name": "дублонов",
         "earn_rate": 1,
@@ -40,8 +40,8 @@ FROM organizations o WHERE o.name = 'Baratie Demo'
 ON CONFLICT DO NOTHING;
 
 -- Create loyalty levels
-INSERT INTO loyalty_levels (program_id, name, threshold, bonus_percent, sort_order, created_at, updated_at)
-SELECT lp.id, level_name, threshold, bonus_pct, sort_ord, NOW(), NOW()
+INSERT INTO loyalty_levels (program_id, name, threshold, reward_percent, sort_order)
+SELECT lp.id, level_name, threshold, bonus_pct, sort_ord
 FROM loyalty_programs lp
 JOIN organizations o ON o.id = lp.org_id
 CROSS JOIN (VALUES

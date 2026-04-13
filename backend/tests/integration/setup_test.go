@@ -24,6 +24,7 @@ import (
 	"revisitr/internal/controller/http/group/health"
 	integrationsGroup "revisitr/internal/controller/http/group/integrations"
 	loyaltyGroup "revisitr/internal/controller/http/group/loyalty"
+	menusGroup "revisitr/internal/controller/http/group/menus"
 	posGroup "revisitr/internal/controller/http/group/pos"
 	promotionsGroup "revisitr/internal/controller/http/group/promotions"
 	segmentsGroup "revisitr/internal/controller/http/group/segments"
@@ -38,21 +39,23 @@ import (
 	dashboardUC "revisitr/internal/usecase/dashboard"
 	integrationsUC "revisitr/internal/usecase/integrations"
 	loyaltyUC "revisitr/internal/usecase/loyalty"
+	menusUC "revisitr/internal/usecase/menus"
 	posUC "revisitr/internal/usecase/pos"
 	promotionsUC "revisitr/internal/usecase/promotions"
 	segmentsUC "revisitr/internal/usecase/segments"
 )
 
 const (
-	testJWTSecret = "integration-test-secret"
-	testDBHost    = "localhost"
-	testDBPort    = "5433"
-	testDBUser    = "revisitr"
-	testDBPass    = "devpassword"
-	testDBName    = "revisitr"
-	testDBSSL     = "disable"
-	testRedisHost = "localhost"
-	testRedisPort = "6380"
+	testJWTSecret         = "integration-test-secret"
+	testMasterBotUsername = "managedmasterbot"
+	testDBHost            = "localhost"
+	testDBPort            = "5433"
+	testDBUser            = "revisitr"
+	testDBPass            = "devpassword"
+	testDBName            = "revisitr"
+	testDBSSL             = "disable"
+	testRedisHost         = "localhost"
+	testRedisPort         = "6380"
 
 	// All test records use this email domain for easy cleanup
 	testEmailDomain = "@test.revisitr.local"
@@ -115,28 +118,34 @@ func TestMain(m *testing.M) {
 	campaignsRepo := pgRepo.NewCampaigns(pgMod)
 	scenariosRepo := pgRepo.NewAutoScenarios(pgMod)
 	posRepo := pgRepo.NewPOS(pgMod)
+	menusRepo := pgRepo.NewMenus(pgMod)
 	analyticsRepo := pgRepo.NewAnalytics(pgMod)
 	segmentsRepo := pgRepo.NewSegments(pgMod)
 	promotionsRepo := pgRepo.NewPromotions(pgMod)
 	integrationsRepo := pgRepo.NewIntegrations(pgMod)
+	masterBotAuthRepo := redisRepo.NewMasterBotAuth(rdsMod)
 
 	// Usecases
 	authUsecase := authUC.New(authCfg{}, usersRepo, sessionsRepo)
 	botsUsecase := botsUC.New(botsRepo, botClientsRepo)
+	managedBotAdapter := botsUC.NewManagedBotAdapter(botsUsecase, masterBotAuthRepo)
 	loyaltyUsecase := loyaltyUC.New(loyaltyRepo)
 	clientsUsecase := clientsUC.New(clientsRepo)
 	dashboardUsecase := dashboardUC.New(dashboardRepo)
 	campaignsUsecase := campaignsUC.New(campaignsRepo, scenariosRepo, clientsRepo)
 	posUsecase := posUC.New(posRepo)
+	menusUsecase := menusUC.New(menusRepo)
 	analyticsUsecase := analyticsUC.New(analyticsRepo)
 	segmentsUsecase := segmentsUC.New(segmentsRepo, clientsRepo)
 	promotionsUsecase := promotionsUC.New(promotionsRepo)
 	posSyncSvc := posService.NewSyncService(integrationsRepo, botClientsRepo, logger)
 	integrationsUsecase := integrationsUC.New(integrationsRepo, posSyncSvc)
 
-	for _, uc := range []interface{ Init(context.Context, *slog.Logger) error }{
+	for _, uc := range []interface {
+		Init(context.Context, *slog.Logger) error
+	}{
 		authUsecase, botsUsecase, loyaltyUsecase,
-		clientsUsecase, dashboardUsecase, campaignsUsecase, posUsecase,
+		clientsUsecase, dashboardUsecase, campaignsUsecase, posUsecase, menusUsecase,
 		integrationsUsecase, promotionsUsecase, analyticsUsecase, segmentsUsecase,
 	} {
 		if err := uc.Init(ctx, logger); err != nil {
@@ -148,12 +157,17 @@ func TestMain(m *testing.M) {
 	groups := []group{
 		health.New(),
 		authGroup.New(authUsecase),
-		botsGroup.New(botsUsecase, testJWTSecret),
+		botsGroup.New(
+			botsUsecase,
+			testJWTSecret,
+			botsGroup.WithManagedBots(managedBotAdapter, testMasterBotUsername),
+		),
 		loyaltyGroup.New(loyaltyUsecase, testJWTSecret),
 		clientsGroup.New(clientsUsecase, testJWTSecret),
 		dashboardGroup.New(dashboardUsecase, testJWTSecret, dashboardGroup.WithSalesUsecase(integrationsUsecase)),
 		campaignsGroup.New(campaignsUsecase, testJWTSecret),
 		posGroup.New(posUsecase, testJWTSecret),
+		menusGroup.New(menusUsecase, testJWTSecret),
 		analyticsGroup.New(analyticsUsecase, testJWTSecret),
 		segmentsGroup.New(segmentsUsecase, testJWTSecret),
 		promotionsGroup.New(promotionsUsecase, testJWTSecret),

@@ -11,6 +11,7 @@ import { useTheme } from './contexts/ThemeContext'
 // Auth pages
 import LoginPage from './routes/auth/login'
 import RegisterPage from './routes/auth/register'
+import ForgotPasswordPage from './routes/auth/forgot-password'
 
 // Dashboard pages
 import DashboardHome from './routes/dashboard/index'
@@ -86,8 +87,15 @@ function DashboardLayout() {
   )
 }
 
-function authLoader() {
-  // TODO: restore auth check after visual redesign
+export function authLoader() {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  if (!window.localStorage.getItem('token')) {
+    return redirect('/auth/login')
+  }
+
   return null
 }
 
@@ -99,6 +107,7 @@ export const router = createBrowserRouter(
         { index: true, loader: () => redirect('/dashboard') },
         { path: 'auth/login', element: <LoginPage /> },
         { path: 'auth/register', element: <RegisterPage /> },
+        { path: 'auth/forgot-password', element: <ForgotPasswordPage /> },
         {
           path: 'dashboard',
           element: <DashboardLayout />,

@@ -87,39 +87,32 @@ describe('RFMTemplatePage', () => {
     expect(screen.getByText('Бар')).toBeInTheDocument()
   })
 
-  it('highlights active template with check icon', () => {
+  it('highlights active template and shows current marker', () => {
     setupMocks()
-    const { container } = render(<RFMTemplatePage />)
+    render(<RFMTemplatePage />)
 
-    // Active template (coffeegng) should have the ring/border style
     const activeCard = screen.getByText('Кофейня / Go-to').closest('button')
-    expect(activeCard?.className).toContain('ring')
+    expect(activeCard?.className).toContain('bg-neutral-50')
+    expect(screen.getByText('Текущий шаблон')).toBeInTheDocument()
   })
 
-  it('shows confirm message on first click', async () => {
+  it('selects a new template and enables save', async () => {
     setupMocks()
     const user = userEvent.setup()
     render(<RFMTemplatePage />)
 
-    // Click a non-active template
     await user.click(screen.getByText('Быстрое питание').closest('button')!)
 
-    expect(screen.getByText('Нажмите ещё раз для подтверждения')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Сохранить' })).toBeEnabled()
   })
 
-  it('saves template on double click (confirm)', async () => {
+  it('saves template after selection and explicit save', async () => {
     setupMocks()
     const user = userEvent.setup()
     render(<RFMTemplatePage />)
 
-    const btn = screen.getByText('Быстрое питание').closest('button')!
-
-    // First click → confirm
-    await user.click(btn)
-    expect(screen.getByText('Нажмите ещё раз для подтверждения')).toBeInTheDocument()
-
-    // Second click → save
-    await user.click(btn)
+    await user.click(screen.getByText('Быстрое питание').closest('button')!)
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
 
     await waitFor(() => {
       expect(mockSetMutateAsync).toHaveBeenCalledWith({
@@ -221,7 +214,7 @@ describe('RFMTemplatePage', () => {
     const user = userEvent.setup()
     render(<RFMTemplatePage />)
 
-    await user.click(screen.getByText('RFM-сегментация'))
+    await user.click(screen.getByText('RFM-сегменты'))
 
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard/rfm')
   })

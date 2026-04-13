@@ -10,9 +10,9 @@ import (
 	"revisitr/internal/application/config"
 	"revisitr/internal/application/env"
 	httpCtrl "revisitr/internal/controller/http"
-	"revisitr/internal/controller/http/middleware"
 	analyticsGroup "revisitr/internal/controller/http/group/analytics"
 	authGroup "revisitr/internal/controller/http/group/auth"
+	billingGroup "revisitr/internal/controller/http/group/billing"
 	botsGroup "revisitr/internal/controller/http/group/bots"
 	campaignsGroup "revisitr/internal/controller/http/group/campaigns"
 	clientsGroup "revisitr/internal/controller/http/group/clients"
@@ -21,17 +21,17 @@ import (
 	"revisitr/internal/controller/http/group/health"
 	integrationsGroup "revisitr/internal/controller/http/group/integrations"
 	loyaltyGroup "revisitr/internal/controller/http/group/loyalty"
+	marketplaceGroup "revisitr/internal/controller/http/group/marketplace"
 	masterbotGroup "revisitr/internal/controller/http/group/masterbot"
-	billingGroup "revisitr/internal/controller/http/group/billing"
 	menusGroup "revisitr/internal/controller/http/group/menus"
 	onboardingGroup "revisitr/internal/controller/http/group/onboarding"
 	posGroup "revisitr/internal/controller/http/group/pos"
+	postsGroup "revisitr/internal/controller/http/group/posts"
 	promotionsGroup "revisitr/internal/controller/http/group/promotions"
 	rfmGroup "revisitr/internal/controller/http/group/rfm"
 	segmentsGroup "revisitr/internal/controller/http/group/segments"
-	marketplaceGroup "revisitr/internal/controller/http/group/marketplace"
-	postsGroup "revisitr/internal/controller/http/group/posts"
 	walletGroup "revisitr/internal/controller/http/group/wallet"
+	"revisitr/internal/controller/http/middleware"
 	"revisitr/internal/controller/scheduler"
 	minioRepo "revisitr/internal/repository/minio"
 	pgRepo "revisitr/internal/repository/postgres"
@@ -40,22 +40,22 @@ import (
 	"revisitr/internal/service/eventbus"
 	posService "revisitr/internal/service/pos"
 	rfmService "revisitr/internal/service/rfm"
-	billingUC "revisitr/internal/usecase/billing"
 	analyticsUC "revisitr/internal/usecase/analytics"
 	authUC "revisitr/internal/usecase/auth"
+	billingUC "revisitr/internal/usecase/billing"
 	botsUC "revisitr/internal/usecase/bots"
 	campaignsUC "revisitr/internal/usecase/campaigns"
 	clientsUC "revisitr/internal/usecase/clients"
 	dashboardUC "revisitr/internal/usecase/dashboard"
 	integrationsUC "revisitr/internal/usecase/integrations"
 	loyaltyUC "revisitr/internal/usecase/loyalty"
+	marketplaceUC "revisitr/internal/usecase/marketplace"
 	menusUC "revisitr/internal/usecase/menus"
 	onboardingUC "revisitr/internal/usecase/onboarding"
 	posUC "revisitr/internal/usecase/pos"
 	promotionsUC "revisitr/internal/usecase/promotions"
 	rfmUC "revisitr/internal/usecase/rfm"
 	segmentsUC "revisitr/internal/usecase/segments"
-	marketplaceUC "revisitr/internal/usecase/marketplace"
 	walletUC "revisitr/internal/usecase/wallet"
 )
 
@@ -96,6 +96,7 @@ func main() {
 	// Phase 4 repos
 	billingRepo := pgRepo.NewBilling(pg)
 	adminBotRepo := pgRepo.NewAdminBot(pg)
+	masterBotAuthRepo := redisRepo.NewMasterBotAuth(rds)
 	walletRepo := pgRepo.NewWallet(pg)
 	marketplaceRepo := pgRepo.NewMarketplace(pg)
 	postCodesRepo := pgRepo.NewPostCodes(pg)
@@ -145,6 +146,7 @@ func main() {
 
 	// Phase 4 usecases
 	billingUsecase := billingUC.New(billingRepo)
+	managedBotAdapter := botsUC.NewManagedBotAdapter(botsUsecase, masterBotAuthRepo)
 	walletUsecase := walletUC.New(walletRepo, walletRepo)
 	marketplaceUsecase := marketplaceUC.New(marketplaceRepo, marketplaceRepo, loyaltyUsecase)
 
@@ -180,6 +182,10 @@ func main() {
 	healthGrp := health.New()
 	authGrp := authGroup.New(authUsecase)
 	botsGrp := botsGroup.New(botsUsecase, jwtSecret,
+		botsGroup.WithManagedBots(
+			managedBotAdapter,
+			env.GetString("MASTER_BOT_USERNAME", "revisitrbot"),
+		),
 		botsGroup.WithPOSLocations(menusUsecase),
 	)
 	loyaltyGrp := loyaltyGroup.New(loyaltyUsecase, jwtSecret,
