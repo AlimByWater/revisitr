@@ -47,6 +47,7 @@ type Manager struct {
 	posRepo     posRepository
 	tgSender    *tgService.Sender
 	logger      *slog.Logger
+	apiServer   string // custom Telegram Bot API server URL (empty = default)
 
 	mu        sync.RWMutex
 	instances map[int]*botInstance
@@ -56,6 +57,10 @@ type ManagerOption func(*Manager)
 
 func WithTelegramSender(ts *tgService.Sender) ManagerOption {
 	return func(m *Manager) { m.tgSender = ts }
+}
+
+func WithAPIServer(url string) ManagerOption {
+	return func(m *Manager) { m.apiServer = url }
 }
 
 func New(
@@ -126,7 +131,6 @@ func (m *Manager) RemoveBot(botID int) error {
 	m.mu.Unlock()
 
 	inst.cancel()
-	inst.bot.StopLongPolling()
 	m.logger.Info("bot stopped", "bot_id", botID, "name", inst.info.Name)
 	return nil
 }
@@ -155,7 +159,6 @@ func (m *Manager) Shutdown() {
 
 	for id, inst := range m.instances {
 		inst.cancel()
-		inst.bot.StopLongPolling()
 		m.logger.Info("bot stopped", "bot_id", id, "name", inst.info.Name)
 	}
 
@@ -164,13 +167,17 @@ func (m *Manager) Shutdown() {
 }
 
 func (m *Manager) startBot(parentCtx context.Context, b entity.Bot) error {
-	tBot, err := telego.NewBot(b.Token)
+	var opts []telego.BotOption
+	if m.apiServer != "" {
+		opts = append(opts, telego.WithAPIServer(m.apiServer))
+	}
+	tBot, err := telego.NewBot(b.Token, opts...)
 	if err != nil {
 		return fmt.Errorf("create telego bot %q: %w", b.Name, err)
 	}
 
 	// Verify token by getting bot info
-	info, err := tBot.GetMe()
+	info, err := tBot.GetMe(parentCtx)
 	if err != nil {
 		return fmt.Errorf("verify bot token %q: %w", b.Name, err)
 	}
@@ -190,7 +197,7 @@ func (m *Manager) startBot(parentCtx context.Context, b entity.Bot) error {
 	handler := newHandler(m, tBot, &inst.info)
 
 	go func() {
-		updates, err := tBot.UpdatesViaLongPolling(nil)
+		updates, err := tBot.UpdatesViaLongPolling(ctx, nil)
 		if err != nil {
 			m.logger.Error("long polling failed", "bot_id", b.ID, "error", err)
 			return

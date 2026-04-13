@@ -144,10 +144,10 @@ func (s *Sender) SendCampaign(ctx context.Context, campaignID int) error {
 			err = s.tgSender.SendContent(ctx, tBot, messages[i].TelegramID, content)
 		} else {
 			// Legacy fallback: plain text only
-			_, err = tBot.SendMessage((&telego.SendMessageParams{
+			_, err = tBot.SendMessage(ctx, &telego.SendMessageParams{
 				ChatID: telego.ChatID{ID: messages[i].TelegramID},
 				Text:   campaign.Message,
-			}))
+			})
 		}
 
 		if err != nil {

@@ -130,7 +130,7 @@ func (s *Scheduler) evaluateBirthday(ctx context.Context, bot entity.Bot, scenar
 		if bd.Month() == today.Month() && bd.Day() == today.Day() {
 			msg := s.personalizeMessage(scenario.Message, client)
 			tgMsg := tu.Message(tu.ID(client.TelegramID), msg)
-			if _, err := tBot.SendMessage(tgMsg); err != nil {
+			if _, err := tBot.SendMessage(ctx, tgMsg); err != nil {
 				s.logger.Warn("scheduler: birthday message failed",
 					"client_id", client.ID, "error", err)
 			} else {
@@ -162,7 +162,7 @@ func (s *Scheduler) evaluateInactiveDays(ctx context.Context, bot entity.Bot, sc
 		if client.RegisteredAt.Before(cutoff) {
 			msg := s.personalizeMessage(scenario.Message, client)
 			tgMsg := tu.Message(tu.ID(client.TelegramID), msg)
-			if _, err := tBot.SendMessage(tgMsg); err != nil {
+			if _, err := tBot.SendMessage(ctx, tgMsg); err != nil {
 				s.logger.Warn("scheduler: inactive message failed",
 					"client_id", client.ID, "error", err)
 			}

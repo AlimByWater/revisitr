@@ -35,7 +35,7 @@ func New(
 		return nil, fmt.Errorf("adminbot: create telego bot: %w", err)
 	}
 
-	info, err := tBot.GetMe()
+	info, err := tBot.GetMe(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("adminbot: verify token: %w", err)
 	}
@@ -55,7 +55,7 @@ func (s *Service) Start(parentCtx context.Context) error {
 	ctx, cancel := context.WithCancel(parentCtx)
 	s.cancel = cancel
 
-	updates, err := s.bot.UpdatesViaLongPolling(nil)
+	updates, err := s.bot.UpdatesViaLongPolling(ctx, nil)
 	if err != nil {
 		cancel()
 		return fmt.Errorf("adminbot: start long polling: %w", err)
@@ -84,6 +84,5 @@ func (s *Service) Shutdown() {
 	if s.cancel != nil {
 		s.cancel()
 	}
-	s.bot.StopLongPolling()
 	s.logger.Info("admin bot stopped")
 }
