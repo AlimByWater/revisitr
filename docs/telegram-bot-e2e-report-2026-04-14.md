@@ -450,3 +450,18 @@ cd backend && go test ./...
 
 Самая заметная оставшаяся operational проблема:
 - `BOT_USERNAME=localrevisbot` в `telegram/.env` остаётся stale/offline target и продолжает быть только xfail probe.
+
+
+## Финальный статус после починки workflow
+
+После фикса `.github/workflows/admin-bot.yml` workflow `Master Bot` для коммита `ab5cbae` прошёл успешно.
+
+Подтверждено:
+- контейнер `infra-admin-bot-1` поднят с image tag `ab5cbae72d51a18336a0212dbe79719bebe802ce`
+- live logs показывают успешный startup `revisitrbot`
+- повторный live smoke `/start` после этого деплоя снова дал корректный ответ
+
+Итоговый production status на конец прохода:
+- deploy path для master bot восстановлен
+- root migrations применены
+- live Telegram smoke и controlled E2E проходят
