@@ -80,6 +80,8 @@ func (h *handler) Handle(ctx context.Context, update telego.Update) {
 		h.handleCreatePromo(ctx, msg, strings.TrimPrefix(text, "/promo "))
 	case text == "/mybots":
 		h.handleMyBots(ctx, msg)
+	case text == "/settings":
+		h.handleSettings(ctx, msg)
 	case text == "/help" || text == btnHelp:
 		h.handleHelp(ctx, msg)
 	default:
@@ -521,11 +523,13 @@ func (h *handler) handleHelp(_ context.Context, msg *telego.Message) {
 			"/start — главное меню\n"+
 			"/link КОД — привязать аккаунт\n"+
 			"/mybots — список ваших ботов\n"+
+			"/settings — настройки бота\n"+
 			"/stats — статистика за 7 дней\n"+
 			"/campaigns — последние рассылки\n"+
 			"/promotions — активные акции\n"+
 			"/promo [КОД] — создать промокод\n"+
-			"/help — эта справка")
+			"/help — эта справка\n\n"+
+			"💡 Отправьте любое сообщение — создадим пост для рассылки.")
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
