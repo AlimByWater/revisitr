@@ -326,3 +326,60 @@ cd backend && go test ./...
 - **onboarding activation через token проверен**
 - **suite не рушится из-за stale configured client bot target**
 
+
+## Дополнительное live-наблюдение после деплоя
+
+После первого push Telegram E2E изменений выяснилось следующее:
+
+### 1. Master Bot workflow прошёл, но контейнер на сервере падал в restart loop
+Причина:
+- на сервере в `/opt/revisitr/infra/.env.prod` отсутствовал `MASTER_BOT_TOKEN`
+- также отсутствовал `ADMIN_BOT_TOKEN`
+- workflow-шима, которая копировала `ADMIN_BOT_TOKEN -> MASTER_BOT_TOKEN`, оказалось недостаточно
+- фактически на сервере был только `BOT_TOKEN`
+
+Что сделано:
+- по SSH вручную добавлен `MASTER_BOT_TOKEN` из server-side `BOT_TOKEN`
+- после этого `infra-admin-bot-1` успешно стартовал
+- live logs показали успешный startup `revisitrbot`
+
+### 2. Live master-bot smoke после server restart
+После поднятия контейнера live userbot-проверка дала:
+- `/start` → отвечает
+- `/help` → отвечает
+- `/mybots` → отвечает `Ваш Telegram не привязан`
+- `/settings` → отвечает `Ваш Telegram не привязан`
+
+Это уже было лучше предыдущего состояния, когда бот не отвечал вовсе.
+
+### 3. На production БД отсутствуют таблицы `master_bot_links` и `post_codes`
+Проверка через SSH/psql показала:
+- `master_bot_links` отсутствует
+- `post_codes` отсутствует
+- в таблице `bots` отсутствуют колонки из миграции 00033
+
+Причина:
+- backend workflow формально выполнял `Run migrations`
+- но лог показал `goose: no migrations to run. current version: 32`
+- root migration files `migrations/00033-00035.sql` не попадали в runtime path мигратора
+- в Docker image backend присутствуют только `backend/migrations`, но не root `migrations/`
+
+Итог:
+- live master-bot runtime уже запущен
+- но часть нового функционала на prod ещё не fully enabled на уровне схемы БД
+
+### 4. Что исправлено в CI/CD после этого наблюдения
+Подготовлены исправления:
+- `.github/workflows/admin-bot.yml`
+  - fallback для `MASTER_BOT_TOKEN` теперь должен уметь брать не только `ADMIN_BOT_TOKEN`, но и `BOT_TOKEN`
+- `.github/workflows/infrastructure.yml`
+  - теперь должен реагировать и на `migrations/**`
+- `infra/scripts/migrate.sh`
+  - теперь должен прогонять не только image-bundled `/migrations`, но и root `migrations/` из checkout
+
+### 5. Практический статус live system
+На момент этого отчёта:
+- master bot live отвечает на базовые команды
+- привязка / post-code paths на prod требуют применения root migrations `00033-00035`
+- configured `BOT_USERNAME=localrevisbot` всё ещё stale/offline target и остаётся xfail probe
+

@@ -61,9 +61,13 @@ jobs:
       - name: Deploy
         run: |
           ENV_FILE=/opt/revisitr/infra/.env.prod
-          if [ -f "$ENV_FILE" ] && grep -q '^ADMIN_BOT_TOKEN=' "$ENV_FILE" && ! grep -q '^MASTER_BOT_TOKEN=' "$ENV_FILE"; then
-            ADMIN_TOKEN=$(grep '^ADMIN_BOT_TOKEN=' "$ENV_FILE" | tail -n1 | cut -d= -f2-)
-            printf '\nMASTER_BOT_TOKEN=%s\n' "$ADMIN_TOKEN" >> "$ENV_FILE"
+          if [ -f "$ENV_FILE" ] && ! grep -q '^MASTER_BOT_TOKEN=' "$ENV_FILE"; then
+            SOURCE_TOKEN=$(grep -E '^(ADMIN_BOT_TOKEN|BOT_TOKEN)=' "$ENV_FILE" | head -n1 | cut -d= -f2-)
+            if [ -n "$SOURCE_TOKEN" ]; then
+              printf '
+MASTER_BOT_TOKEN=%s
+' "$SOURCE_TOKEN" >> "$ENV_FILE"
+            fi
           fi
           cd /opt/revisitr/infra
           export ADMIN_BOT_TAG=${{ github.sha }}

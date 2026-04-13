@@ -3,7 +3,7 @@ name: Infrastructure
 on:
   push:
     branches: [main]
-    paths: ['backend/migrations/**']
+    paths: ['backend/migrations/**', 'migrations/**', 'infra/scripts/migrate.sh', '.github/workflows/infrastructure.yml']
   workflow_dispatch:
     inputs:
       action:
