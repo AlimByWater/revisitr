@@ -56,6 +56,7 @@ func main() {
 			MasterLinks: pgRepo.NewMasterBot(pg),
 			AuthTokens:  redisRepo.NewMasterBotAuth(redis),
 			Bots:        pgRepo.NewBots(pg),
+			PostCodes:   pgRepo.NewPostCodes(pg),
 		},
 		logger,
 	)

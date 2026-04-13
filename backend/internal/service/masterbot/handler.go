@@ -282,7 +282,7 @@ func (h *handler) handleMyBots(ctx context.Context, msg *telego.Message) {
 		if username != "" {
 			username = "@" + username
 		}
-		sb.WriteString(fmt.Sprintf("%s %s %s\n", status, b.Name, username))
+		sb.WriteString(fmt.Sprintf("%s %s %s\n", status, escapeMarkdown(b.Name), escapeMarkdown(username)))
 	}
 
 	h.sendText(msg.Chat.ID, sb.String())
@@ -443,7 +443,7 @@ func (h *handler) handleCampaigns(ctx context.Context, msg *telego.Message) {
 			status = "❌"
 		}
 		sb.WriteString(fmt.Sprintf("%s %s\n   Статус: %s\n\n",
-			status, c.Name, c.Status))
+			status, escapeMarkdown(c.Name), escapeMarkdown(c.Status)))
 	}
 
 	h.sendText(msg.Chat.ID, sb.String())
@@ -473,7 +473,7 @@ func (h *handler) handlePromotions(ctx context.Context, msg *telego.Message) {
 		if !p.Active {
 			continue
 		}
-		sb.WriteString(fmt.Sprintf("• %s (%s)\n", p.Name, p.Type))
+		sb.WriteString(fmt.Sprintf("• %s (%s)\n", escapeMarkdown(p.Name), escapeMarkdown(p.Type)))
 	}
 
 	if sb.Len() == len("🏷️ Активные акции:\n\n") {
@@ -530,6 +530,11 @@ func (h *handler) handleHelp(_ context.Context, msg *telego.Message) {
 			"/promo [КОД] — создать промокод\n"+
 			"/help — эта справка\n\n"+
 			"💡 Отправьте любое сообщение — создадим пост для рассылки.")
+}
+
+func escapeMarkdown(text string) string {
+	replacer := strings.NewReplacer("_", "\\_", "*", "\\*", "[", "\\[", "`", "\\`")
+	return replacer.Replace(text)
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────

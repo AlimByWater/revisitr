@@ -1,0 +1,25 @@
+[project]
+name = "revisitr-telegram"
+version = "0.1.0"
+description = "Telethon infrastructure for bot E2E testing and competitor analysis"
+requires-python = ">=3.11"
+dependencies = [
+    "telethon>=1.36",
+    "python-dotenv>=1.0",
+    "httpx>=0.27",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
