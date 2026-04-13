@@ -16,6 +16,7 @@ import RegisterPage from './routes/auth/register'
 import DashboardHome from './routes/dashboard/index'
 import BotsPage from './routes/dashboard/bots/index'
 import BotDetailPage from './routes/dashboard/bots/$botId'
+import CreateBotPage from './routes/dashboard/bots/create'
 import ClientsPage from './routes/dashboard/clients/index'
 import ClientDetailPage from './routes/dashboard/clients/$clientId'
 import LoyaltyProgramsPage from './routes/dashboard/loyalty/index'
@@ -105,6 +106,7 @@ export const router = createBrowserRouter(
           children: [
             { index: true, element: <DashboardHome /> },
             { path: 'bots', element: <BotsPage /> },
+            { path: 'bots/create', element: <CreateBotPage /> },
             { path: 'bots/:botId', element: <BotDetailPage /> },
             { path: 'clients', element: <ClientsPage /> },
             { path: 'clients/segments', element: <SegmentsPage /> },
