@@ -1,4 +1,4 @@
-name: Admin Bot
+name: Master Bot
 
 on:
   push:
@@ -53,13 +53,18 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: backend
-          file: backend/Dockerfile.admin-bot
+          file: backend/Dockerfile.masterbot
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
       - name: Deploy
         run: |
+          ENV_FILE=/opt/revisitr/infra/.env.prod
+          if [ -f "$ENV_FILE" ] && grep -q '^ADMIN_BOT_TOKEN=' "$ENV_FILE" && ! grep -q '^MASTER_BOT_TOKEN=' "$ENV_FILE"; then
+            ADMIN_TOKEN=$(grep '^ADMIN_BOT_TOKEN=' "$ENV_FILE" | tail -n1 | cut -d= -f2-)
+            printf '\nMASTER_BOT_TOKEN=%s\n' "$ADMIN_TOKEN" >> "$ENV_FILE"
+          fi
           cd /opt/revisitr/infra
           export ADMIN_BOT_TAG=${{ github.sha }}
           docker compose -f docker-compose.prod.yml pull admin-bot
