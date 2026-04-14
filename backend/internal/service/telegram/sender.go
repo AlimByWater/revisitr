@@ -3,7 +3,10 @@ package telegram
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
+	"path"
 	"strings"
 	"time"
 
@@ -70,7 +73,11 @@ func (s *Sender) sendPart(
 		return err
 
 	case entity.PartPhoto:
-		photo := tu.Photo(tu.ID(chatID), s.mediaInput(part))
+		media, err := s.mediaInput(ctx, part)
+		if err != nil {
+			return err
+		}
+		photo := tu.Photo(tu.ID(chatID), media)
 		if part.Text != "" {
 			photo = photo.WithCaption(part.Text)
 		}
@@ -80,11 +87,15 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			photo = photo.WithReplyMarkup(markup)
 		}
-		_, err := bot.SendPhoto(ctx, photo)
+		_, err = bot.SendPhoto(ctx, photo)
 		return err
 
 	case entity.PartVideo:
-		video := tu.Video(tu.ID(chatID), s.mediaInput(part))
+		media, err := s.mediaInput(ctx, part)
+		if err != nil {
+			return err
+		}
+		video := tu.Video(tu.ID(chatID), media)
 		if part.Text != "" {
 			video = video.WithCaption(part.Text)
 		}
@@ -94,56 +105,76 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			video = video.WithReplyMarkup(markup)
 		}
-		_, err := bot.SendVideo(ctx, video)
+		_, err = bot.SendVideo(ctx, video)
 		return err
 
 	case entity.PartDocument:
-		doc := tu.Document(tu.ID(chatID), s.mediaInput(part))
+		media, err := s.mediaInput(ctx, part)
+		if err != nil {
+			return err
+		}
+		doc := tu.Document(tu.ID(chatID), media)
 		if part.Text != "" {
 			doc = doc.WithCaption(part.Text)
 		}
 		if markup != nil {
 			doc = doc.WithReplyMarkup(markup)
 		}
-		_, err := bot.SendDocument(ctx, doc)
+		_, err = bot.SendDocument(ctx, doc)
 		return err
 
 	case entity.PartSticker:
-		sticker := tu.Sticker(tu.ID(chatID), s.mediaInput(part))
-		_, err := bot.SendSticker(ctx, sticker)
+		media, err := s.mediaInput(ctx, part)
+		if err != nil {
+			return err
+		}
+		sticker := tu.Sticker(tu.ID(chatID), media)
+		_, err = bot.SendSticker(ctx, sticker)
 		return err
 
 	case entity.PartAnimation:
-		anim := tu.Animation(tu.ID(chatID), s.mediaInput(part))
+		media, err := s.mediaInput(ctx, part)
+		if err != nil {
+			return err
+		}
+		anim := tu.Animation(tu.ID(chatID), media)
 		if part.Text != "" {
 			anim = anim.WithCaption(part.Text)
 		}
 		if markup != nil {
 			anim = anim.WithReplyMarkup(markup)
 		}
-		_, err := bot.SendAnimation(ctx, anim)
+		_, err = bot.SendAnimation(ctx, anim)
 		return err
 
 	case entity.PartAudio:
-		audio := tu.Audio(tu.ID(chatID), s.mediaInput(part))
+		media, err := s.mediaInput(ctx, part)
+		if err != nil {
+			return err
+		}
+		audio := tu.Audio(tu.ID(chatID), media)
 		if part.Text != "" {
 			audio = audio.WithCaption(part.Text)
 		}
 		if markup != nil {
 			audio = audio.WithReplyMarkup(markup)
 		}
-		_, err := bot.SendAudio(ctx, audio)
+		_, err = bot.SendAudio(ctx, audio)
 		return err
 
 	case entity.PartVoice:
-		voice := tu.Voice(tu.ID(chatID), s.mediaInput(part))
+		media, err := s.mediaInput(ctx, part)
+		if err != nil {
+			return err
+		}
+		voice := tu.Voice(tu.ID(chatID), media)
 		if part.Text != "" {
 			voice = voice.WithCaption(part.Text)
 		}
 		if markup != nil {
 			voice = voice.WithReplyMarkup(markup)
 		}
-		_, err := bot.SendVoice(ctx, voice)
+		_, err = bot.SendVoice(ctx, voice)
 		return err
 
 	default:
@@ -151,16 +182,43 @@ func (s *Sender) sendPart(
 	}
 }
 
-// mediaInput selects FileFromID (cached) or FileFromURL.
-func (s *Sender) mediaInput(part entity.MessagePart) telego.InputFile {
+// mediaInput selects FileFromID (cached), or downloads bytes from a public URL
+// so uploads don't depend on Telegram fetching external URLs itself.
+func (s *Sender) mediaInput(ctx context.Context, part entity.MessagePart) (telego.InputFile, error) {
 	if part.MediaID != "" {
-		return tu.FileFromID(part.MediaID)
+		return tu.FileFromID(part.MediaID), nil
 	}
 	url := part.MediaURL
 	if !strings.HasPrefix(url, "http") {
 		url = s.baseURL + url
 	}
-	return tu.FileFromURL(url)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return telego.InputFile{}, fmt.Errorf("build media request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return telego.InputFile{}, fmt.Errorf("download media: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return telego.InputFile{}, fmt.Errorf("download media: unexpected status %d", resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 25<<20))
+	if err != nil {
+		return telego.InputFile{}, fmt.Errorf("read media body: %w", err)
+	}
+
+	filename := path.Base(part.MediaURL)
+	if filename == "." || filename == "/" || filename == "" {
+		filename = "media"
+	}
+
+	return tu.FileFromBytes(data, filename), nil
 }
 
 func (s *Sender) buildInlineKeyboard(buttons [][]entity.InlineButton) *telego.InlineKeyboardMarkup {
