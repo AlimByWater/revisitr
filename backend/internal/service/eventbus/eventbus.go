@@ -24,12 +24,12 @@ type BotEvent struct {
 
 // EventBus publishes events to Redis Pub/Sub channels.
 type EventBus struct {
-	rds    *goredis.Client
-	logger *slog.Logger
+	rdsClient func() *goredis.Client
+	logger    *slog.Logger
 }
 
-func New(rds *goredis.Client, logger *slog.Logger) *EventBus {
-	return &EventBus{rds: rds, logger: logger}
+func New(rdsClient func() *goredis.Client, logger *slog.Logger) *EventBus {
+	return &EventBus{rdsClient: rdsClient, logger: logger}
 }
 
 func (eb *EventBus) PublishBotReload(ctx context.Context, botID int) error {
@@ -49,12 +49,21 @@ func (eb *EventBus) PublishBotSettings(ctx context.Context, botID int, field str
 }
 
 func (eb *EventBus) publish(ctx context.Context, channel string, event BotEvent) error {
+	if eb == nil || eb.rdsClient == nil {
+		return fmt.Errorf("eventbus: redis client getter is not configured")
+	}
+
+	rds := eb.rdsClient()
+	if rds == nil {
+		return fmt.Errorf("eventbus: redis client is not initialized")
+	}
+
 	data, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("eventbus: marshal event: %w", err)
 	}
 
-	if err := eb.rds.Publish(ctx, channel, data).Err(); err != nil {
+	if err := rds.Publish(ctx, channel, data).Err(); err != nil {
 		eb.logger.Error("eventbus: publish failed",
 			"channel", channel,
 			"bot_id", event.BotID,

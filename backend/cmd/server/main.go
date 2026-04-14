@@ -119,7 +119,7 @@ func main() {
 
 	// ── Event Bus ─────────────────────────────────────────────────────────────
 
-	evBus := eventbus.New(rds.Client(), logger)
+	evBus := eventbus.New(rds.Client, logger)
 
 	// ── Usecases ──────────────────────────────────────────────────────────────
 
