@@ -70,7 +70,7 @@ func (h *handler) sendBotSettings(_ context.Context, chatID int64, bot *entity.B
 		"📋 Поля регформы: %d\n"+
 		"📦 Модули: %d\n\n"+
 		"Для изменения настроек используйте веб-панель.",
-		bot.Name, welcome, formFields, modules)
+		escapeMarkdown(bot.Name), escapeMarkdown(welcome), formFields, modules)
 
-	h.sendText(chatID, text)
+	h.sendMarkdown(chatID, text)
 }

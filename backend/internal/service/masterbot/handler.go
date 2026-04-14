@@ -308,7 +308,7 @@ func (h *handler) requireAuth(ctx context.Context, msg *telego.Message) *entity.
 			"Для привязки:\n"+
 			"1. Откройте веб-панель → Настройки → Админ-бот\n"+
 			"2. Нажмите «Получить код привязки»\n"+
-			"3. Отправьте сюда: /link ВАШИ_КОД")
+			"3. Отправьте сюда: /link ВАШ КОД")
 		return nil
 	}
 	return link
@@ -514,7 +514,7 @@ func (h *handler) handleCreatePromo(ctx context.Context, msg *telego.Message, ar
 		return
 	}
 
-	h.sendText(msg.Chat.ID, fmt.Sprintf("✅ Промокод создан: `%s`\n\nИспользуйте в рассылках или передайте клиентам.", code))
+	h.sendMarkdown(msg.Chat.ID, fmt.Sprintf("✅ Промокод создан: `%s`\n\nИспользуйте в рассылках или передайте клиентам.", code))
 }
 
 func (h *handler) handleHelp(_ context.Context, msg *telego.Message) {
@@ -541,7 +541,13 @@ func escapeMarkdown(text string) string {
 
 func (h *handler) sendText(chatID int64, text string) {
 	msg := tu.Message(tu.ID(chatID), text)
-	msg = msg.WithParseMode("Markdown")
+	if _, err := h.bot.SendMessage(context.Background(), msg); err != nil {
+		h.logger.Error("send message", "error", err, "chat_id", chatID)
+	}
+}
+
+func (h *handler) sendMarkdown(chatID int64, text string) {
+	msg := tu.Message(tu.ID(chatID), text).WithParseMode("Markdown")
 	if _, err := h.bot.SendMessage(context.Background(), msg); err != nil {
 		h.logger.Error("send message", "error", err, "chat_id", chatID)
 	}
