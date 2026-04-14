@@ -298,7 +298,7 @@ const store = {
     {
       id: 1, org_id: 1, name: 'Кофейня на Маросейке', username: 'marosejka_bot',
       token_masked: '7281***:AAH***', status: 'active' as const,
-      settings: { modules: ['loyalty', 'campaigns'], buttons: [{ label: 'Меню', type: 'webapp', value: 'https://example.com' }], registration_form: [{ name: 'phone', label: 'Телефон', type: 'phone', required: true }], welcome_message: 'Привет! Добро пожаловать в нашу кофейню.' },
+      settings: { modules: ['loyalty', 'campaigns'], buttons: [{ label: 'Меню', type: 'text', value: 'Показываем меню в сообщении' }], registration_form: [{ name: 'phone', label: 'Телефон', type: 'phone', required: true }], welcome_message: 'Привет! Добро пожаловать в нашу кофейню.' },
       created_at: ago(90), updated_at: ago(2), client_count: 210, program_id: 1,
     },
     {

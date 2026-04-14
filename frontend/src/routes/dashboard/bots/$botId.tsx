@@ -223,7 +223,7 @@ export default function BotDetailPage() {
         welcome_message: bot.settings.welcome_message ?? '',
         welcome_content: bot.settings.welcome_content,
         modules: bot.settings.modules ?? [],
-        buttons: bot.settings.buttons ?? [],
+        buttons: (bot.settings.buttons ?? []).map((button) => ({ ...button, type: 'text' })),
         registration_form: bot.settings.registration_form ?? [],
       })
     }
@@ -545,7 +545,7 @@ function GeneralTab({
     botsApi.updateSettings(botId, {
       welcome_message: settings.welcome_message,
       welcome_content: settings.welcome_content,
-      buttons: settings.buttons,
+      buttons: settings.buttons.map((button) => ({ ...button, type: 'text' })),
       registration_form: settings.registration_form,
     }),
   )
@@ -571,7 +571,7 @@ function GeneralTab({
   const addButton = () => {
     if (settings.buttons.length >= 10) return
     setSettings((s) =>
-      s ? { ...s, buttons: [...s.buttons, { label: '', type: 'url', value: '' }] } : s,
+      s ? { ...s, buttons: [...s.buttons, { label: '', type: 'text', value: '' }] } : s,
     )
   }
 
@@ -732,10 +732,8 @@ function GeneralTab({
         </button>
       </div>
       <p className="text-xs text-neutral-400 mb-4">
-        <strong className="text-neutral-500">Ссылка</strong> — открывает URL в браузере.{' '}
-        <strong className="text-neutral-500">Callback</strong> — отправляет событие боту для обработки действия.{' '}
-        <strong className="text-neutral-500">WebApp</strong> — открывает мини-приложение внутри Telegram.{' '}
-        <strong className="text-neutral-500">Команда</strong> — выполняет пользовательскую команду (/текст).
+        Сейчас используются только обычные кнопки меню Telegram. Кнопка показывает название в клавиатуре и отправляет
+        пользователю подготовленный текст-ответ.
       </p>
 
       {settings.buttons.length === 0 ? (
@@ -757,7 +755,7 @@ function GeneralTab({
                       >
                         <GripVertical className="w-4 h-4" />
                       </button>
-                      <div className="flex-1 grid grid-cols-3 gap-3">
+                      <div className="flex-1 grid grid-cols-2 gap-3">
                         <input
                           type="text"
                           value={button.label}
@@ -767,31 +765,11 @@ function GeneralTab({
                           className={inputClassName}
                           aria-label={`Название кнопки ${index + 1}`}
                         />
-                        <select
-                          value={button.type}
-                          onChange={(e) => updateButton(index, 'type', e.target.value)}
-                          disabled={isSaving}
-                          className={inputClassName}
-                          aria-label={`Тип кнопки ${index + 1}`}
-                        >
-                          <option value="url">Ссылка</option>
-                          <option value="callback">Callback</option>
-                          <option value="webapp">WebApp</option>
-                          <option value="command">Команда</option>
-                        </select>
                         <input
                           type="text"
                           value={button.value}
                           onChange={(e) => updateButton(index, 'value', e.target.value)}
-                          placeholder={
-                            button.type === 'url'
-                              ? 'https://...'
-                              : button.type === 'webapp'
-                                ? 'https://...'
-                                : button.type === 'command'
-                                  ? '/команда'
-                                  : 'callback_data'
-                          }
+                          placeholder="Текст ответа"
                           disabled={isSaving}
                           className={inputClassName}
                           aria-label={`Значение кнопки ${index + 1}`}
