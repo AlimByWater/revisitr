@@ -101,7 +101,7 @@ func (h *handler) handleStart(ctx context.Context, msg *telego.Message) {
 	}
 
 	if needsPhone {
-		h.sendWithKeyboard(chatID, "Для регистрации поделитесь номером телефона:", buildContactRequest())
+		h.sendWithKeyboard(chatID, h.registrationPrompt(), buildContactRequest())
 	} else {
 		// Auto-register from Telegram profile
 		h.autoRegister(ctx, msg)
@@ -116,7 +116,7 @@ func (h *handler) handleContact(ctx context.Context, msg *telego.Message) {
 	// Check not already registered
 	existing, _ := h.mgr.clientsRepo.GetByTelegramID(ctx, h.info.ID, telegramID)
 	if existing != nil {
-		h.sendMainMenu(ctx, chatID, "Вы уже зарегистрированы! 👍")
+		h.sendMainMenu(ctx, chatID, h.alreadyRegisteredText())
 		return
 	}
 
@@ -140,7 +140,7 @@ func (h *handler) handleContact(ctx context.Context, msg *telego.Message) {
 	// Award welcome bonus if loyalty program exists
 	h.awardWelcomeBonus(ctx, client)
 
-	h.sendMainMenu(ctx, chatID, fmt.Sprintf("Добро пожаловать, %s! Вы успешно зарегистрированы. 🎉", client.FirstName))
+	h.sendMainMenu(ctx, chatID, h.registeredWelcomeText(client.FirstName))
 }
 
 func (h *handler) autoRegister(ctx context.Context, msg *telego.Message) {
@@ -165,7 +165,7 @@ func (h *handler) autoRegister(ctx context.Context, msg *telego.Message) {
 
 	h.awardWelcomeBonus(ctx, client)
 
-	h.sendMainMenu(ctx, chatID, fmt.Sprintf("Добро пожаловать, %s! Вы успешно зарегистрированы. 🎉", client.FirstName))
+	h.sendMainMenu(ctx, chatID, h.registeredWelcomeText(client.FirstName))
 }
 
 func (h *handler) handleBalance(ctx context.Context, msg *telego.Message) {
@@ -174,18 +174,18 @@ func (h *handler) handleBalance(ctx context.Context, msg *telego.Message) {
 
 	client, err := h.mgr.clientsRepo.GetByTelegramID(ctx, h.info.ID, telegramID)
 	if err != nil {
-		h.sendText(chatID, "Сначала нужно зарегистрироваться. Отправьте /start")
+		h.sendText(chatID, h.balanceNeedsRegistrationText())
 		return
 	}
 
 	programs, err := h.mgr.loyaltyRepo.GetProgramsByOrgID(ctx, h.info.OrgID)
 	if err != nil || len(programs) == 0 {
-		h.sendText(chatID, "Программа лояльности пока не настроена.")
+		h.sendText(chatID, h.loyaltyUnavailableText())
 		return
 	}
 
 	var sb strings.Builder
-	sb.WriteString("💰 Ваш баланс:\n\n")
+	sb.WriteString(h.balanceHeader())
 
 	for _, prog := range programs {
 		if !prog.IsActive {
@@ -218,9 +218,15 @@ func (h *handler) handleBalance(ctx context.Context, msg *telego.Message) {
 			currencyName = "баллов"
 		}
 
-		sb.WriteString(fmt.Sprintf("📋 %s\n", prog.Name))
-		sb.WriteString(fmt.Sprintf("   Баланс: %.0f %s\n", balance, currencyName))
-		sb.WriteString(fmt.Sprintf("   Уровень: %s\n\n", levelName))
+		if h.isBaratieDemo() {
+			sb.WriteString(fmt.Sprintf("⚓ %s\n", prog.Name))
+			sb.WriteString(fmt.Sprintf("   🪙 Дублоны: %.0f %s\n", balance, currencyName))
+			sb.WriteString(fmt.Sprintf("   🧭 Ранг экипажа: %s\n\n", levelName))
+		} else {
+			sb.WriteString(fmt.Sprintf("📋 %s\n", prog.Name))
+			sb.WriteString(fmt.Sprintf("   Баланс: %.0f %s\n", balance, currencyName))
+			sb.WriteString(fmt.Sprintf("   Уровень: %s\n\n", levelName))
+		}
 	}
 
 	h.sendText(chatID, sb.String())
@@ -231,25 +237,36 @@ func (h *handler) handleLocations(ctx context.Context, msg *telego.Message) {
 
 	locations, err := h.mgr.posRepo.GetByOrgID(ctx, h.info.OrgID)
 	if err != nil || len(locations) == 0 {
-		h.sendText(chatID, "Информация о точках пока недоступна.")
+		h.sendText(chatID, h.locationsUnavailableText())
 		return
 	}
 
 	var sb strings.Builder
-	sb.WriteString("📍 Наши точки:\n\n")
+	sb.WriteString(h.locationsHeader())
 
 	for _, loc := range locations {
 		if !loc.IsActive {
 			continue
 		}
-		sb.WriteString(fmt.Sprintf("🏠 %s\n", loc.Name))
-		if loc.Address != "" {
-			sb.WriteString(fmt.Sprintf("   📌 %s\n", loc.Address))
+		if h.isBaratieDemo() {
+			sb.WriteString(fmt.Sprintf("⚓ %s\n", loc.Name))
+			if loc.Address != "" {
+				sb.WriteString(fmt.Sprintf("   🪸 %s\n", loc.Address))
+			}
+			if loc.Phone != "" {
+				sb.WriteString(fmt.Sprintf("   📯 %s\n", loc.Phone))
+			}
+			sb.WriteString("\n")
+		} else {
+			sb.WriteString(fmt.Sprintf("🏠 %s\n", loc.Name))
+			if loc.Address != "" {
+				sb.WriteString(fmt.Sprintf("   📌 %s\n", loc.Address))
+			}
+			if loc.Phone != "" {
+				sb.WriteString(fmt.Sprintf("   📞 %s\n", loc.Phone))
+			}
+			sb.WriteString("\n")
 		}
-		if loc.Phone != "" {
-			sb.WriteString(fmt.Sprintf("   📞 %s\n", loc.Phone))
-		}
-		sb.WriteString("\n")
 	}
 
 	h.sendText(chatID, sb.String())
@@ -257,6 +274,10 @@ func (h *handler) handleLocations(ctx context.Context, msg *telego.Message) {
 
 func (h *handler) handleAbout(ctx context.Context, msg *telego.Message) {
 	chatID := msg.Chat.ID
+	if h.isBaratieDemo() {
+		h.sendText(chatID, "⋆｡°✩ ⚓︎ Baratie ⚓︎ ✩°｡⋆\n\nЛегендарный ресторан на воде, где кухня Sanji встречается с морским ветром East Blue.\n\nОткройте меню, проверьте дублоны и выберите курс к Baratie.")
+		return
+	}
 	h.sendText(chatID, fmt.Sprintf("ℹ️ %s\n\nИспользуйте меню для навигации.", h.info.Name))
 }
 
@@ -317,7 +338,7 @@ func (h *handler) awardWelcomeBonus(ctx context.Context, client *entity.BotClien
 			currencyName = "баллов"
 		}
 
-		h.sendText(client.TelegramID, fmt.Sprintf("🎁 Вам начислен приветственный бонус: %.0f %s!", bonus, currencyName))
+		h.sendText(client.TelegramID, h.welcomeBonusText(bonus, currencyName))
 		h.logger.Info("welcome bonus awarded", "client_id", client.ID, "amount", bonus, "program", prog.Name)
 	}
 }
@@ -341,9 +362,80 @@ func (h *handler) sendWelcomeContent(ctx context.Context, chatID int64) {
 	// Legacy text welcome
 	welcome := settings.WelcomeMessage
 	if welcome == "" {
-		welcome = fmt.Sprintf("Добро пожаловать в %s! 🎉", h.info.Name)
+		if h.isBaratieDemo() {
+			welcome = "⋆｡°✩ ⚓︎ Добро пожаловать на борт Baratie ⚓︎ ✩°｡⋆"
+		} else {
+			welcome = fmt.Sprintf("Добро пожаловать в %s! 🎉", h.info.Name)
+		}
 	}
 	h.sendText(chatID, welcome)
+}
+
+func (h *handler) isBaratieDemo() bool {
+	return h.info.Username == "baratie_demo_bot"
+}
+
+func (h *handler) registrationPrompt() string {
+	if h.isBaratieDemo() {
+		return "╭──────༺🪸༻──────╮\nПоделитесь номером телефона,\nи мы впишем вас в список гостей Baratie.\n╰──────༺🦈༻──────╯"
+	}
+	return "Для регистрации поделитесь номером телефона:"
+}
+
+func (h *handler) alreadyRegisteredText() string {
+	if h.isBaratieDemo() {
+		return "⚓ Вы уже в списке гостей Baratie. Добро пожаловать на борт!"
+	}
+	return "Вы уже зарегистрированы! 👍"
+}
+
+func (h *handler) registeredWelcomeText(firstName string) string {
+	if h.isBaratieDemo() {
+		return fmt.Sprintf("⚓ %s, вы успешно поднялись на борт Baratie!\n\nОткройте меню, проверьте дублоны и выберите свой курс.", firstName)
+	}
+	return fmt.Sprintf("Добро пожаловать, %s! Вы успешно зарегистрированы. 🎉", firstName)
+}
+
+func (h *handler) balanceNeedsRegistrationText() string {
+	if h.isBaratieDemo() {
+		return "⚓ Сначала поднимитесь на борт через /start, чтобы открыть трюм с дублонами."
+	}
+	return "Сначала нужно зарегистрироваться. Отправьте /start"
+}
+
+func (h *handler) loyaltyUnavailableText() string {
+	if h.isBaratieDemo() {
+		return "🪙 Корабельная казна пока недоступна. Попробуйте чуть позже."
+	}
+	return "Программа лояльности пока не настроена."
+}
+
+func (h *handler) balanceHeader() string {
+	if h.isBaratieDemo() {
+		return "⋆｡°✩ 🪙 Трюм дублонов Baratie 🪙 ✩°｡⋆\n\n"
+	}
+	return "💰 Ваш баланс:\n\n"
+}
+
+func (h *handler) locationsUnavailableText() string {
+	if h.isBaratieDemo() {
+		return "🧭 Курс к Baratie пока уточняется. Загляните чуть позже."
+	}
+	return "Информация о точках пока недоступна."
+}
+
+func (h *handler) locationsHeader() string {
+	if h.isBaratieDemo() {
+		return "⋆｡°✩ 🧭 Курс к Baratie 🧭 ✩°｡⋆\n\n"
+	}
+	return "📍 Наши точки:\n\n"
+}
+
+func (h *handler) welcomeBonusText(bonus float64, currencyName string) string {
+	if h.isBaratieDemo() {
+		return fmt.Sprintf("🪙 В ваш трюм зачислено %.0f %s!\nДобро пожаловать в экипаж Baratie.", bonus, currencyName)
+	}
+	return fmt.Sprintf("🎁 Вам начислен приветственный бонус: %.0f %s!", bonus, currencyName)
 }
 
 func (h *handler) sendText(chatID int64, text string) {
