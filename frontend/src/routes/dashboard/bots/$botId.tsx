@@ -154,6 +154,38 @@ function buttonSummary(content?: MessageContent, fallback = ''): string {
   return [text.slice(0, 90) + (text.length > 90 ? '…' : ''), details.join(' · ')].filter(Boolean).join(' · ')
 }
 
+function SectionBlock({
+  eyebrow,
+  title,
+  description,
+  actions,
+  children,
+}: {
+  eyebrow?: string
+  title: string
+  description?: string
+  actions?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-2xl border border-surface-border bg-neutral-50/60 p-5 md:p-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-5">
+        <div className="min-w-0">
+          {eyebrow && (
+            <div className="text-[10px] uppercase tracking-[0.22em] text-neutral-400 font-medium mb-2">
+              {eyebrow}
+            </div>
+          )}
+          <h3 className="text-base font-semibold text-neutral-900">{title}</h3>
+          {description && <p className="text-sm text-neutral-500 mt-1 max-w-2xl">{description}</p>}
+        </div>
+        {actions && <div className="shrink-0">{actions}</div>}
+      </div>
+      {children}
+    </section>
+  )
+}
+
 /** Per-tab save hook returning state + handler */
 function useSaveAction(_id: number, updater: () => Promise<void>) {
   const [isSaving, setIsSaving] = useState(false)
@@ -597,7 +629,7 @@ function GeneralTab({
   botName: string
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [expandedButtons, setExpandedButtons] = useState<string[]>([])
+  const [expandedButtonId, setExpandedButtonId] = useState<string | null>(null)
 
   const { isSaving, saveError, saveSuccess, save } = useSaveAction(botId, () =>
     botsApi.updateSettings(botId, {
@@ -633,6 +665,7 @@ function GeneralTab({
 
   const addButton = () => {
     if (settings.buttons.length >= 10) return
+    const nextId = `btn-${settings.buttons.length}`
     setSettings((s) =>
       s
         ? {
@@ -644,6 +677,7 @@ function GeneralTab({
           }
         : s,
     )
+    setExpandedButtonId(nextId)
   }
 
   const updateButton = (index: number, field: keyof BotButton, value: string) => {
@@ -675,9 +709,7 @@ function GeneralTab({
   }
 
   const toggleButtonExpanded = (id: string) => {
-    setExpandedButtons((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    )
+    setExpandedButtonId((current) => (current === id ? null : id))
   }
 
   // --- Form dnd ---
@@ -762,203 +794,198 @@ function GeneralTab({
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
-      {/* Section 1: Welcome Message */}
-      <h3 className="text-base font-semibold text-neutral-900 mb-4">Приветственное сообщение</h3>
-      <p className="text-sm text-neutral-400 mb-5">
-        Составное сообщение, которое клиент видит при запуске бота. Добавляйте текст, фото, видео, стикеры и кнопки.
-      </p>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Left: Editor */}
-        <div>
-          {/* Template variable chips */}
-          <div className="flex flex-wrap gap-2 mb-3">
-            {TEMPLATE_VARIABLES.map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => insertVariable(v)}
-                className="px-2.5 py-1 rounded-md text-xs font-mono bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-          <MessageContentEditor
-            value={welcomeContent}
-            onChange={(content) => {
-              setSettings((s) => s ? {
-                ...s,
-                welcome_content: content,
-                welcome_message: welcomeMessageFromContent(content, s.welcome_message),
-              } : s)
-            }}
-            onUpload={campaignsApi.uploadFile}
-            maxParts={5}
-          />
-        </div>
-
-        {/* Right: Live Preview */}
-        <div className="flex justify-center">
-          <TelegramPreview
-            botName={botName}
-            content={welcomeContent}
-            showFrame
-          />
-        </div>
-      </div>
-
-      {/* Section divider */}
-      <div className="border-t border-surface-border my-8"></div>
-
-      {/* Section 2: Buttons */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-semibold text-neutral-900">Кнопки бота</h3>
-        <button
-          type="button"
-          onClick={addButton}
-          disabled={isSaving || settings.buttons.length >= 10}
-          className={cn(
-            'flex items-center gap-1.5 text-sm font-medium text-accent',
-            'hover:text-accent/80 transition-colors',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-          )}
+      <div className="space-y-8">
+        <SectionBlock
+          eyebrow="Старт"
+          title="Приветственное сообщение"
+          description="Составное сообщение, которое клиент видит при запуске бота. Добавляйте текст, фото, видео, стикеры и кнопки."
         >
-          <Plus className="w-4 h-4" />
-          Добавить
-        </button>
-      </div>
-      <p className="text-xs text-neutral-400 mb-4">
-        Сейчас используются только обычные кнопки меню Telegram. Для каждой кнопки можно собрать полноценный ответ:
-        текст, фото, видео, документы, несколько сообщений подряд и inline-кнопки внутри ответа.
-      </p>
-
-      {settings.buttons.length === 0 ? (
-        <p className="text-sm text-neutral-400 text-center py-4">Нет кнопок меню</p>
-      ) : (
-        <DndContext sensors={buttonSensors} collisionDetection={closestCenter} onDragEnd={handleButtonDragEnd}>
-          <SortableContext items={buttonIds} strategy={verticalListSortingStrategy}>
-            <div className="space-y-3">
-              {settings.buttons.map((button, index) => (
-                <SortableItem key={buttonIds[index]} id={buttonIds[index]}>
-                  {({ listeners, attributes }) => (
-                    <div className="rounded-xl border border-surface-border bg-neutral-50 overflow-hidden">
-                      <div className="flex items-start gap-3 p-3">
-                        <button
-                          type="button"
-                          className="mt-1 text-neutral-400 hover:text-neutral-600 cursor-grab active:cursor-grabbing touch-none"
-                          {...listeners}
-                          {...attributes}
-                          aria-label="Перетащить"
-                        >
-                          <GripVertical className="w-4 h-4" />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => toggleButtonExpanded(buttonIds[index])}
-                          className="flex-1 text-left min-w-0"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="text-sm font-semibold text-neutral-900">
-                                {button.label || `Кнопка ${index + 1}`}
-                              </div>
-                              <div className="text-xs text-neutral-500 mt-1 break-words">
-                                {buttonSummary(button.content, button.value)}
-                              </div>
-                            </div>
-                            <ChevronDown
-                              className={cn(
-                                'w-4 h-4 mt-0.5 text-neutral-400 transition-transform shrink-0',
-                                expandedButtons.includes(buttonIds[index]) && 'rotate-180',
-                              )}
-                            />
-                          </div>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => removeButton(index)}
-                          disabled={isSaving}
-                          className="mt-1 p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
-                          aria-label={`Удалить кнопку ${index + 1}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {expandedButtons.includes(buttonIds[index]) && (
-                        <div className="border-t border-surface-border bg-white p-4">
-                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            <div className="space-y-3">
-                              <input
-                                type="text"
-                                value={button.label}
-                                onChange={(e) => updateButton(index, 'label', e.target.value)}
-                                placeholder="Название кнопки в клавиатуре"
-                                disabled={isSaving}
-                                className={inputClassName}
-                                aria-label={`Название кнопки ${index + 1}`}
-                              />
-                              <MessageContentEditor
-                                value={button.content && button.content.parts?.length > 0
-                                  ? button.content
-                                  : buttonContentFromValue(button.value)}
-                                onChange={(content) => updateButtonContent(index, content)}
-                                onUpload={campaignsApi.uploadFile}
-                                maxParts={5}
-                              />
-                            </div>
-
-                            <div className="flex justify-center">
-                              <TelegramPreview
-                                botName={button.label || botName}
-                                content={button.content && button.content.parts?.length > 0
-                                  ? button.content
-                                  : buttonContentFromValue(button.value)}
-                                showFrame
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </SortableItem>
-              ))}
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)] gap-6 xl:gap-8 items-start">
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {TEMPLATE_VARIABLES.map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => insertVariable(v)}
+                    className="px-2.5 py-1 rounded-md text-xs font-mono bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+              <MessageContentEditor
+                value={welcomeContent}
+                onChange={(content) => {
+                  setSettings((s) => s ? {
+                    ...s,
+                    welcome_content: content,
+                    welcome_message: welcomeMessageFromContent(content, s.welcome_message),
+                  } : s)
+                }}
+                onUpload={campaignsApi.uploadFile}
+                maxParts={5}
+              />
             </div>
-          </SortableContext>
-        </DndContext>
-      )}
 
-      {settings.buttons.length >= 10 && (
-        <p className="text-xs text-neutral-400 mt-2">Максимум 10 кнопок</p>
-      )}
+            <div className="xl:sticky xl:top-6 flex justify-center">
+              <TelegramPreview
+                botName={botName}
+                content={welcomeContent}
+                showFrame
+              />
+            </div>
+          </div>
+        </SectionBlock>
 
-      {/* Section divider */}
-      <div className="border-t border-surface-border my-8"></div>
-
-      {/* Section 3: Registration Form */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-semibold text-neutral-900">Форма регистрации</h3>
-        <button
-          type="button"
-          onClick={addField}
-          disabled={isSaving}
-          className={cn(
-            'flex items-center gap-1.5 text-sm font-medium text-accent',
-            'hover:text-accent/80 transition-colors',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
+        <SectionBlock
+          eyebrow="Клавиатура"
+          title="Кнопки бота"
+          description="Обычные кнопки меню Telegram. Для каждой кнопки можно собрать полноценный ответ: текст, фото, видео, документы, несколько сообщений подряд и inline-кнопки."
+          actions={(
+            <button
+              type="button"
+              onClick={addButton}
+              disabled={isSaving || settings.buttons.length >= 10}
+              className={cn(
+                'inline-flex items-center gap-1.5 text-sm font-medium text-accent',
+                'hover:text-accent/80 transition-colors',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+              )}
+            >
+              <Plus className="w-4 h-4" />
+              Добавить кнопку
+            </button>
           )}
         >
-          <Plus className="w-4 h-4" />
-          Добавить
-        </button>
-      </div>
+          {settings.buttons.length === 0 ? (
+            <p className="text-sm text-neutral-400 text-center py-6">Нет кнопок меню</p>
+          ) : (
+            <DndContext sensors={buttonSensors} collisionDetection={closestCenter} onDragEnd={handleButtonDragEnd}>
+              <SortableContext items={buttonIds} strategy={verticalListSortingStrategy}>
+                <div className="space-y-3">
+                  {settings.buttons.map((button, index) => (
+                    <SortableItem key={buttonIds[index]} id={buttonIds[index]}>
+                      {({ listeners, attributes }) => {
+                        const isExpanded = expandedButtonId === buttonIds[index]
+                        const buttonContent = button.content && button.content.parts?.length > 0
+                          ? button.content
+                          : buttonContentFromValue(button.value)
 
-      {/* Presets */}
-      <div className="flex flex-wrap gap-2 mb-4">
+                        return (
+                          <div className="rounded-xl border border-surface-border bg-white overflow-hidden shadow-sm">
+                            <div className="flex items-start gap-3 px-4 py-3">
+                              <button
+                                type="button"
+                                className="mt-1 text-neutral-400 hover:text-neutral-600 cursor-grab active:cursor-grabbing touch-none"
+                                {...listeners}
+                                {...attributes}
+                                aria-label="Перетащить"
+                              >
+                                <GripVertical className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => toggleButtonExpanded(buttonIds[index])}
+                                className="flex-1 text-left min-w-0"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-semibold text-neutral-900">
+                                      {button.label || `Кнопка ${index + 1}`}
+                                    </div>
+                                    <div className="text-xs text-neutral-500 mt-1 break-words">
+                                      {buttonSummary(button.content, button.value)}
+                                    </div>
+                                  </div>
+                                  <ChevronDown
+                                    className={cn(
+                                      'w-4 h-4 mt-0.5 text-neutral-400 transition-transform shrink-0',
+                                      isExpanded && 'rotate-180',
+                                    )}
+                                  />
+                                </div>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => removeButton(index)}
+                                disabled={isSaving}
+                                className="mt-1 p-2 rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                                aria-label={`Удалить кнопку ${index + 1}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            {isExpanded && (
+                              <div className="border-t border-surface-border bg-neutral-50/60 px-4 py-4">
+                                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)] gap-6 xl:gap-8 items-start">
+                                  <div className="space-y-3">
+                                    <input
+                                      type="text"
+                                      value={button.label}
+                                      onChange={(e) => updateButton(index, 'label', e.target.value)}
+                                      placeholder="Название кнопки в клавиатуре"
+                                      disabled={isSaving}
+                                      className={inputClassName}
+                                      aria-label={`Название кнопки ${index + 1}`}
+                                    />
+                                    <MessageContentEditor
+                                      value={buttonContent}
+                                      onChange={(content) => updateButtonContent(index, content)}
+                                      onUpload={campaignsApi.uploadFile}
+                                      maxParts={5}
+                                    />
+                                  </div>
+
+                                  <div className="xl:sticky xl:top-6 flex justify-center">
+                                    <TelegramPreview
+                                      botName={button.label || botName}
+                                      content={buttonContent}
+                                      showFrame
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      }}
+                    </SortableItem>
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+
+          {settings.buttons.length >= 10 && (
+            <p className="text-xs text-neutral-400 mt-3">Максимум 10 кнопок</p>
+          )}
+        </SectionBlock>
+
+        <SectionBlock
+          eyebrow="Анкета"
+          title="Форма регистрации"
+          description="Поля, которые бот попросит у гостя при первом запуске. Держите форму короткой: только данные, которые реально нужны."
+          actions={(
+            <button
+              type="button"
+              onClick={addField}
+              disabled={isSaving}
+              className={cn(
+                'inline-flex items-center gap-1.5 text-sm font-medium text-accent',
+                'hover:text-accent/80 transition-colors',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+              )}
+            >
+              <Plus className="w-4 h-4" />
+              Добавить поле
+            </button>
+          )}
+        >
+          <div className="flex flex-wrap gap-2 mb-4">
         {FORM_PRESETS.map((preset) => (
           <button
             key={preset.name}
@@ -974,28 +1001,28 @@ function GeneralTab({
             + {preset.label}
           </button>
         ))}
-      </div>
+          </div>
 
-      {settings.registration_form.length === 0 ? (
-        <p className="text-sm text-neutral-400 text-center py-4">Нет полей анкеты</p>
-      ) : (
-        <DndContext sensors={formSensors} collisionDetection={closestCenter} onDragEnd={handleFieldDragEnd}>
-          <SortableContext items={fieldIds} strategy={verticalListSortingStrategy}>
-            <div className="space-y-3">
-              {settings.registration_form.map((field, index) => (
-                <SortableItem key={fieldIds[index]} id={fieldIds[index]}>
-                  {({ listeners, attributes }) => (
-                    <div className="flex items-start gap-3 p-3 rounded-lg bg-neutral-50">
-                      <button
-                        type="button"
-                        className="mt-2.5 text-neutral-400 hover:text-neutral-600 cursor-grab active:cursor-grabbing touch-none"
-                        {...listeners}
-                        {...attributes}
-                        aria-label="Перетащить"
-                      >
-                        <GripVertical className="w-4 h-4" />
-                      </button>
-                      <div className="flex-1 grid grid-cols-2 gap-3">
+          {settings.registration_form.length === 0 ? (
+            <p className="text-sm text-neutral-400 text-center py-6">Нет полей анкеты</p>
+          ) : (
+            <DndContext sensors={formSensors} collisionDetection={closestCenter} onDragEnd={handleFieldDragEnd}>
+              <SortableContext items={fieldIds} strategy={verticalListSortingStrategy}>
+                <div className="space-y-3">
+                  {settings.registration_form.map((field, index) => (
+                    <SortableItem key={fieldIds[index]} id={fieldIds[index]}>
+                      {({ listeners, attributes }) => (
+                        <div className="flex items-start gap-3 p-4 rounded-xl bg-white border border-surface-border shadow-sm">
+                          <button
+                            type="button"
+                            className="mt-2.5 text-neutral-400 hover:text-neutral-600 cursor-grab active:cursor-grabbing touch-none"
+                            {...listeners}
+                            {...attributes}
+                            aria-label="Перетащить"
+                          >
+                            <GripVertical className="w-4 h-4" />
+                          </button>
+                          <div className="flex-1 grid grid-cols-2 gap-3">
                         <input
                           type="text"
                           value={field.name}
@@ -1066,26 +1093,27 @@ function GeneralTab({
                             {field.type === 'date' && 'Бот проверит формат даты (ДД.ММ.ГГГГ) перед принятием ответа'}
                           </p>
                         )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeField(index)}
-                        disabled={isSaving}
-                        className="mt-2.5 p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
-                        aria-label={`Удалить поле ${index + 1}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </SortableItem>
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeField(index)}
+                            disabled={isSaving}
+                            className="mt-2.5 p-2 rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                            aria-label={`Удалить поле ${index + 1}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </SortableItem>
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </SectionBlock>
+      </div>
 
-      {/* Single combined save button */}
       <SaveButton isSaving={isSaving} saveError={saveError} saveSuccess={saveSuccess} onSave={save} />
     </div>
   )
