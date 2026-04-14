@@ -25,7 +25,7 @@ async def test_start_command(tg_client, bot_entity, bot_username):
 
     if not bot_responses:
         pytest.xfail(
-            f"configured BOT_USERNAME '{bot_username}' did not respond to /start; target likely stale or offline"
+            f"configured demo/client bot '{bot_username}' did not respond to /start; target likely stale or offline"
         )
 
     has_content = any(r.text or r.media for r in bot_responses)

@@ -44,6 +44,14 @@ def telegram_env() -> dict[str, str]:
     return {k: str(v) for k, v in env.items() if v is not None}
 
 
+def resolve_probe_bot_username(env: dict[str, str]) -> str | None:
+    return (
+        env.get("DEMO_BOT_USERNAME")
+        or env.get("CLIENT_BOT_USERNAME")
+        or env.get("BOT_USERNAME")
+    )
+
+
 @pytest.fixture(scope="session")
 def master_bot_token() -> str:
     backend_env = dotenv_values(BACKEND_DIR / ".env")
@@ -161,9 +169,9 @@ async def master_bot_entity(tg_client, master_bot_username):
 
 @pytest.fixture(scope="session")
 def bot_username(telegram_env: dict[str, str]) -> str:
-    username = telegram_env.get("BOT_USERNAME")
+    username = resolve_probe_bot_username(telegram_env)
     if not username:
-        pytest.skip("BOT_USERNAME not set in telegram/.env")
+        pytest.skip("DEMO_BOT_USERNAME / CLIENT_BOT_USERNAME / BOT_USERNAME not set in telegram/.env")
     return username
 
 

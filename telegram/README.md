@@ -63,7 +63,9 @@ Results are saved as JSON to `results/{bot_username}_{timestamp}.json`.
 | `API_ID` | Yes | Telegram API ID from my.telegram.org |
 | `API_HASH` | Yes | Telegram API hash from my.telegram.org |
 | `SESSION_NAME` | Yes | Name of `.session` file (without extension) |
-| `BOT_USERNAME` | For tests | Your bot's @username |
+| `DEMO_BOT_USERNAME` | Preferred for tests | Canonical demo bot target (for example `baratie_demo_bot`) |
+| `CLIENT_BOT_USERNAME` | Optional for tests | Alternate client bot probe target |
+| `BOT_USERNAME` | Legacy fallback | Older single bot target env var |
 | `CODEX_API_KEY` | For walker | OpenAI API key |
 | `CODEX_MODEL` | No | Model name (default: `codex-mini-latest`) |
 | `CODEX_BASE_URL` | No | API base URL (default: `https://api.openai.com/v1`) |

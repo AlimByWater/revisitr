@@ -187,9 +187,13 @@ async def test_masterbot_creates_post_code_from_photo_message(tg_client, master_
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_current_configured_client_bot_probe(tg_client, me, telegram_env):
-    target = telegram_env.get("BOT_USERNAME")
+    target = (
+        telegram_env.get("DEMO_BOT_USERNAME")
+        or telegram_env.get("CLIENT_BOT_USERNAME")
+        or telegram_env.get("BOT_USERNAME")
+    )
     if not target:
-        pytest.skip("BOT_USERNAME not set")
+        pytest.skip("DEMO_BOT_USERNAME / CLIENT_BOT_USERNAME / BOT_USERNAME not set")
 
     entity = await tg_client.get_entity(target)
     responses = await send_and_collect(tg_client, entity, me, "/start", delay=5.0)

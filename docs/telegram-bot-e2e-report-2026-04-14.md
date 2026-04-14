@@ -45,12 +45,12 @@
 - но для реального запуска текущих Telethon тестов использовалась именно рабочая `SESSION_STRING`
 
 ### Что найдено по target bot
-- В `telegram/.env` настроен `BOT_USERNAME=localrevisbot`
+- В `telegram/.env` был настроен legacy target `BOT_USERNAME`
 - Пробный live-check показал, что этот бот **не отвечает** на свежий `/start`
 - В истории переписки с ним есть старые ответы от `2026-04-05`
 
 Вывод:
-- `localrevisbot` сейчас, вероятно, **устаревший target** или **offline runtime**
+- legacy target сейчас, вероятно, **устаревший target** или **offline runtime**
 - его оставили как probe / xfail, но не как blocking regression target
 
 ---
@@ -222,7 +222,7 @@ cd telegram && uv run pytest tests -vv -s
 2. `test_start_command`
 
 Причина xfail:
-- configured `BOT_USERNAME=localrevisbot` не отвечает на свежий `/start`
+- configured legacy `BOT_USERNAME` не отвечает на свежий `/start`
 - это зафиксировано как отдельная operational проблема, но не блокирует основной master-bot regression pack
 
 ---
@@ -381,7 +381,7 @@ cd backend && go test ./...
 На момент этого отчёта:
 - master bot live отвечает на базовые команды
 - привязка / post-code paths на prod требуют применения root migrations `00033-00035`
-- configured `BOT_USERNAME=localrevisbot` всё ещё stale/offline target и остаётся xfail probe
+- configured legacy `BOT_USERNAME` всё ещё stale/offline target и остаётся xfail probe
 
 
 
@@ -449,7 +449,7 @@ cd backend && go test ./...
 - post-code authoring реально работает на production runtime для text и photo
 
 Самая заметная оставшаяся operational проблема:
-- `BOT_USERNAME=localrevisbot` в `telegram/.env` остаётся stale/offline target и продолжает быть только xfail probe.
+- legacy `BOT_USERNAME` в `telegram/.env` остаётся stale/offline target и продолжает быть только xfail probe.
 
 
 ## Финальный статус после починки workflow
