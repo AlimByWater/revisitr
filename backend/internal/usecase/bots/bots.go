@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"revisitr/internal/entity"
 )
@@ -204,6 +205,9 @@ func (uc *Usecase) UpdateSettings(ctx context.Context, id, orgID int, req *entit
 			return fmt.Errorf("invalid welcome content: %w", err)
 		}
 		settings.WelcomeContent = req.WelcomeContent
+		if derived := deriveWelcomeMessage(req.WelcomeContent, settings.WelcomeMessage); derived != "" {
+			settings.WelcomeMessage = derived
+		}
 	}
 
 	if err := uc.bots.UpdateSettings(ctx, id, settings); err != nil {
@@ -227,4 +231,18 @@ func (uc *Usecase) UpdateSettings(ctx context.Context, id, orgID int, req *entit
 	}
 
 	return nil
+}
+
+func deriveWelcomeMessage(content *entity.MessageContent, fallback string) string {
+	if content == nil || len(content.Parts) == 0 {
+		return fallback
+	}
+
+	for _, part := range content.Parts {
+		if strings.TrimSpace(part.Text) != "" {
+			return part.Text
+		}
+	}
+
+	return fallback
 }

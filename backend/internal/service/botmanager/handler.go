@@ -79,7 +79,13 @@ func (h *handler) handleStart(ctx context.Context, msg *telego.Message) {
 	}
 
 	if client != nil {
-		// Already registered — show main menu
+		// Already registered — show synced welcome content if configured
+		if h.hasWelcomeContent() {
+			h.sendWelcomeContent(ctx, chatID)
+			h.sendMainMenu(ctx, chatID, h.returningMenuText(client.FirstName))
+			return
+		}
+
 		welcome := h.info.Settings.WelcomeMessage
 		if welcome == "" {
 			welcome = fmt.Sprintf("С возвращением, %s! 👋", client.FirstName)
@@ -369,7 +375,7 @@ func (h *handler) sendWelcomeContent(ctx context.Context, chatID int64) {
 	settings := h.info.Settings
 
 	// Priority: new format → legacy → default
-	if h.tgSender != nil && settings.WelcomeContent != nil && len(settings.WelcomeContent.Parts) > 0 {
+	if h.tgSender != nil && h.hasWelcomeContent() {
 		if err := h.tgSender.SendContent(ctx, h.bot, chatID, *settings.WelcomeContent); err != nil {
 			h.logger.Error("send welcome content", "error", err, "chat_id", chatID)
 		}
@@ -386,6 +392,10 @@ func (h *handler) sendWelcomeContent(ctx context.Context, chatID int64) {
 		}
 	}
 	h.sendText(chatID, welcome)
+}
+
+func (h *handler) hasWelcomeContent() bool {
+	return h.info.Settings.WelcomeContent != nil && len(h.info.Settings.WelcomeContent.Parts) > 0
 }
 
 func (h *handler) isBaratieDemo() bool {
@@ -411,6 +421,13 @@ func (h *handler) registeredWelcomeText(firstName string) string {
 		return fmt.Sprintf("⚓ %s, вы успешно поднялись на борт Baratie!\n\nОткройте меню, проверьте дублоны и выберите свой курс.", firstName)
 	}
 	return fmt.Sprintf("Добро пожаловать, %s! Вы успешно зарегистрированы. 🎉", firstName)
+}
+
+func (h *handler) returningMenuText(firstName string) string {
+	if h.isBaratieDemo() {
+		return fmt.Sprintf("⚓ %s, экипаж Baratie к вашим услугам. Выберите курс в меню ниже.", firstName)
+	}
+	return "Главное меню"
 }
 
 func (h *handler) balanceNeedsRegistrationText() string {

@@ -127,6 +127,15 @@ function buttonValueFromContent(content?: MessageContent, fallback = ''): string
   return fallback
 }
 
+function welcomeMessageFromContent(content?: MessageContent, fallback = ''): string {
+  if (!content || !content.parts?.length) return fallback
+
+  const firstTextLike = content.parts.find((part) => part.text?.trim())
+  if (firstTextLike?.text) return firstTextLike.text
+
+  return fallback
+}
+
 /** Per-tab save hook returning state + handler */
 function useSaveAction(_id: number, updater: () => Promise<void>) {
   const [isSaving, setIsSaving] = useState(false)
@@ -753,7 +762,11 @@ function GeneralTab({
           <MessageContentEditor
             value={welcomeContent}
             onChange={(content) => {
-              setSettings((s) => s ? { ...s, welcome_content: content } : s)
+              setSettings((s) => s ? {
+                ...s,
+                welcome_content: content,
+                welcome_message: welcomeMessageFromContent(content, s.welcome_message),
+              } : s)
             }}
             onUpload={campaignsApi.uploadFile}
             maxParts={5}
