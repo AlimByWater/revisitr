@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useLayoutEffect, type TextareaHTMLAttributes } from "react";
 import {
   DndContext,
   closestCenter,
@@ -361,13 +361,13 @@ function TextPartEditor({
 }) {
   return (
     <div className="space-y-2">
-      <textarea
+      <AutoResizeTextarea
         value={part.text || ""}
         onChange={(e) => onChange({ text: e.target.value })}
         placeholder="Текст сообщения..."
         rows={3}
         maxLength={4096}
-        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+        className="w-full overflow-hidden px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
       />
       <div className="flex items-center justify-between text-xs text-gray-400">
         <span>*жирный*, _курсив_, `код`</span>
@@ -407,17 +407,33 @@ function MediaPartEditor({
         label="Загрузить файл"
       />
       {part.type !== "sticker" && (
-        <textarea
+        <AutoResizeTextarea
           value={part.text || ""}
           onChange={(e) => onChange({ text: e.target.value })}
           placeholder="Подпись (опционально)..."
           rows={2}
           maxLength={1024}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+          className="w-full overflow-hidden px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
         />
       )}
     </div>
   );
+}
+
+function AutoResizeTextarea(
+  props: TextareaHTMLAttributes<HTMLTextAreaElement>,
+) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "0px";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [props.value]);
+
+  return <textarea ref={textareaRef} {...props} />;
 }
 
 // ── Media Upload Field ────────────────────────────────────────────────────────
