@@ -29,28 +29,43 @@ func NewSender(baseURL string, logger *slog.Logger) *Sender {
 
 // SendContent sends a composite message (all parts sequentially).
 func (s *Sender) SendContent(ctx context.Context, bot *telego.Bot, chatID int64, content entity.MessageContent) error {
-	for i, part := range content.Parts {
+	_, _, err := s.SendContentWithCache(ctx, bot, chatID, content)
+	return err
+}
+
+// SendContentWithCache sends a composite message and returns updated content
+// with resolved Telegram media_id values when they were learned during send.
+func (s *Sender) SendContentWithCache(ctx context.Context, bot *telego.Bot, chatID int64, content entity.MessageContent) (entity.MessageContent, bool, error) {
+	updated := content
+	changed := false
+
+	for i, part := range updated.Parts {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return updated, changed, ctx.Err()
 		}
 
 		// Buttons attach only to the last part
 		var markup *telego.InlineKeyboardMarkup
-		if i == len(content.Parts)-1 && len(content.Buttons) > 0 {
-			markup = s.buildInlineKeyboard(content.Buttons)
+		if i == len(updated.Parts)-1 && len(updated.Buttons) > 0 {
+			markup = s.buildInlineKeyboard(updated.Buttons)
 		}
 
-		if err := s.sendPart(ctx, bot, chatID, part, markup); err != nil {
-			return fmt.Errorf("send part %d (%s): %w", i, part.Type, err)
+		mediaID, err := s.sendPart(ctx, bot, chatID, part, markup)
+		if err != nil {
+			return updated, changed, fmt.Errorf("send part %d (%s): %w", i, part.Type, err)
+		}
+		if mediaID != "" && updated.Parts[i].MediaID != mediaID {
+			updated.Parts[i].MediaID = mediaID
+			changed = true
 		}
 
 		// Rate limiting: pause between parts to avoid Telegram 429 errors.
 		// Telegram allows ~30 msgs/sec per bot; 50ms gap prevents bursts.
-		if i < len(content.Parts)-1 {
+		if i < len(updated.Parts)-1 {
 			time.Sleep(50 * time.Millisecond)
 		}
 	}
-	return nil
+	return updated, changed, nil
 }
 
 func (s *Sender) sendPart(
@@ -59,7 +74,7 @@ func (s *Sender) sendPart(
 	chatID int64,
 	part entity.MessagePart,
 	markup *telego.InlineKeyboardMarkup,
-) error {
+) (string, error) {
 	switch part.Type {
 	case entity.PartText:
 		msg := tu.Message(tu.ID(chatID), part.Text)
@@ -70,12 +85,12 @@ func (s *Sender) sendPart(
 			msg = msg.WithReplyMarkup(markup)
 		}
 		_, err := bot.SendMessage(ctx, msg)
-		return err
+		return "", err
 
 	case entity.PartPhoto:
 		media, err := s.mediaInput(ctx, part)
 		if err != nil {
-			return err
+			return "", err
 		}
 		photo := tu.Photo(tu.ID(chatID), media)
 		if part.Text != "" {
@@ -87,13 +102,13 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			photo = photo.WithReplyMarkup(markup)
 		}
-		_, err = bot.SendPhoto(ctx, photo)
-		return err
+		message, err := bot.SendPhoto(ctx, photo)
+		return s.extractMediaID(message, part.Type), err
 
 	case entity.PartVideo:
 		media, err := s.mediaInput(ctx, part)
 		if err != nil {
-			return err
+			return "", err
 		}
 		video := tu.Video(tu.ID(chatID), media)
 		if part.Text != "" {
@@ -105,13 +120,13 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			video = video.WithReplyMarkup(markup)
 		}
-		_, err = bot.SendVideo(ctx, video)
-		return err
+		message, err := bot.SendVideo(ctx, video)
+		return s.extractMediaID(message, part.Type), err
 
 	case entity.PartDocument:
 		media, err := s.mediaInput(ctx, part)
 		if err != nil {
-			return err
+			return "", err
 		}
 		doc := tu.Document(tu.ID(chatID), media)
 		if part.Text != "" {
@@ -120,22 +135,22 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			doc = doc.WithReplyMarkup(markup)
 		}
-		_, err = bot.SendDocument(ctx, doc)
-		return err
+		message, err := bot.SendDocument(ctx, doc)
+		return s.extractMediaID(message, part.Type), err
 
 	case entity.PartSticker:
 		media, err := s.mediaInput(ctx, part)
 		if err != nil {
-			return err
+			return "", err
 		}
 		sticker := tu.Sticker(tu.ID(chatID), media)
-		_, err = bot.SendSticker(ctx, sticker)
-		return err
+		message, err := bot.SendSticker(ctx, sticker)
+		return s.extractMediaID(message, part.Type), err
 
 	case entity.PartAnimation:
 		media, err := s.mediaInput(ctx, part)
 		if err != nil {
-			return err
+			return "", err
 		}
 		anim := tu.Animation(tu.ID(chatID), media)
 		if part.Text != "" {
@@ -144,13 +159,13 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			anim = anim.WithReplyMarkup(markup)
 		}
-		_, err = bot.SendAnimation(ctx, anim)
-		return err
+		message, err := bot.SendAnimation(ctx, anim)
+		return s.extractMediaID(message, part.Type), err
 
 	case entity.PartAudio:
 		media, err := s.mediaInput(ctx, part)
 		if err != nil {
-			return err
+			return "", err
 		}
 		audio := tu.Audio(tu.ID(chatID), media)
 		if part.Text != "" {
@@ -159,13 +174,13 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			audio = audio.WithReplyMarkup(markup)
 		}
-		_, err = bot.SendAudio(ctx, audio)
-		return err
+		message, err := bot.SendAudio(ctx, audio)
+		return s.extractMediaID(message, part.Type), err
 
 	case entity.PartVoice:
 		media, err := s.mediaInput(ctx, part)
 		if err != nil {
-			return err
+			return "", err
 		}
 		voice := tu.Voice(tu.ID(chatID), media)
 		if part.Text != "" {
@@ -174,11 +189,11 @@ func (s *Sender) sendPart(
 		if markup != nil {
 			voice = voice.WithReplyMarkup(markup)
 		}
-		_, err = bot.SendVoice(ctx, voice)
-		return err
+		message, err := bot.SendVoice(ctx, voice)
+		return s.extractMediaID(message, part.Type), err
 
 	default:
-		return fmt.Errorf("unsupported part type: %s", part.Type)
+		return "", fmt.Errorf("unsupported part type: %s", part.Type)
 	}
 }
 
@@ -219,6 +234,52 @@ func (s *Sender) mediaInput(ctx context.Context, part entity.MessagePart) (teleg
 	}
 
 	return tu.FileFromBytes(data, filename), nil
+}
+
+func (s *Sender) extractMediaID(message *telego.Message, partType entity.MessagePartType) string {
+	if message == nil {
+		return ""
+	}
+
+	switch partType {
+	case entity.PartPhoto:
+		if len(message.Photo) == 0 {
+			return ""
+		}
+		return message.Photo[len(message.Photo)-1].FileID
+	case entity.PartVideo:
+		if message.Video == nil {
+			return ""
+		}
+		return message.Video.FileID
+	case entity.PartDocument:
+		if message.Document == nil {
+			return ""
+		}
+		return message.Document.FileID
+	case entity.PartSticker:
+		if message.Sticker == nil {
+			return ""
+		}
+		return message.Sticker.FileID
+	case entity.PartAnimation:
+		if message.Animation == nil {
+			return ""
+		}
+		return message.Animation.FileID
+	case entity.PartAudio:
+		if message.Audio == nil {
+			return ""
+		}
+		return message.Audio.FileID
+	case entity.PartVoice:
+		if message.Voice == nil {
+			return ""
+		}
+		return message.Voice.FileID
+	default:
+		return ""
+	}
 }
 
 func (s *Sender) buildInlineKeyboard(buttons [][]entity.InlineButton) *telego.InlineKeyboardMarkup {

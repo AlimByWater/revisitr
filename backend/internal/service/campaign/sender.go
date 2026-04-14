@@ -18,6 +18,7 @@ type campaignsRepo interface {
 	UpdateStats(ctx context.Context, id int, stats *entity.CampaignStats) error
 	CreateMessagesBatch(ctx context.Context, messages []entity.CampaignMessage) error
 	UpdateMessageStatus(ctx context.Context, id int, status string, errorMsg *string) error
+	UpdateContent(ctx context.Context, id int, content entity.MessageContent) error
 }
 
 type botsRepo interface {
@@ -141,7 +142,16 @@ func (s *Sender) SendCampaign(ctx context.Context, campaignID int) error {
 
 		var err error
 		if s.tgSender != nil {
-			err = s.tgSender.SendContent(ctx, tBot, messages[i].TelegramID, content)
+			var changed bool
+			content, changed, err = s.tgSender.SendContentWithCache(ctx, tBot, messages[i].TelegramID, content)
+			if err == nil && changed {
+				if updateErr := s.campaigns.UpdateContent(ctx, campaignID, content); updateErr != nil {
+					s.logger.Warn("campaign content cache update failed",
+						"campaign_id", campaignID,
+						"error", updateErr,
+					)
+				}
+			}
 		} else {
 			// Legacy fallback: plain text only
 			_, err = tBot.SendMessage(ctx, &telego.SendMessageParams{

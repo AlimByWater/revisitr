@@ -15,6 +15,7 @@ import (
 type botsRepository interface {
 	GetAllActive(ctx context.Context) ([]entity.Bot, error)
 	GetByID(ctx context.Context, id int) (*entity.Bot, error)
+	UpdateSettings(ctx context.Context, id int, settings entity.BotSettings) error
 }
 
 type botClientsRepository interface {

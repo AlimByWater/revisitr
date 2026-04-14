@@ -150,6 +150,24 @@ func (r *Campaigns) UpdateStats(ctx context.Context, id int, stats *entity.Campa
 	return nil
 }
 
+func (r *Campaigns) UpdateContent(ctx context.Context, id int, content entity.MessageContent) error {
+	query := `UPDATE campaigns SET content = $1, updated_at = NOW() WHERE id = $2`
+	result, err := r.pg.DB().ExecContext(ctx, query, content, id)
+	if err != nil {
+		return fmt.Errorf("campaigns.UpdateContent: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("campaigns.UpdateContent rows affected: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("campaigns.UpdateContent: %w", sql.ErrNoRows)
+	}
+
+	return nil
+}
+
 func (r *Campaigns) Delete(ctx context.Context, id int) error {
 	result, err := r.pg.DB().ExecContext(ctx, "DELETE FROM campaigns WHERE id = $1", id)
 	if err != nil {

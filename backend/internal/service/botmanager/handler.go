@@ -288,11 +288,15 @@ func (h *handler) handleAbout(ctx context.Context, msg *telego.Message) {
 }
 
 func (h *handler) handleCustomButton(ctx context.Context, msg *telego.Message, text string) {
-	for _, btn := range h.info.Settings.Buttons {
+	for idx, btn := range h.info.Settings.Buttons {
 		if btn.Label == text {
 			if btn.Content != nil && len(btn.Content.Parts) > 0 {
 				if h.tgSender != nil {
-					if err := h.tgSender.SendContent(ctx, h.bot, msg.Chat.ID, *btn.Content); err == nil {
+					if updated, changed, err := h.tgSender.SendContentWithCache(ctx, h.bot, msg.Chat.ID, *btn.Content); err == nil {
+						if changed {
+							h.info.Settings.Buttons = h.updateButtonContentCache(idx, updated)
+							h.persistSettingsCache(ctx)
+						}
 						return
 					} else {
 						h.logger.Error("send button content", "error", err, "label", btn.Label)
@@ -376,8 +380,11 @@ func (h *handler) sendWelcomeContent(ctx context.Context, chatID int64) {
 
 	// Priority: new format → legacy → default
 	if h.tgSender != nil && h.hasWelcomeContent() {
-		if err := h.tgSender.SendContent(ctx, h.bot, chatID, *settings.WelcomeContent); err != nil {
+		if updated, changed, err := h.tgSender.SendContentWithCache(ctx, h.bot, chatID, *settings.WelcomeContent); err != nil {
 			h.logger.Error("send welcome content", "error", err, "chat_id", chatID)
+		} else if changed {
+			h.info.Settings.WelcomeContent = &updated
+			h.persistSettingsCache(ctx)
 		}
 		return
 	}
@@ -483,5 +490,19 @@ func (h *handler) sendWithKeyboard(chatID int64, text string, kb *telego.ReplyKe
 	msg := tu.Message(tu.ID(chatID), text).WithReplyMarkup(kb)
 	if _, err := h.bot.SendMessage(context.Background(), msg); err != nil {
 		h.logger.Error("send message with keyboard", "error", err, "chat_id", chatID)
+	}
+}
+
+func (h *handler) updateButtonContentCache(index int, updated entity.MessageContent) []entity.BotButton {
+	buttons := append([]entity.BotButton(nil), h.info.Settings.Buttons...)
+	if index >= 0 && index < len(buttons) {
+		buttons[index].Content = &updated
+	}
+	return buttons
+}
+
+func (h *handler) persistSettingsCache(ctx context.Context) {
+	if err := h.mgr.botsRepo.UpdateSettings(ctx, h.info.ID, h.info.Settings); err != nil {
+		h.logger.Error("persist cached media ids", "error", err, "bot_id", h.info.ID)
 	}
 }
