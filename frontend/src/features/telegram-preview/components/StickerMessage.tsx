@@ -12,6 +12,8 @@ export function StickerMessage({ mediaUrl }: StickerMessageProps) {
           <img
             src={mediaUrl}
             alt="sticker"
+            loading="lazy"
+            decoding="async"
             onError={(e) => {
               e.currentTarget.style.display = 'none'
               e.currentTarget.nextElementSibling?.classList.remove('hidden')

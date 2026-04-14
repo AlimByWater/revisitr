@@ -50,6 +50,8 @@ export function MediaMessage({
                 <img
                   src={mediaUrl}
                   alt=""
+                  loading="lazy"
+                  decoding="async"
                   className="w-full max-h-[280px] object-cover"
                   onError={() => setHasError(true)}
                 />
@@ -63,6 +65,8 @@ export function MediaMessage({
               <img
                 src={mediaUrl}
                 alt=""
+                loading="lazy"
+                decoding="async"
                 className="w-full max-h-[280px] object-cover"
                 onError={() => setHasError(true)}
               />

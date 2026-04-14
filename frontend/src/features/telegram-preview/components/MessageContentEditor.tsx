@@ -188,7 +188,7 @@ export function MessageContentEditor({
           <button
             type="button"
             onClick={() => setShowTypeMenu(!showTypeMenu)}
-            className="flex items-center gap-2 w-full px-3 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors"
+            className="flex min-h-11 items-center gap-2 w-full px-3 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Добавить блок
@@ -224,7 +224,7 @@ export function MessageContentEditor({
           <button
             type="button"
             onClick={addButtonRow}
-            className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            className="inline-flex min-h-11 items-center gap-1 px-2 text-sm text-blue-600 hover:text-blue-700"
           >
             <Plus className="w-3 h-3" />
             Добавить ряд
@@ -293,9 +293,10 @@ function SortablePartEditor({
       <div className="flex items-center gap-2 mb-2">
         <button
           type="button"
-          className="cursor-grab text-gray-400 hover:text-gray-600"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg cursor-grab text-gray-400 hover:text-gray-600 hover:bg-gray-50"
           {...attributes}
           {...listeners}
+          aria-label={`Перетащить блок ${index + 1}`}
         >
           <GripVertical className="w-4 h-4" />
         </button>
@@ -320,7 +321,8 @@ function SortablePartEditor({
           <button
             type="button"
             onClick={() => onRemove(index)}
-            className="ml-auto text-gray-400 hover:text-red-500"
+            className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50"
+            aria-label={`Удалить блок ${index + 1}`}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -469,6 +471,8 @@ function MediaUploadField({
             <img
               src={value}
               alt=""
+              loading="lazy"
+              decoding="async"
               className="w-12 h-12 rounded object-cover"
             />
           )}

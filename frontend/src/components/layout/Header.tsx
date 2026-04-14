@@ -49,7 +49,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
           <button
             onClick={onMenuToggle}
             type="button"
-            className="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center transition-colors text-white/60 hover:text-white hover:bg-white/10"
+            className="lg:hidden h-11 w-11 rounded-lg flex items-center justify-center transition-colors text-white/60 hover:text-white hover:bg-white/10"
             aria-label="Открыть меню"
           >
             <Menu className="w-5 h-5" />
@@ -161,14 +161,19 @@ export function Header({ onMenuToggle }: HeaderProps) {
           <button
             onClick={onMenuToggle}
             type="button"
-            className="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center transition-colors text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-neutral-900 mr-3"
+            className="lg:hidden h-11 w-11 rounded-lg flex items-center justify-center transition-colors text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-neutral-900 mr-3"
             aria-label="Открыть меню"
           >
             <Menu className="w-5 h-5" />
           </button>
 
           <Link to="/dashboard">
-            <img src="/revisitr/logo.png" alt="Revisitr" className="h-6 sm:h-7 w-auto" />
+            <img
+              src="/revisitr/logo.png"
+              alt="Revisitr"
+              decoding="async"
+              className="h-6 sm:h-7 w-auto"
+            />
           </Link>
         </div>
 

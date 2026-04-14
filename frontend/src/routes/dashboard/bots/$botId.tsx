@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { useState, useEffect, useRef } from 'react'
+import { Suspense, lazy, useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { useBotQuery } from '@/features/bots/queries'
 import { botsApi } from '@/features/bots/api'
@@ -39,9 +39,15 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import type { Bot, BotSettings, BotButton, FormField } from '@/features/bots/types'
 import type { POSLocation } from '@/features/pos/types'
-import { TelegramPreview, MessageContentEditor } from '@/features/telegram-preview'
 import { campaignsApi } from '@/features/campaigns/api'
 import type { MessageContent } from '@/features/telegram-preview'
+
+const TelegramPreview = lazy(() =>
+  import('@/features/telegram-preview').then((module) => ({ default: module.TelegramPreview })),
+)
+const MessageContentEditor = lazy(() =>
+  import('@/features/telegram-preview').then((module) => ({ default: module.MessageContentEditor })),
+)
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -168,7 +174,7 @@ function SectionBlock({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-2xl border border-surface-border bg-neutral-50/60 p-5 md:p-6">
+    <section className="rounded-2xl border border-surface-border bg-neutral-50/60 p-4 sm:p-5 md:p-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-5">
         <div className="min-w-0">
           {eyebrow && (
@@ -179,10 +185,28 @@ function SectionBlock({
           <h3 className="text-base font-semibold text-neutral-900">{title}</h3>
           {description && <p className="text-sm text-neutral-500 mt-1 max-w-2xl">{description}</p>}
         </div>
-        {actions && <div className="shrink-0">{actions}</div>}
+        {actions && <div className="shrink-0 w-full md:w-auto">{actions}</div>}
       </div>
       {children}
     </section>
+  )
+}
+
+function PreviewFallback() {
+  return (
+    <div className="w-full max-w-[360px] overflow-hidden rounded-[2rem] border border-surface-border bg-white shadow-sm">
+      <div className="h-[min(520px,65vh)] sm:h-[520px] animate-pulse bg-neutral-100" />
+    </div>
+  )
+}
+
+function EditorFallback() {
+  return (
+    <div className="space-y-3 rounded-xl border border-surface-border bg-white p-4">
+      <div className="h-11 rounded-lg bg-neutral-100 animate-pulse" />
+      <div className="h-32 rounded-lg bg-neutral-100 animate-pulse" />
+      <div className="h-11 rounded-lg bg-neutral-100 animate-pulse" />
+    </div>
   )
 }
 
@@ -206,7 +230,7 @@ function useSaveAction(_id: number, updater: () => Promise<void>) {
       await updater()
       setSaveSuccess(true)
     } catch {
-      setSaveError('Не удалось сохранить. Попробуйте снова.')
+      setSaveError('Не удалось сохранить изменения. Попробуйте ещё раз.')
     } finally {
       setIsSaving(false)
     }
@@ -227,7 +251,7 @@ function SaveButton({
   onSave: () => void
 }) {
   return (
-    <div className="flex items-center justify-between mt-6 pt-5 border-t border-surface-border">
+    <div className="flex flex-col gap-3 mt-6 pt-5 border-t border-surface-border sm:flex-row sm:items-center sm:justify-between">
       <div>
         {saveError && (
           <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 border border-red-100">
@@ -238,7 +262,7 @@ function SaveButton({
         {saveSuccess && (
           <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 border border-green-100">
             <Check className="w-3.5 h-3.5 text-green-600" />
-            <p className="text-sm text-green-600 font-medium">Сохранено</p>
+            <p className="text-sm text-green-600 font-medium">Изменения сохранены</p>
           </div>
         )}
       </div>
@@ -247,7 +271,7 @@ function SaveButton({
         onClick={onSave}
         disabled={isSaving}
         className={cn(
-          'py-2.5 px-6 rounded-xl',
+          'inline-flex w-full items-center justify-center rounded-xl py-3 px-6 sm:w-auto',
           'bg-accent text-white text-sm font-semibold',
           'hover:bg-accent-hover active:bg-accent/80',
           'transition-all duration-150',
@@ -256,7 +280,7 @@ function SaveButton({
           'disabled:opacity-50 disabled:cursor-not-allowed',
         )}
       >
-        {isSaving ? 'Сохранение...' : 'Сохранить'}
+        {isSaving ? 'Сохраняем…' : 'Сохранить изменения'}
       </button>
     </div>
   )
@@ -391,24 +415,26 @@ export default function BotDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-surface-border overflow-x-auto animate-in animate-in-delay-1">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium whitespace-nowrap',
-              'border-b-2 transition-colors',
-              activeTab === tab.id
-                ? 'border-accent text-accent'
-                : 'border-transparent text-neutral-500 hover:text-neutral-700',
-            )}
-          >
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
-          </button>
-        ))}
+      <div className="mb-6 border-b border-surface-border overflow-x-auto animate-in animate-in-delay-1">
+        <div className="flex gap-1 min-w-max">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'inline-flex min-h-11 items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap',
+                'border-b-2 transition-colors',
+                activeTab === tab.id
+                  ? 'border-accent text-accent'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-700',
+              )}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tab content */}
@@ -457,7 +483,7 @@ function ConnectionTab({ bot, botId }: { bot: Bot; botId: number }) {
               : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200',
           )}
         >
-          {advanced ? 'По умолчанию' : 'Расширенный'}
+          {advanced ? 'Скрыть тех. детали' : 'Показать тех. детали'}
         </button>
       </div>
 
@@ -481,7 +507,8 @@ function ConnectionTab({ bot, botId }: { bot: Bot; botId: number }) {
         {advanced && (
           <>
             <p className="text-xs text-neutral-400 leading-relaxed">
-              Техническая информация о боте. ID — уникальный идентификатор бота в системе. Org ID — идентификатор вашей организации. Токен — секретный ключ для связи с Telegram API.
+              Здесь собраны технические данные бота. Они нужны в редких случаях — например, если поддержку попросят
+              прислать ID бота или проверить токен.
             </p>
             {bot.token_masked && (
               <div>
@@ -548,18 +575,18 @@ function POSSection({ botId }: { botId: number }) {
   }, [botId, loaded])
 
   if (posLoading || !loaded) {
-    return <p className="text-sm text-neutral-500">Загрузка POS-точек...</p>
+    return <p className="text-sm text-neutral-500">Загружаем точки продаж…</p>
   }
 
   const locations = posLocations ?? []
 
   if (locations.length === 0) {
     return (
-      <div className="text-center py-6">
-        <Store className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-        <p className="text-sm text-neutral-500 mb-4">Нет POS-точек</p>
-        <Link
-          to="/dashboard/pos"
+        <div className="text-center py-6">
+          <Store className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+          <p className="text-sm text-neutral-500 mb-4">Пока нет точек продаж</p>
+          <Link
+            to="/dashboard/pos"
           className={cn(
             'inline-flex items-center gap-1.5 py-2 px-4 rounded-lg text-sm font-medium',
             'bg-accent text-white hover:bg-accent-hover transition-colors',
@@ -581,7 +608,8 @@ function POSSection({ botId }: { botId: number }) {
   return (
     <>
       <p className="text-sm text-neutral-400 mb-5">
-        Привяжите точки продаж к боту. Если выбрано несколько, гость сможет выбрать нужную точку при запуске бота через кнопки.
+        Выберите, в каких точках будет работать этот бот. Если точек несколько, гость сможет выбрать нужную после
+        запуска бота.
       </p>
 
       <div className="space-y-2">
@@ -798,7 +826,7 @@ function GeneralTab({
         <SectionBlock
           eyebrow="Старт"
           title="Приветственное сообщение"
-          description="Составное сообщение, которое клиент видит при запуске бота. Добавляйте текст, фото, видео, стикеры и кнопки."
+          description="Это первое сообщение, которое увидит гость после /start. Здесь можно собрать текст, медиа и inline-кнопки."
         >
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)] gap-6 xl:gap-8 items-start">
             <div className="space-y-4">
@@ -814,41 +842,46 @@ function GeneralTab({
                   </button>
                 ))}
               </div>
-              <MessageContentEditor
-                value={welcomeContent}
-                onChange={(content) => {
-                  setSettings((s) => s ? {
-                    ...s,
-                    welcome_content: content,
-                    welcome_message: welcomeMessageFromContent(content, s.welcome_message),
-                  } : s)
-                }}
-                onUpload={campaignsApi.uploadFile}
-                maxParts={5}
-              />
+              <Suspense fallback={<EditorFallback />}>
+                <MessageContentEditor
+                  value={welcomeContent}
+                  onChange={(content) => {
+                    setSettings((s) => s ? {
+                      ...s,
+                      welcome_content: content,
+                      welcome_message: welcomeMessageFromContent(content, s.welcome_message),
+                    } : s)
+                  }}
+                  onUpload={campaignsApi.uploadFile}
+                  maxParts={5}
+                />
+              </Suspense>
             </div>
 
             <div className="xl:sticky xl:top-6 flex justify-center">
-              <TelegramPreview
-                botName={botName}
-                content={welcomeContent}
-                showFrame
-              />
+              <Suspense fallback={<PreviewFallback />}>
+                <TelegramPreview
+                  botName={botName}
+                  content={welcomeContent}
+                  showFrame
+                  className="w-full max-w-[360px]"
+                />
+              </Suspense>
             </div>
           </div>
         </SectionBlock>
 
         <SectionBlock
           eyebrow="Клавиатура"
-          title="Кнопки бота"
-          description="Обычные кнопки меню Telegram. Для каждой кнопки можно собрать полноценный ответ: текст, фото, видео, документы, несколько сообщений подряд и inline-кнопки."
+          title="Кнопки меню бота"
+          description="Это кнопки в нижней клавиатуре Telegram. Нажатие на кнопку открывает готовый ответ: текст, медиа, несколько сообщений подряд или inline-кнопки."
           actions={(
             <button
               type="button"
               onClick={addButton}
               disabled={isSaving || settings.buttons.length >= 10}
               className={cn(
-                'inline-flex items-center gap-1.5 text-sm font-medium text-accent',
+                'inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium text-accent sm:w-auto',
                 'hover:text-accent/80 transition-colors',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
               )}
@@ -859,7 +892,7 @@ function GeneralTab({
           )}
         >
           {settings.buttons.length === 0 ? (
-            <p className="text-sm text-neutral-400 text-center py-6">Нет кнопок меню</p>
+            <p className="text-sm text-neutral-400 text-center py-6">Кнопки ещё не добавлены. Создайте первую кнопку для меню бота.</p>
           ) : (
             <DndContext sensors={buttonSensors} collisionDetection={closestCenter} onDragEnd={handleButtonDragEnd}>
               <SortableContext items={buttonIds} strategy={verticalListSortingStrategy}>
@@ -877,7 +910,7 @@ function GeneralTab({
                             <div className="flex items-start gap-3 px-4 py-3">
                               <button
                                 type="button"
-                                className="mt-1 text-neutral-400 hover:text-neutral-600 cursor-grab active:cursor-grabbing touch-none"
+                                className="mt-1 inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 cursor-grab active:cursor-grabbing touch-none"
                                 {...listeners}
                                 {...attributes}
                                 aria-label="Перетащить"
@@ -912,7 +945,7 @@ function GeneralTab({
                                 type="button"
                                 onClick={() => removeButton(index)}
                                 disabled={isSaving}
-                                className="mt-1 p-2 rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                                className="mt-1 inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
                                 aria-label={`Удалить кнопку ${index + 1}`}
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -927,25 +960,30 @@ function GeneralTab({
                                       type="text"
                                       value={button.label}
                                       onChange={(e) => updateButton(index, 'label', e.target.value)}
-                                      placeholder="Название кнопки в клавиатуре"
+                                      placeholder="Текст кнопки в меню бота"
                                       disabled={isSaving}
                                       className={inputClassName}
                                       aria-label={`Название кнопки ${index + 1}`}
                                     />
-                                    <MessageContentEditor
-                                      value={buttonContent}
-                                      onChange={(content) => updateButtonContent(index, content)}
-                                      onUpload={campaignsApi.uploadFile}
-                                      maxParts={5}
-                                    />
+                                    <Suspense fallback={<EditorFallback />}>
+                                      <MessageContentEditor
+                                        value={buttonContent}
+                                        onChange={(content) => updateButtonContent(index, content)}
+                                        onUpload={campaignsApi.uploadFile}
+                                        maxParts={5}
+                                      />
+                                    </Suspense>
                                   </div>
 
                                   <div className="xl:sticky xl:top-6 flex justify-center">
-                                    <TelegramPreview
-                                      botName={button.label || botName}
-                                      content={buttonContent}
-                                      showFrame
-                                    />
+                                    <Suspense fallback={<PreviewFallback />}>
+                                      <TelegramPreview
+                                        botName={button.label || botName}
+                                        content={buttonContent}
+                                        showFrame
+                                        className="w-full max-w-[360px]"
+                                      />
+                                    </Suspense>
                                   </div>
                                 </div>
                               </div>
@@ -967,15 +1005,15 @@ function GeneralTab({
 
         <SectionBlock
           eyebrow="Анкета"
-          title="Форма регистрации"
-          description="Поля, которые бот попросит у гостя при первом запуске. Держите форму короткой: только данные, которые реально нужны."
+          title="Поля регистрации"
+          description="Эти поля бот попросит у гостя при первом запуске. Оставляйте только то, что действительно нужно для работы с клиентом."
           actions={(
             <button
               type="button"
               onClick={addField}
               disabled={isSaving}
               className={cn(
-                'inline-flex items-center gap-1.5 text-sm font-medium text-accent',
+                'inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium text-accent sm:w-auto',
                 'hover:text-accent/80 transition-colors',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
               )}
@@ -986,25 +1024,25 @@ function GeneralTab({
           )}
         >
           <div className="flex flex-wrap gap-2 mb-4">
-        {FORM_PRESETS.map((preset) => (
-          <button
-            key={preset.name}
-            type="button"
-            onClick={() => addPreset(preset)}
-            disabled={isSaving}
-            className={cn(
-              'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-              'bg-neutral-100 text-neutral-600 hover:bg-neutral-200',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-            )}
-          >
-            + {preset.label}
-          </button>
-        ))}
+            {FORM_PRESETS.map((preset) => (
+              <button
+                key={preset.name}
+                type="button"
+                onClick={() => addPreset(preset)}
+                disabled={isSaving}
+                className={cn(
+                  'inline-flex min-h-11 items-center rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                  'bg-neutral-100 text-neutral-600 hover:bg-neutral-200',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                )}
+              >
+                + {preset.label}
+              </button>
+            ))}
           </div>
 
           {settings.registration_form.length === 0 ? (
-            <p className="text-sm text-neutral-400 text-center py-6">Нет полей анкеты</p>
+            <p className="text-sm text-neutral-400 text-center py-6">Поля регистрации ещё не добавлены.</p>
           ) : (
             <DndContext sensors={formSensors} collisionDetection={closestCenter} onDragEnd={handleFieldDragEnd}>
               <SortableContext items={fieldIds} strategy={verticalListSortingStrategy}>
@@ -1015,19 +1053,19 @@ function GeneralTab({
                         <div className="flex items-start gap-3 p-4 rounded-xl bg-white border border-surface-border shadow-sm">
                           <button
                             type="button"
-                            className="mt-2.5 text-neutral-400 hover:text-neutral-600 cursor-grab active:cursor-grabbing touch-none"
+                            className="mt-2.5 inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 cursor-grab active:cursor-grabbing touch-none"
                             {...listeners}
                             {...attributes}
                             aria-label="Перетащить"
                           >
                             <GripVertical className="w-4 h-4" />
                           </button>
-                          <div className="flex-1 grid grid-cols-2 gap-3">
+                          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <input
                           type="text"
                           value={field.name}
                           onChange={(e) => updateField(index, 'name', e.target.value)}
-                          placeholder="Ключ поля (латиница)"
+                          placeholder="Внутреннее имя, например phone"
                           disabled={isSaving}
                           className={inputClassName}
                           aria-label={`Ключ поля ${index + 1}`}
@@ -1036,7 +1074,7 @@ function GeneralTab({
                           type="text"
                           value={field.label}
                           onChange={(e) => updateField(index, 'label', e.target.value)}
-                          placeholder="Название для пользователя"
+                          placeholder="Как это поле увидит гость"
                           disabled={isSaving}
                           className={inputClassName}
                           aria-label={`Название поля ${index + 1}`}
@@ -1060,9 +1098,9 @@ function GeneralTab({
                             checked={field.required}
                             onChange={(e) => updateField(index, 'required', e.target.checked)}
                             disabled={isSaving}
-                            className="w-4 h-4 rounded border-neutral-300 text-accent focus:ring-accent/20"
+                            className="h-4 w-4 rounded border-neutral-300 text-accent focus:ring-accent/20"
                           />
-                          <span className="text-sm text-neutral-700">Обязательное</span>
+                          <span className="text-sm text-neutral-700">Обязательно</span>
                         </label>
                         {field.type === 'select' && (
                           <div className="col-span-2">
@@ -1079,18 +1117,18 @@ function GeneralTab({
                                   return { ...s, registration_form: updated }
                                 })
                               }}
-                              placeholder="Варианты через запятую (будут отображаться как кнопки)"
+                              placeholder="Варианты через запятую, например: Москва, Санкт-Петербург"
                               disabled={isSaving}
                               className={inputClassName}
                             />
-                            <p className="text-[11px] text-neutral-400 mt-1">Варианты выбора отображаются как кнопки в боте</p>
+                            <p className="text-[11px] text-neutral-400 mt-1">Гость увидит эти варианты как кнопки в боте.</p>
                           </div>
                         )}
                         {(field.type === 'email' || field.type === 'phone' || field.type === 'date') && (
                           <p className="col-span-2 text-[11px] text-neutral-400">
-                            {field.type === 'email' && 'Бот проверит формат email перед принятием ответа'}
-                            {field.type === 'phone' && 'Бот проверит формат номера телефона перед принятием ответа'}
-                            {field.type === 'date' && 'Бот проверит формат даты (ДД.ММ.ГГГГ) перед принятием ответа'}
+                            {field.type === 'email' && 'Бот проверит, что гость ввёл корректный email.'}
+                            {field.type === 'phone' && 'Бот проверит, что номер телефона введён в понятном формате.'}
+                            {field.type === 'date' && 'Бот подскажет нужный формат даты: ДД.ММ.ГГГГ.'}
                           </p>
                         )}
                           </div>
@@ -1098,7 +1136,7 @@ function GeneralTab({
                             type="button"
                             onClick={() => removeField(index)}
                             disabled={isSaving}
-                            className="mt-2.5 p-2 rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                            className="mt-2.5 inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
                             aria-label={`Удалить поле ${index + 1}`}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1236,12 +1274,12 @@ function ModulesTab({
       {settings.modules.includes('menu') && (
         <div id="module-menu" className="mt-5 pt-5 border-t border-surface-border scroll-mt-20">
           <h3 className="text-sm font-semibold text-neutral-900 mb-2">Настройка: Меню</h3>
-          <p className="text-xs text-neutral-400 mb-3">Меню заведения, которое будет отображаться в боте.</p>
+          <p className="text-xs text-neutral-400 mb-3">Здесь вы управляете блюдами и категориями, которые увидит гость в боте.</p>
           <Link
             to="/dashboard/menus"
             className="inline-flex items-center gap-1.5 text-sm text-accent hover:text-accent/80 font-medium transition-colors"
           >
-            Управление меню <ChevronRight className="w-3.5 h-3.5" />
+            Открыть меню <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       )}
@@ -1249,12 +1287,12 @@ function ModulesTab({
       {settings.modules.includes('marketplace') && (
         <div id="module-marketplace" className="mt-5 pt-5 border-t border-surface-border scroll-mt-20">
           <h3 className="text-sm font-semibold text-neutral-900 mb-2">Настройка: Маркетплейс</h3>
-          <p className="text-xs text-neutral-400 mb-3">Каталог товаров для заказа через бота.</p>
+          <p className="text-xs text-neutral-400 mb-3">Здесь находятся товары, которые гость сможет заказать через бота.</p>
           <Link
             to="/dashboard/marketplace"
             className="inline-flex items-center gap-1.5 text-sm text-accent hover:text-accent/80 font-medium transition-colors"
           >
-            Управление товарами <ChevronRight className="w-3.5 h-3.5" />
+            Открыть каталог товаров <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       )}
@@ -1288,11 +1326,13 @@ function PreviewTab({ settings, botName }: { settings: BotSettings; botName: str
 
   return (
     <div className="flex justify-center">
-      <TelegramPreview
-        botName={botName}
-        content={content}
-        showFrame
-      />
+      <Suspense fallback={<PreviewFallback />}>
+        <TelegramPreview
+          botName={botName}
+          content={content}
+          showFrame
+        />
+      </Suspense>
     </div>
   )
 }

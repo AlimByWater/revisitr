@@ -126,7 +126,7 @@ export function TelegramPreview({
   if (showFrame) {
     return (
       <PhoneFrame className={className}>
-        <div className="h-[520px] flex flex-col">{chatContent}</div>
+        <div className="flex h-[min(520px,65vh)] w-full flex-col sm:h-[520px]">{chatContent}</div>
       </PhoneFrame>
     )
   }
@@ -134,11 +134,11 @@ export function TelegramPreview({
   return (
     <div
       className={cn(
-        'w-[360px] rounded-xl overflow-hidden border border-gray-200',
+        'w-full max-w-[360px] rounded-xl overflow-hidden border border-gray-200',
         className
       )}
     >
-      <div className="h-[420px] flex flex-col">{chatContent}</div>
+      <div className="flex h-[min(420px,55vh)] w-full flex-col sm:h-[420px]">{chatContent}</div>
     </div>
   )
 }

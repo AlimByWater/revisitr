@@ -8,7 +8,7 @@ interface PhoneFrameProps {
 
 export function PhoneFrame({ children, className }: PhoneFrameProps) {
   return (
-    <div className={cn('tg-phone-frame w-[360px] bg-black', className)}>
+    <div className={cn('tg-phone-frame w-full max-w-[360px] bg-black', className)}>
       {/* Status bar */}
       <div className="flex items-center justify-between px-6 py-2 bg-[#17212B]">
         <span className="text-white text-xs font-medium">9:41</span>

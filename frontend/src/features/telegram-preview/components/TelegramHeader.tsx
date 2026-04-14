@@ -27,7 +27,13 @@ export function TelegramHeader({ botName, botAvatar, theme = 'light' }: Telegram
         )}
       >
         {botAvatar ? (
-          <img src={botAvatar} alt={botName} className="w-full h-full rounded-full object-cover" />
+          <img
+            src={botAvatar}
+            alt={botName}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full rounded-full object-cover"
+          />
         ) : (
           botName.charAt(0).toUpperCase()
         )}

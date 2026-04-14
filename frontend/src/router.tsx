@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Suspense, lazy, useState, type ComponentType, type LazyExoticComponent } from 'react'
 import { createBrowserRouter, redirect, Outlet } from 'react-router-dom'
 import { Sidebar } from './components/layout/Sidebar'
 import { Footer } from './components/layout/Footer'
@@ -8,50 +8,64 @@ import { AuroraSidebar } from './components/layout/AuroraSidebar'
 import { AuroraHeader } from './components/layout/AuroraHeader'
 import { useTheme } from './contexts/ThemeContext'
 
-// Auth pages
-import LoginPage from './routes/auth/login'
-import RegisterPage from './routes/auth/register'
-import ForgotPasswordPage from './routes/auth/forgot-password'
+const LoginPage = lazy(() => import('./routes/auth/login'))
+const RegisterPage = lazy(() => import('./routes/auth/register'))
+const ForgotPasswordPage = lazy(() => import('./routes/auth/forgot-password'))
 
-// Dashboard pages
-import DashboardHome from './routes/dashboard/index'
-import BotsPage from './routes/dashboard/bots/index'
-import BotDetailPage from './routes/dashboard/bots/$botId'
-import CreateBotPage from './routes/dashboard/bots/create'
-import ClientsPage from './routes/dashboard/clients/index'
-import ClientDetailPage from './routes/dashboard/clients/$clientId'
-import LoyaltyProgramsPage from './routes/dashboard/loyalty/index'
-import ProgramDetailPage from './routes/dashboard/loyalty/$programId'
-import POSListPage from './routes/dashboard/pos/index'
-import POSDetailPage from './routes/dashboard/pos/$posId'
-import CampaignsPage from './routes/dashboard/campaigns/index'
-import CreateCampaignPage from './routes/dashboard/campaigns/create'
-import CampaignDetailPage from './routes/dashboard/campaigns/$campaignId'
-import ScenarioDetailPage from './routes/dashboard/campaigns/scenario.$scenarioId'
-import SalesAnalyticsPage from './routes/dashboard/analytics/sales'
-import LoyaltyAnalyticsPage from './routes/dashboard/analytics/loyalty'
-import MailingsAnalyticsPage from './routes/dashboard/analytics/mailings'
-import IntegrationsPage from './routes/dashboard/integrations/index'
-import IntegrationDetailPage from './routes/dashboard/integrations/$integrationId'
-import SegmentsPage from './routes/dashboard/clients/segments'
-import PromotionsPage from './routes/dashboard/promotions/index'
-import PromoCodesPage from './routes/dashboard/promotions/codes'
-import PromotionsArchivePage from './routes/dashboard/promotions/archive'
-import OnboardingPage from './routes/dashboard/onboarding/index'
-import MenusPage from './routes/dashboard/menus/index'
-import MenuDetailPage from './routes/dashboard/menus/$menuId'
-import WalletPage from './routes/dashboard/loyalty/wallet'
-import MarketplacePage from './routes/dashboard/marketplace/index'
-import BillingPage from './routes/dashboard/billing/index'
-import InvoicesPage from './routes/dashboard/billing/invoices'
-import CreatePromotionPage from './routes/dashboard/promotions/create'
-import PredictionsPage from './routes/dashboard/clients/predictions'
-import RFMDashboardPage from './routes/dashboard/rfm/index'
-import RFMOnboardingPage from './routes/dashboard/rfm/onboarding'
-import RFMTemplatePage from './routes/dashboard/rfm/template'
-import SegmentDetailPage from './routes/dashboard/rfm/segments/$segment'
-import AccountPage from './routes/dashboard/account/index'
-import CustomSegmentsPage from './routes/dashboard/clients/custom-segments'
+const DashboardHome = lazy(() => import('./routes/dashboard/index'))
+const BotsPage = lazy(() => import('./routes/dashboard/bots/index'))
+const BotDetailPage = lazy(() => import('./routes/dashboard/bots/$botId'))
+const CreateBotPage = lazy(() => import('./routes/dashboard/bots/create'))
+const ClientsPage = lazy(() => import('./routes/dashboard/clients/index'))
+const ClientDetailPage = lazy(() => import('./routes/dashboard/clients/$clientId'))
+const LoyaltyProgramsPage = lazy(() => import('./routes/dashboard/loyalty/index'))
+const ProgramDetailPage = lazy(() => import('./routes/dashboard/loyalty/$programId'))
+const POSListPage = lazy(() => import('./routes/dashboard/pos/index'))
+const POSDetailPage = lazy(() => import('./routes/dashboard/pos/$posId'))
+const CampaignsPage = lazy(() => import('./routes/dashboard/campaigns/index'))
+const CreateCampaignPage = lazy(() => import('./routes/dashboard/campaigns/create'))
+const CampaignDetailPage = lazy(() => import('./routes/dashboard/campaigns/$campaignId'))
+const ScenarioDetailPage = lazy(() => import('./routes/dashboard/campaigns/scenario.$scenarioId'))
+const SalesAnalyticsPage = lazy(() => import('./routes/dashboard/analytics/sales'))
+const LoyaltyAnalyticsPage = lazy(() => import('./routes/dashboard/analytics/loyalty'))
+const MailingsAnalyticsPage = lazy(() => import('./routes/dashboard/analytics/mailings'))
+const IntegrationsPage = lazy(() => import('./routes/dashboard/integrations/index'))
+const IntegrationDetailPage = lazy(() => import('./routes/dashboard/integrations/$integrationId'))
+const SegmentsPage = lazy(() => import('./routes/dashboard/clients/segments'))
+const PromotionsPage = lazy(() => import('./routes/dashboard/promotions/index'))
+const PromoCodesPage = lazy(() => import('./routes/dashboard/promotions/codes'))
+const PromotionsArchivePage = lazy(() => import('./routes/dashboard/promotions/archive'))
+const OnboardingPage = lazy(() => import('./routes/dashboard/onboarding/index'))
+const MenusPage = lazy(() => import('./routes/dashboard/menus/index'))
+const MenuDetailPage = lazy(() => import('./routes/dashboard/menus/$menuId'))
+const WalletPage = lazy(() => import('./routes/dashboard/loyalty/wallet'))
+const MarketplacePage = lazy(() => import('./routes/dashboard/marketplace/index'))
+const BillingPage = lazy(() => import('./routes/dashboard/billing/index'))
+const InvoicesPage = lazy(() => import('./routes/dashboard/billing/invoices'))
+const CreatePromotionPage = lazy(() => import('./routes/dashboard/promotions/create'))
+const PredictionsPage = lazy(() => import('./routes/dashboard/clients/predictions'))
+const RFMDashboardPage = lazy(() => import('./routes/dashboard/rfm/index'))
+const RFMOnboardingPage = lazy(() => import('./routes/dashboard/rfm/onboarding'))
+const RFMTemplatePage = lazy(() => import('./routes/dashboard/rfm/template'))
+const SegmentDetailPage = lazy(() => import('./routes/dashboard/rfm/segments/$segment'))
+const AccountPage = lazy(() => import('./routes/dashboard/account/index'))
+const CustomSegmentsPage = lazy(() => import('./routes/dashboard/clients/custom-segments'))
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[240px] items-center justify-center">
+      <div className="h-10 w-10 rounded-full border-2 border-neutral-300 border-t-accent animate-spin" />
+    </div>
+  )
+}
+
+function lazyElement(Component: LazyExoticComponent<ComponentType<any>>) {
+  return (
+    <Suspense fallback={<RouteFallback />}>
+      <Component />
+    </Suspense>
+  )
+}
 
 function DashboardLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -105,52 +119,52 @@ export const router = createBrowserRouter(
       path: '/',
       children: [
         { index: true, loader: () => redirect('/dashboard') },
-        { path: 'auth/login', element: <LoginPage /> },
-        { path: 'auth/register', element: <RegisterPage /> },
-        { path: 'auth/forgot-password', element: <ForgotPasswordPage /> },
+        { path: 'auth/login', element: lazyElement(LoginPage) },
+        { path: 'auth/register', element: lazyElement(RegisterPage) },
+        { path: 'auth/forgot-password', element: lazyElement(ForgotPasswordPage) },
         {
           path: 'dashboard',
           element: <DashboardLayout />,
           loader: authLoader,
           children: [
-            { index: true, element: <DashboardHome /> },
-            { path: 'bots', element: <BotsPage /> },
-            { path: 'bots/create', element: <CreateBotPage /> },
-            { path: 'bots/:botId', element: <BotDetailPage /> },
-            { path: 'clients', element: <ClientsPage /> },
-            { path: 'clients/segments', element: <SegmentsPage /> },
-            { path: 'clients/custom-segments', element: <CustomSegmentsPage /> },
-            { path: 'clients/predictions', element: <PredictionsPage /> },
-            { path: 'clients/:clientId', element: <ClientDetailPage /> },
-            { path: 'loyalty', element: <LoyaltyProgramsPage /> },
-            { path: 'loyalty/wallet', element: <WalletPage /> },
-            { path: 'loyalty/:programId', element: <ProgramDetailPage /> },
-            { path: 'pos', element: <POSListPage /> },
-            { path: 'pos/:posId', element: <POSDetailPage /> },
-            { path: 'campaigns', element: <CampaignsPage /> },
-            { path: 'campaigns/create', element: <CreateCampaignPage /> },
-            { path: 'campaigns/:campaignId', element: <CampaignDetailPage /> },
-            { path: 'campaigns/scenario/:scenarioId', element: <ScenarioDetailPage /> },
-            { path: 'analytics/sales', element: <SalesAnalyticsPage /> },
-            { path: 'analytics/loyalty', element: <LoyaltyAnalyticsPage /> },
-            { path: 'analytics/mailings', element: <MailingsAnalyticsPage /> },
-            { path: 'rfm', element: <RFMDashboardPage /> },
-            { path: 'rfm/onboarding', element: <RFMOnboardingPage /> },
-            { path: 'rfm/template', element: <RFMTemplatePage /> },
-            { path: 'rfm/segments/:segment', element: <SegmentDetailPage /> },
-            { path: 'promotions/create', element: <CreatePromotionPage /> },
-            { path: 'promotions', element: <PromotionsPage /> },
-            { path: 'promotions/codes', element: <PromoCodesPage /> },
-            { path: 'promotions/archive', element: <PromotionsArchivePage /> },
-            { path: 'integrations', element: <IntegrationsPage /> },
-            { path: 'integrations/:integrationId', element: <IntegrationDetailPage /> },
-            { path: 'onboarding', element: <OnboardingPage /> },
-            { path: 'marketplace', element: <MarketplacePage /> },
-            { path: 'menus', element: <MenusPage /> },
-            { path: 'menus/:menuId', element: <MenuDetailPage /> },
-            { path: 'billing', element: <BillingPage /> },
-            { path: 'billing/invoices', element: <InvoicesPage /> },
-            { path: 'account', element: <AccountPage /> },
+            { index: true, element: lazyElement(DashboardHome) },
+            { path: 'bots', element: lazyElement(BotsPage) },
+            { path: 'bots/create', element: lazyElement(CreateBotPage) },
+            { path: 'bots/:botId', element: lazyElement(BotDetailPage) },
+            { path: 'clients', element: lazyElement(ClientsPage) },
+            { path: 'clients/segments', element: lazyElement(SegmentsPage) },
+            { path: 'clients/custom-segments', element: lazyElement(CustomSegmentsPage) },
+            { path: 'clients/predictions', element: lazyElement(PredictionsPage) },
+            { path: 'clients/:clientId', element: lazyElement(ClientDetailPage) },
+            { path: 'loyalty', element: lazyElement(LoyaltyProgramsPage) },
+            { path: 'loyalty/wallet', element: lazyElement(WalletPage) },
+            { path: 'loyalty/:programId', element: lazyElement(ProgramDetailPage) },
+            { path: 'pos', element: lazyElement(POSListPage) },
+            { path: 'pos/:posId', element: lazyElement(POSDetailPage) },
+            { path: 'campaigns', element: lazyElement(CampaignsPage) },
+            { path: 'campaigns/create', element: lazyElement(CreateCampaignPage) },
+            { path: 'campaigns/:campaignId', element: lazyElement(CampaignDetailPage) },
+            { path: 'campaigns/scenario/:scenarioId', element: lazyElement(ScenarioDetailPage) },
+            { path: 'analytics/sales', element: lazyElement(SalesAnalyticsPage) },
+            { path: 'analytics/loyalty', element: lazyElement(LoyaltyAnalyticsPage) },
+            { path: 'analytics/mailings', element: lazyElement(MailingsAnalyticsPage) },
+            { path: 'rfm', element: lazyElement(RFMDashboardPage) },
+            { path: 'rfm/onboarding', element: lazyElement(RFMOnboardingPage) },
+            { path: 'rfm/template', element: lazyElement(RFMTemplatePage) },
+            { path: 'rfm/segments/:segment', element: lazyElement(SegmentDetailPage) },
+            { path: 'promotions/create', element: lazyElement(CreatePromotionPage) },
+            { path: 'promotions', element: lazyElement(PromotionsPage) },
+            { path: 'promotions/codes', element: lazyElement(PromoCodesPage) },
+            { path: 'promotions/archive', element: lazyElement(PromotionsArchivePage) },
+            { path: 'integrations', element: lazyElement(IntegrationsPage) },
+            { path: 'integrations/:integrationId', element: lazyElement(IntegrationDetailPage) },
+            { path: 'onboarding', element: lazyElement(OnboardingPage) },
+            { path: 'marketplace', element: lazyElement(MarketplacePage) },
+            { path: 'menus', element: lazyElement(MenusPage) },
+            { path: 'menus/:menuId', element: lazyElement(MenuDetailPage) },
+            { path: 'billing', element: lazyElement(BillingPage) },
+            { path: 'billing/invoices', element: lazyElement(InvoicesPage) },
+            { path: 'account', element: lazyElement(AccountPage) },
           ],
         },
       ],
