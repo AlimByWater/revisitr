@@ -45,7 +45,7 @@ jobs:
           push: true
           build-args: |
             VITE_API_URL=/revisitr/api/v1
-            VITE_MOCK_API=true
+            VITE_MOCK_API=false
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
