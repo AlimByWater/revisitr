@@ -56,6 +56,26 @@ function createEmptyPart(type: MessagePartType): MessagePart {
   return { type, media_url: '', text: '', parse_mode: 'Markdown' }
 }
 
+function convertPartType(part: MessagePart, nextType: MessagePartType): MessagePart {
+  if (part.type === nextType) return part
+
+  if (nextType === 'text') {
+    return {
+      type: 'text',
+      text: part.text || '',
+      parse_mode: part.parse_mode || 'Markdown',
+    }
+  }
+
+  return {
+    type: nextType,
+    text: part.text || '',
+    media_url: part.media_url || '',
+    media_id: part.media_id || '',
+    parse_mode: part.parse_mode || 'Markdown',
+  }
+}
+
 export function MessageContentEditor({
   value,
   onChange,
@@ -238,9 +258,18 @@ function SortablePartEditor({
         <button type="button" className="cursor-grab text-gray-400 hover:text-gray-600" {...attributes} {...listeners}>
           <GripVertical className="w-4 h-4" />
         </button>
-        <span className="text-xs font-medium text-gray-500 uppercase">
-          {PART_TYPE_OPTIONS.find((o) => o.type === part.type)?.label || part.type}
-        </span>
+        <select
+          value={part.type}
+          onChange={(e) => onUpdate(index, convertPartType(part, e.target.value as MessagePartType))}
+          className="text-xs font-medium uppercase text-gray-500 bg-transparent border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+          aria-label={`Тип блока ${index + 1}`}
+        >
+          {PART_TYPE_OPTIONS.map((option) => (
+            <option key={option.type} value={option.type}>
+              {option.label}
+            </option>
+          ))}
+        </select>
         {canRemove && (
           <button
             type="button"
@@ -289,7 +318,7 @@ function TextPartEditor({
         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
       />
       <div className="flex items-center justify-between text-xs text-gray-400">
-        <span>*жирный*, _курсив_, `код`</span>
+        <span>*жирный*, _курсив_, `код` · можно переключить блок на фото/видео и использовать текст как подпись</span>
         <span>{(part.text || '').length}/4096</span>
       </div>
     </div>
