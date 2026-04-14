@@ -40,6 +40,7 @@ import type { Bot, BotSettings, BotButton, FormField } from '@/features/bots/typ
 import type { POSLocation } from '@/features/pos/types'
 import { TelegramPreview, MessageContentEditor } from '@/features/telegram-preview'
 import { campaignsApi } from '@/features/campaigns/api'
+import type { MessageContent } from '@/features/telegram-preview'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -95,6 +96,35 @@ function formatDate(dateStr: string): string {
     month: 'short',
     year: 'numeric',
   })
+}
+
+function buttonContentFromValue(value: string): MessageContent {
+  return {
+    parts: [{ type: 'text', text: value, parse_mode: 'Markdown' }],
+  }
+}
+
+function normalizeButton(button: BotButton): BotButton {
+  return {
+    ...button,
+    type: 'text',
+    content:
+      button.content && button.content.parts?.length > 0
+        ? button.content
+        : buttonContentFromValue(button.value ?? ''),
+  }
+}
+
+function buttonValueFromContent(content?: MessageContent, fallback = ''): string {
+  if (!content || !content.parts?.length) return fallback
+
+  const firstTextPart = content.parts.find((part) => part.type === 'text' && part.text?.trim())
+  if (firstTextPart?.text) return firstTextPart.text
+
+  const firstCaptionPart = content.parts.find((part) => part.text?.trim())
+  if (firstCaptionPart?.text) return firstCaptionPart.text
+
+  return fallback
 }
 
 /** Per-tab save hook returning state + handler */
@@ -223,7 +253,7 @@ export default function BotDetailPage() {
         welcome_message: bot.settings.welcome_message ?? '',
         welcome_content: bot.settings.welcome_content,
         modules: bot.settings.modules ?? [],
-        buttons: (bot.settings.buttons ?? []).map((button) => ({ ...button, type: 'text' })),
+        buttons: (bot.settings.buttons ?? []).map(normalizeButton),
         registration_form: bot.settings.registration_form ?? [],
       })
     }
@@ -545,7 +575,12 @@ function GeneralTab({
     botsApi.updateSettings(botId, {
       welcome_message: settings.welcome_message,
       welcome_content: settings.welcome_content,
-      buttons: settings.buttons.map((button) => ({ ...button, type: 'text' })),
+      buttons: settings.buttons.map((button) => ({
+        ...button,
+        type: 'text',
+        value: buttonValueFromContent(button.content, button.value),
+        content: button.content,
+      })),
       registration_form: settings.registration_form,
     }),
   )
@@ -571,7 +606,15 @@ function GeneralTab({
   const addButton = () => {
     if (settings.buttons.length >= 10) return
     setSettings((s) =>
-      s ? { ...s, buttons: [...s.buttons, { label: '', type: 'text', value: '' }] } : s,
+      s
+        ? {
+            ...s,
+            buttons: [
+              ...s.buttons,
+              { label: '', type: 'text', value: '', content: buttonContentFromValue('') },
+            ],
+          }
+        : s,
     )
   }
 
@@ -585,6 +628,22 @@ function GeneralTab({
 
   const removeButton = (index: number) => {
     setSettings((s) => (s ? { ...s, buttons: s.buttons.filter((_, i) => i !== index) } : s))
+  }
+
+  const updateButtonContent = (index: number, content: MessageContent) => {
+    setSettings((s) => {
+      if (!s) return s
+      const updated = s.buttons.map((btn, i) =>
+        i === index
+          ? {
+              ...btn,
+              content,
+              value: buttonValueFromContent(content, btn.value),
+            }
+          : btn,
+      )
+      return { ...s, buttons: updated }
+    })
   }
 
   // --- Form dnd ---
@@ -732,8 +791,8 @@ function GeneralTab({
         </button>
       </div>
       <p className="text-xs text-neutral-400 mb-4">
-        Сейчас используются только обычные кнопки меню Telegram. Кнопка показывает название в клавиатуре и отправляет
-        пользователю подготовленный текст-ответ.
+        Сейчас используются только обычные кнопки меню Telegram. Для каждой кнопки можно собрать полноценный ответ:
+        текст, фото, видео, документы, несколько сообщений подряд и inline-кнопки внутри ответа.
       </p>
 
       {settings.buttons.length === 0 ? (
@@ -755,24 +814,23 @@ function GeneralTab({
                       >
                         <GripVertical className="w-4 h-4" />
                       </button>
-                      <div className="flex-1 grid grid-cols-2 gap-3">
+                      <div className="flex-1 space-y-3">
                         <input
                           type="text"
                           value={button.label}
                           onChange={(e) => updateButton(index, 'label', e.target.value)}
-                          placeholder="Название"
+                          placeholder="Название кнопки в клавиатуре"
                           disabled={isSaving}
                           className={inputClassName}
                           aria-label={`Название кнопки ${index + 1}`}
                         />
-                        <input
-                          type="text"
-                          value={button.value}
-                          onChange={(e) => updateButton(index, 'value', e.target.value)}
-                          placeholder="Текст ответа"
-                          disabled={isSaving}
-                          className={inputClassName}
-                          aria-label={`Значение кнопки ${index + 1}`}
+                        <MessageContentEditor
+                          value={button.content && button.content.parts?.length > 0
+                            ? button.content
+                            : buttonContentFromValue(button.value)}
+                          onChange={(content) => updateButtonContent(index, content)}
+                          onUpload={campaignsApi.uploadFile}
+                          maxParts={5}
                         />
                       </div>
                       <button

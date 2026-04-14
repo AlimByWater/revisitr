@@ -26,6 +26,7 @@ export interface BotButton {
   label: string
   type: string
   value: string
+  content?: import('@/features/telegram-preview').MessageContent
 }
 
 export interface FormField {

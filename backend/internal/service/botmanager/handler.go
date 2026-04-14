@@ -284,6 +284,23 @@ func (h *handler) handleAbout(ctx context.Context, msg *telego.Message) {
 func (h *handler) handleCustomButton(ctx context.Context, msg *telego.Message, text string) {
 	for _, btn := range h.info.Settings.Buttons {
 		if btn.Label == text {
+			if btn.Content != nil && len(btn.Content.Parts) > 0 {
+				if h.tgSender != nil {
+					if err := h.tgSender.SendContent(ctx, h.bot, msg.Chat.ID, *btn.Content); err == nil {
+						return
+					} else {
+						h.logger.Error("send button content", "error", err, "label", btn.Label)
+					}
+				}
+
+				for _, part := range btn.Content.Parts {
+					if part.Text != "" {
+						h.sendText(msg.Chat.ID, part.Text)
+						return
+					}
+				}
+			}
+
 			switch btn.Type {
 			case "url":
 				h.sendText(msg.Chat.ID, btn.Value)
