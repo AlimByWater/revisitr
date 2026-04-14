@@ -17,6 +17,7 @@ import {
   Store,
   Eye,
   GripVertical,
+  ChevronDown,
   ChevronRight,
   Link2,
 } from 'lucide-react'
@@ -134,6 +135,23 @@ function welcomeMessageFromContent(content?: MessageContent, fallback = ''): str
   if (firstTextLike?.text) return firstTextLike.text
 
   return fallback
+}
+
+function buttonSummary(content?: MessageContent, fallback = ''): string {
+  const source = content && content.parts?.length > 0 ? content : buttonContentFromValue(fallback)
+  const text = buttonValueFromContent(source, fallback).replace(/\s+/g, ' ').trim()
+  const mediaCount = source.parts.filter((part) => part.type !== 'text').length
+  const inlineButtons = (source.buttons || []).reduce((sum, row) => sum + row.length, 0)
+
+  const details = [
+    source.parts.length > 1 ? `${source.parts.length} блока` : null,
+    mediaCount > 0 ? `${mediaCount} медиа` : null,
+    inlineButtons > 0 ? `${inlineButtons} inline-кнопок` : null,
+  ].filter(Boolean)
+
+  if (!text && details.length === 0) return 'Ответ пока не настроен'
+  if (!text) return details.join(' · ')
+  return [text.slice(0, 90) + (text.length > 90 ? '…' : ''), details.join(' · ')].filter(Boolean).join(' · ')
 }
 
 /** Per-tab save hook returning state + handler */
@@ -579,6 +597,7 @@ function GeneralTab({
   botName: string
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [expandedButtons, setExpandedButtons] = useState<string[]>([])
 
   const { isSaving, saveError, saveSuccess, save } = useSaveAction(botId, () =>
     botsApi.updateSettings(botId, {
@@ -653,6 +672,12 @@ function GeneralTab({
       )
       return { ...s, buttons: updated }
     })
+  }
+
+  const toggleButtonExpanded = (id: string) => {
+    setExpandedButtons((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    )
   }
 
   // --- Form dnd ---
@@ -817,44 +842,87 @@ function GeneralTab({
               {settings.buttons.map((button, index) => (
                 <SortableItem key={buttonIds[index]} id={buttonIds[index]}>
                   {({ listeners, attributes }) => (
-                    <div className="flex items-start gap-3 p-3 rounded-lg bg-neutral-50">
-                      <button
-                        type="button"
-                        className="mt-2.5 text-neutral-400 hover:text-neutral-600 cursor-grab active:cursor-grabbing touch-none"
-                        {...listeners}
-                        {...attributes}
-                        aria-label="Перетащить"
-                      >
-                        <GripVertical className="w-4 h-4" />
-                      </button>
-                      <div className="flex-1 space-y-3">
-                        <input
-                          type="text"
-                          value={button.label}
-                          onChange={(e) => updateButton(index, 'label', e.target.value)}
-                          placeholder="Название кнопки в клавиатуре"
+                    <div className="rounded-xl border border-surface-border bg-neutral-50 overflow-hidden">
+                      <div className="flex items-start gap-3 p-3">
+                        <button
+                          type="button"
+                          className="mt-1 text-neutral-400 hover:text-neutral-600 cursor-grab active:cursor-grabbing touch-none"
+                          {...listeners}
+                          {...attributes}
+                          aria-label="Перетащить"
+                        >
+                          <GripVertical className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleButtonExpanded(buttonIds[index])}
+                          className="flex-1 text-left min-w-0"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="text-sm font-semibold text-neutral-900">
+                                {button.label || `Кнопка ${index + 1}`}
+                              </div>
+                              <div className="text-xs text-neutral-500 mt-1 break-words">
+                                {buttonSummary(button.content, button.value)}
+                              </div>
+                            </div>
+                            <ChevronDown
+                              className={cn(
+                                'w-4 h-4 mt-0.5 text-neutral-400 transition-transform shrink-0',
+                                expandedButtons.includes(buttonIds[index]) && 'rotate-180',
+                              )}
+                            />
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => removeButton(index)}
                           disabled={isSaving}
-                          className={inputClassName}
-                          aria-label={`Название кнопки ${index + 1}`}
-                        />
-                        <MessageContentEditor
-                          value={button.content && button.content.parts?.length > 0
-                            ? button.content
-                            : buttonContentFromValue(button.value)}
-                          onChange={(content) => updateButtonContent(index, content)}
-                          onUpload={campaignsApi.uploadFile}
-                          maxParts={5}
-                        />
+                          className="mt-1 p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                          aria-label={`Удалить кнопку ${index + 1}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeButton(index)}
-                        disabled={isSaving}
-                        className="mt-2.5 p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
-                        aria-label={`Удалить кнопку ${index + 1}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+
+                      {expandedButtons.includes(buttonIds[index]) && (
+                        <div className="border-t border-surface-border bg-white p-4">
+                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                              <input
+                                type="text"
+                                value={button.label}
+                                onChange={(e) => updateButton(index, 'label', e.target.value)}
+                                placeholder="Название кнопки в клавиатуре"
+                                disabled={isSaving}
+                                className={inputClassName}
+                                aria-label={`Название кнопки ${index + 1}`}
+                              />
+                              <MessageContentEditor
+                                value={button.content && button.content.parts?.length > 0
+                                  ? button.content
+                                  : buttonContentFromValue(button.value)}
+                                onChange={(content) => updateButtonContent(index, content)}
+                                onUpload={campaignsApi.uploadFile}
+                                maxParts={5}
+                              />
+                            </div>
+
+                            <div className="flex justify-center">
+                              <TelegramPreview
+                                botName={button.label || botName}
+                                content={button.content && button.content.parts?.length > 0
+                                  ? button.content
+                                  : buttonContentFromValue(button.value)}
+                                showFrame
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </SortableItem>
