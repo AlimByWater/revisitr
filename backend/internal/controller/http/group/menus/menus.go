@@ -21,8 +21,9 @@ type menusUsecase interface {
 	Update(ctx context.Context, orgID, menuID int, req entity.UpdateMenuRequest) error
 	Delete(ctx context.Context, orgID, menuID int) error
 	AddCategory(ctx context.Context, orgID, menuID int, req entity.CreateMenuCategoryRequest) (*entity.MenuCategory, error)
+	UpdateCategory(ctx context.Context, orgID, categoryID int, req entity.UpdateMenuCategoryRequest) (*entity.MenuCategory, error)
 	AddItem(ctx context.Context, orgID, menuID, categoryID int, req entity.CreateMenuItemRequest) (*entity.MenuItem, error)
-	UpdateItem(ctx context.Context, itemID int, req entity.UpdateMenuItemRequest) (*entity.MenuItem, error)
+	UpdateItem(ctx context.Context, orgID, itemID int, req entity.UpdateMenuItemRequest) (*entity.MenuItem, error)
 	GetClientOrderStats(ctx context.Context, clientID int) (*entity.ClientOrderStats, error)
 	SetBotPOSLocations(ctx context.Context, botID int, posIDs []int) error
 	GetBotPOSLocations(ctx context.Context, botID int) ([]int, error)
@@ -53,6 +54,7 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handleUpdate,
 		g.handleDelete,
 		g.handleAddCategory,
+		g.handleUpdateCategory,
 		g.handleAddItem,
 		g.handleUpdateItem,
 	}
@@ -215,8 +217,34 @@ func (g *Group) handleAddItem() (string, string, gin.HandlerFunc) {
 	}
 }
 
+func (g *Group) handleUpdateCategory() (string, string, gin.HandlerFunc) {
+	return http.MethodPatch, "/categories/:id", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category id"})
+			return
+		}
+
+		var req entity.UpdateMenuCategoryRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		category, err := g.uc.UpdateCategory(c.Request.Context(), orgID.(int), id, req)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, category)
+	}
+}
+
 func (g *Group) handleUpdateItem() (string, string, gin.HandlerFunc) {
 	return http.MethodPatch, "/items/:id", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
 		id, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item id"})
@@ -229,7 +257,7 @@ func (g *Group) handleUpdateItem() (string, string, gin.HandlerFunc) {
 			return
 		}
 
-		item, err := g.uc.UpdateItem(c.Request.Context(), id, req)
+		item, err := g.uc.UpdateItem(c.Request.Context(), orgID.(int), id, req)
 		if err != nil {
 			handleError(c, err)
 			return

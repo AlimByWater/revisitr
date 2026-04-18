@@ -61,8 +61,8 @@ func TestBots_Create(t *testing.T) {
 	if bot.Name != "My Test Bot" {
 		t.Fatalf("expected name %q, got %q", "My Test Bot", bot.Name)
 	}
-	if bot.Status != "inactive" {
-		t.Fatalf("expected status %q, got %q", "inactive", bot.Status)
+	if bot.Status != "pending" {
+		t.Fatalf("expected status %q, got %q", "pending", bot.Status)
 	}
 	if bot.OrgID != ar.User.OrgID {
 		t.Fatalf("expected org_id %d, got %d", ar.User.OrgID, bot.OrgID)

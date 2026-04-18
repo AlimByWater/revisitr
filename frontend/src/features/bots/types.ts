@@ -12,6 +12,7 @@ export interface Bot {
   program_id?: number
   is_managed?: boolean
   managed_bot_id?: number
+  created_by_telegram_id?: number
 }
 
 export interface BotSettings {
@@ -20,6 +21,9 @@ export interface BotSettings {
   registration_form: FormField[]
   welcome_message: string
   welcome_content?: import('@/features/telegram-preview').MessageContent
+  module_configs?: ModuleConfigs
+  pos_selector_enabled?: boolean
+  contacts_pos_ids?: number[]
 }
 
 export interface BotButton {
@@ -27,6 +31,8 @@ export interface BotButton {
   type: string
   value: string
   content?: import('@/features/telegram-preview').MessageContent
+  managed_by_module?: string | null
+  is_system?: boolean
 }
 
 export interface FormField {
@@ -35,6 +41,35 @@ export interface FormField {
   type: string
   required: boolean
   options?: string[]
+}
+
+export interface ModuleConfigs {
+  menu?: MenuModuleConfig
+  booking?: BookingModuleConfig
+  feedback?: FeedbackModuleConfig
+}
+
+export interface MenuModuleConfig {
+  unavailable_message?: string
+}
+
+export interface BookingTimeSlot {
+  start: string
+  end: string
+}
+
+export interface BookingModuleConfig {
+  intro_content?: import('@/features/telegram-preview').MessageContent
+  date_from_days?: number
+  date_to_days?: number
+  time_slots?: BookingTimeSlot[]
+  party_size_options?: string[]
+  pos_ids?: number[]
+}
+
+export interface FeedbackModuleConfig {
+  prompt_message?: string
+  success_message?: string
 }
 
 export interface CreateBotRequest {

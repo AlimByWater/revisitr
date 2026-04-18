@@ -18,6 +18,7 @@ type botsRepo interface {
 	Create(ctx context.Context, bot *entity.Bot) error
 	GetByID(ctx context.Context, id int) (*entity.Bot, error)
 	GetByOrgID(ctx context.Context, orgID int) ([]entity.Bot, error)
+	HasPOSLocations(ctx context.Context, botID int) (bool, error)
 	Update(ctx context.Context, bot *entity.Bot) error
 	UpdateSettings(ctx context.Context, id int, settings entity.BotSettings) error
 	Delete(ctx context.Context, id int) error
@@ -63,7 +64,7 @@ func (uc *Usecase) Create(ctx context.Context, orgID int, req *entity.CreateBotR
 		OrgID:  orgID,
 		Name:   req.Name,
 		Token:  req.Token,
-		Status: "inactive",
+		Status: "pending",
 		Settings: entity.BotSettings{
 			Modules:          []string{},
 			Buttons:          []entity.BotButton{},
@@ -121,8 +122,19 @@ func (uc *Usecase) Update(ctx context.Context, id, orgID int, req *entity.Update
 	if req.Name != nil {
 		bot.Name = *req.Name
 	}
+	if req.ProgramID != nil {
+		bot.ProgramID = req.ProgramID
+	}
 	if req.Status != nil {
-		bot.Status = *req.Status
+		hasPOS, err := uc.bots.HasPOSLocations(ctx, id)
+		if err != nil {
+			return nil, fmt.Errorf("check bot pos locations: %w", err)
+		}
+		if !hasPOS {
+			bot.Status = "pending"
+		} else {
+			bot.Status = *req.Status
+		}
 	}
 
 	if err := uc.bots.Update(ctx, bot); err != nil {
@@ -208,6 +220,20 @@ func (uc *Usecase) UpdateSettings(ctx context.Context, id, orgID int, req *entit
 		if derived := deriveWelcomeMessage(req.WelcomeContent, settings.WelcomeMessage); derived != "" {
 			settings.WelcomeMessage = derived
 		}
+	}
+	if req.ModuleConfigs != nil {
+		if req.ModuleConfigs.Booking.IntroContent != nil {
+			if err := req.ModuleConfigs.Booking.IntroContent.Validate(); err != nil {
+				return fmt.Errorf("invalid booking intro content: %w", err)
+			}
+		}
+		settings.ModuleConfigs = *req.ModuleConfigs
+	}
+	if req.PosSelectorEnabled != nil {
+		settings.PosSelectorEnabled = *req.PosSelectorEnabled
+	}
+	if req.ContactsPOSIDs != nil {
+		settings.ContactsPOSIDs = *req.ContactsPOSIDs
 	}
 
 	if err := uc.bots.UpdateSettings(ctx, id, settings); err != nil {

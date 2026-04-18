@@ -8,11 +8,14 @@ import (
 )
 
 type BotSettings struct {
-	Modules          []string        `json:"modules"`
-	Buttons          []BotButton     `json:"buttons"`
-	RegistrationForm []FormField     `json:"registration_form"`
-	WelcomeMessage   string          `json:"welcome_message"`            // Legacy
-	WelcomeContent   *MessageContent `json:"welcome_content,omitempty"`  // New: composite welcome
+	Modules            []string        `json:"modules"`
+	Buttons            []BotButton     `json:"buttons"`
+	RegistrationForm   []FormField     `json:"registration_form"`
+	WelcomeMessage     string          `json:"welcome_message"`           // Legacy
+	WelcomeContent     *MessageContent `json:"welcome_content,omitempty"` // New: composite welcome
+	ModuleConfigs      ModuleConfigs   `json:"module_configs,omitempty"`
+	PosSelectorEnabled bool            `json:"pos_selector_enabled,omitempty"`
+	ContactsPOSIDs     []int           `json:"contacts_pos_ids,omitempty"`
 }
 
 func (s *BotSettings) Scan(src interface{}) error {
@@ -45,27 +48,57 @@ type BotButton struct {
 }
 
 type FormField struct {
-	Name     string `json:"name"`
-	Label    string `json:"label"`
-	Type     string `json:"type"`
-	Required bool   `json:"required"`
+	Name     string   `json:"name"`
+	Label    string   `json:"label"`
+	Type     string   `json:"type"`
+	Required bool     `json:"required"`
+	Options  []string `json:"options,omitempty"`
+}
+
+type ModuleConfigs struct {
+	Menu     MenuModuleConfig     `json:"menu,omitempty"`
+	Booking  BookingModuleConfig  `json:"booking,omitempty"`
+	Feedback FeedbackModuleConfig `json:"feedback,omitempty"`
+}
+
+type MenuModuleConfig struct {
+	UnavailableMessage string `json:"unavailable_message,omitempty"`
+}
+
+type BookingModuleConfig struct {
+	IntroContent     *MessageContent   `json:"intro_content,omitempty"`
+	DateFromDays     int               `json:"date_from_days,omitempty"`
+	DateToDays       int               `json:"date_to_days,omitempty"`
+	TimeSlots        []BookingTimeSlot `json:"time_slots,omitempty"`
+	PartySizeOptions []string          `json:"party_size_options,omitempty"`
+	POSIDs           []int             `json:"pos_ids,omitempty"`
+}
+
+type BookingTimeSlot struct {
+	Start string `json:"start"`
+	End   string `json:"end"`
+}
+
+type FeedbackModuleConfig struct {
+	PromptMessage  string `json:"prompt_message,omitempty"`
+	SuccessMessage string `json:"success_message,omitempty"`
 }
 
 type Bot struct {
-	ID        int         `db:"id" json:"id"`
-	OrgID     int         `db:"org_id" json:"org_id"`
-	ProgramID *int        `db:"program_id" json:"program_id"`
-	Name      string      `db:"name" json:"name"`
-	Token     string      `db:"token" json:"-"`
-	Username  string      `db:"username" json:"username"`
-	Status    string      `db:"status" json:"status"` // "active" | "inactive" | "pending" | "error"
-	Settings  BotSettings `db:"settings" json:"settings"`
-	CreatedAt           time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt           time.Time `db:"updated_at" json:"updated_at"`
-	TokenMasked         string    `db:"-" json:"token_masked,omitempty"`
-	IsManagedBot        bool      `db:"is_managed" json:"is_managed"`
-	ManagedBotID        *int64    `db:"managed_bot_id" json:"managed_bot_id,omitempty"`
-	CreatedByTelegramID *int64    `db:"created_by_telegram_id" json:"created_by_telegram_id,omitempty"`
+	ID                  int         `db:"id" json:"id"`
+	OrgID               int         `db:"org_id" json:"org_id"`
+	ProgramID           *int        `db:"program_id" json:"program_id"`
+	Name                string      `db:"name" json:"name"`
+	Token               string      `db:"token" json:"-"`
+	Username            string      `db:"username" json:"username"`
+	Status              string      `db:"status" json:"status"` // "active" | "inactive" | "pending" | "error"
+	Settings            BotSettings `db:"settings" json:"settings"`
+	CreatedAt           time.Time   `db:"created_at" json:"created_at"`
+	UpdatedAt           time.Time   `db:"updated_at" json:"updated_at"`
+	TokenMasked         string      `db:"-" json:"token_masked,omitempty"`
+	IsManagedBot        bool        `db:"is_managed" json:"is_managed"`
+	ManagedBotID        *int64      `db:"managed_bot_id" json:"managed_bot_id,omitempty"`
+	CreatedByTelegramID *int64      `db:"created_by_telegram_id" json:"created_by_telegram_id,omitempty"`
 }
 
 // MaskToken returns a partially masked token for safe display.
@@ -94,9 +127,12 @@ type UpdateBotRequest struct {
 }
 
 type UpdateBotSettingsRequest struct {
-	Modules          *[]string        `json:"modules,omitempty"`
-	Buttons          *[]BotButton     `json:"buttons,omitempty"`
-	RegistrationForm *[]FormField     `json:"registration_form,omitempty"`
-	WelcomeMessage   *string          `json:"welcome_message,omitempty"`
-	WelcomeContent   *MessageContent  `json:"welcome_content,omitempty"`
+	Modules            *[]string       `json:"modules,omitempty"`
+	Buttons            *[]BotButton    `json:"buttons,omitempty"`
+	RegistrationForm   *[]FormField    `json:"registration_form,omitempty"`
+	WelcomeMessage     *string         `json:"welcome_message,omitempty"`
+	WelcomeContent     *MessageContent `json:"welcome_content,omitempty"`
+	ModuleConfigs      *ModuleConfigs  `json:"module_configs,omitempty"`
+	PosSelectorEnabled *bool           `json:"pos_selector_enabled,omitempty"`
+	ContactsPOSIDs     *[]int          `json:"contacts_pos_ids,omitempty"`
 }

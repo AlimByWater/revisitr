@@ -9,25 +9,32 @@ import (
 	"revisitr/internal/entity"
 )
 
+func ptr[T any](value T) *T { return &value }
+
 // --- mocks ---
 
 type mockMenusRepo struct {
-	createFn             func(ctx context.Context, m *entity.Menu) error
-	getByIDFn            func(ctx context.Context, id int) (*entity.Menu, error)
-	getByOrgIDFn         func(ctx context.Context, orgID int) ([]entity.Menu, error)
-	updateFn             func(ctx context.Context, m *entity.Menu) error
-	deleteFn             func(ctx context.Context, id int) error
-	getFullMenuFn        func(ctx context.Context, menuID int) (*entity.Menu, error)
-	createCategoryFn     func(ctx context.Context, cat *entity.MenuCategory) error
-	getCategoriesFn      func(ctx context.Context, menuID int) ([]entity.MenuCategory, error)
-	deleteCategoryFn     func(ctx context.Context, id int) error
-	createItemFn         func(ctx context.Context, item *entity.MenuItem) error
-	getItemFn            func(ctx context.Context, id int) (*entity.MenuItem, error)
-	updateItemFn         func(ctx context.Context, item *entity.MenuItem) error
-	deleteItemFn         func(ctx context.Context, id int) error
+	createFn              func(ctx context.Context, m *entity.Menu) error
+	getByIDFn             func(ctx context.Context, id int) (*entity.Menu, error)
+	getByOrgIDFn          func(ctx context.Context, orgID int) ([]entity.Menu, error)
+	updateFn              func(ctx context.Context, m *entity.Menu) error
+	deleteFn              func(ctx context.Context, id int) error
+	getFullMenuFn         func(ctx context.Context, menuID int) (*entity.Menu, error)
+	createCategoryFn      func(ctx context.Context, cat *entity.MenuCategory) error
+	getCategoryFn         func(ctx context.Context, id int) (*entity.MenuCategory, error)
+	getCategoriesFn       func(ctx context.Context, menuID int) ([]entity.MenuCategory, error)
+	updateCategoryFn      func(ctx context.Context, category *entity.MenuCategory) error
+	deleteCategoryFn      func(ctx context.Context, id int) error
+	createItemFn          func(ctx context.Context, item *entity.MenuItem) error
+	getItemFn             func(ctx context.Context, id int) (*entity.MenuItem, error)
+	updateItemFn          func(ctx context.Context, item *entity.MenuItem) error
+	deleteItemFn          func(ctx context.Context, id int) error
 	getClientOrderStatsFn func(ctx context.Context, clientID int) (*entity.ClientOrderStats, error)
 	setBotPOSLocationsFn  func(ctx context.Context, botID int, posIDs []int) error
 	getBotPOSLocationsFn  func(ctx context.Context, botID int) ([]int, error)
+	setMenuPOSBindingsFn  func(ctx context.Context, menuID int, bindings []entity.MenuPOSBindingRequest) error
+	getMenuPOSBindingsFn  func(ctx context.Context, menuID int) ([]entity.MenuPOSBinding, error)
+	getActiveMenuForPOSFn func(ctx context.Context, orgID, posID int) (*entity.Menu, error)
 }
 
 func (m *mockMenusRepo) Create(ctx context.Context, menu *entity.Menu) error {
@@ -78,6 +85,18 @@ func (m *mockMenusRepo) GetCategories(ctx context.Context, menuID int) ([]entity
 	}
 	return nil, nil
 }
+func (m *mockMenusRepo) GetCategory(ctx context.Context, id int) (*entity.MenuCategory, error) {
+	if m.getCategoryFn != nil {
+		return m.getCategoryFn(ctx, id)
+	}
+	return nil, nil
+}
+func (m *mockMenusRepo) UpdateCategory(ctx context.Context, category *entity.MenuCategory) error {
+	if m.updateCategoryFn != nil {
+		return m.updateCategoryFn(ctx, category)
+	}
+	return nil
+}
 func (m *mockMenusRepo) DeleteCategory(ctx context.Context, id int) error {
 	if m.deleteCategoryFn != nil {
 		return m.deleteCategoryFn(ctx, id)
@@ -123,6 +142,24 @@ func (m *mockMenusRepo) SetBotPOSLocations(ctx context.Context, botID int, posID
 func (m *mockMenusRepo) GetBotPOSLocations(ctx context.Context, botID int) ([]int, error) {
 	if m.getBotPOSLocationsFn != nil {
 		return m.getBotPOSLocationsFn(ctx, botID)
+	}
+	return nil, nil
+}
+func (m *mockMenusRepo) SetMenuPOSBindings(ctx context.Context, menuID int, bindings []entity.MenuPOSBindingRequest) error {
+	if m.setMenuPOSBindingsFn != nil {
+		return m.setMenuPOSBindingsFn(ctx, menuID, bindings)
+	}
+	return nil
+}
+func (m *mockMenusRepo) GetMenuPOSBindings(ctx context.Context, menuID int) ([]entity.MenuPOSBinding, error) {
+	if m.getMenuPOSBindingsFn != nil {
+		return m.getMenuPOSBindingsFn(ctx, menuID)
+	}
+	return nil, nil
+}
+func (m *mockMenusRepo) GetActiveMenuForPOS(ctx context.Context, orgID, posID int) (*entity.Menu, error) {
+	if m.getActiveMenuForPOSFn != nil {
+		return m.getActiveMenuForPOSFn(ctx, orgID, posID)
 	}
 	return nil, nil
 }
@@ -326,5 +363,46 @@ func TestAddItem(t *testing.T) {
 	}
 	if createdItem == nil {
 		t.Fatal("expected repo.CreateItem to be called")
+	}
+}
+
+func TestUpdateCategory_NotOwner(t *testing.T) {
+	repo := &mockMenusRepo{
+		getCategoryFn: func(_ context.Context, _ int) (*entity.MenuCategory, error) {
+			return &entity.MenuCategory{ID: 5, MenuID: 9, Name: "Coffee"}, nil
+		},
+		getByIDFn: func(_ context.Context, id int) (*entity.Menu, error) {
+			return &entity.Menu{ID: id, OrgID: 77}, nil
+		},
+	}
+	uc := New(repo)
+
+	_, err := uc.UpdateCategory(context.Background(), 10, 5, entity.UpdateMenuCategoryRequest{
+		Name: ptr("Tea"),
+	})
+	if err != ErrNotOwner {
+		t.Fatalf("expected ErrNotOwner, got %v", err)
+	}
+}
+
+func TestUpdateItem_NotOwner(t *testing.T) {
+	repo := &mockMenusRepo{
+		getItemFn: func(_ context.Context, _ int) (*entity.MenuItem, error) {
+			return &entity.MenuItem{ID: 7, CategoryID: 5, Name: "Latte"}, nil
+		},
+		getCategoryFn: func(_ context.Context, _ int) (*entity.MenuCategory, error) {
+			return &entity.MenuCategory{ID: 5, MenuID: 9, Name: "Coffee"}, nil
+		},
+		getByIDFn: func(_ context.Context, id int) (*entity.Menu, error) {
+			return &entity.Menu{ID: id, OrgID: 77}, nil
+		},
+	}
+	uc := New(repo)
+
+	_, err := uc.UpdateItem(context.Background(), 10, 7, entity.UpdateMenuItemRequest{
+		Name: ptr("Mocha"),
+	})
+	if err != ErrNotOwner {
+		t.Fatalf("expected ErrNotOwner, got %v", err)
 	}
 }

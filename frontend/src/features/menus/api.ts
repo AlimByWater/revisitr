@@ -1,7 +1,8 @@
 import { api } from '@/lib/api'
 import type {
   Menu, CreateMenuRequest, MenuCategory, CreateMenuCategoryRequest,
-  MenuItem, CreateMenuItemRequest, UpdateMenuItemRequest,
+  MenuItem, CreateMenuItemRequest, UpdateMenuCategoryRequest, UpdateMenuItemRequest,
+  UpdateMenuRequest,
   ClientOrderStats,
 } from './types'
 
@@ -21,7 +22,7 @@ export const menusApi = {
     return response.data
   },
 
-  update: async (id: number, data: Partial<Menu>): Promise<void> => {
+  update: async (id: number, data: UpdateMenuRequest): Promise<void> => {
     await api.patch(`/menus/${id}`, data)
   },
 
@@ -31,6 +32,11 @@ export const menusApi = {
 
   addCategory: async (menuId: number, data: CreateMenuCategoryRequest): Promise<MenuCategory> => {
     const response = await api.post<MenuCategory>(`/menus/${menuId}/categories`, data)
+    return response.data
+  },
+
+  updateCategory: async (categoryId: number, data: UpdateMenuCategoryRequest): Promise<MenuCategory> => {
+    const response = await api.patch<MenuCategory>(`/menus/categories/${categoryId}`, data)
     return response.data
   },
 

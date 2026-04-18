@@ -16,6 +16,7 @@ type mockBotsRepo struct {
 	createFn     func(ctx context.Context, bot *entity.Bot) error
 	getByIDFn    func(ctx context.Context, id int) (*entity.Bot, error)
 	getByOrgIDFn func(ctx context.Context, orgID int) ([]entity.Bot, error)
+	hasPOSFn     func(ctx context.Context, botID int) (bool, error)
 	updateFn     func(ctx context.Context, bot *entity.Bot) error
 	updateSettFn func(ctx context.Context, id int, s entity.BotSettings) error
 	deleteFn     func(ctx context.Context, id int) error
@@ -29,6 +30,12 @@ func (m *mockBotsRepo) GetByID(ctx context.Context, id int) (*entity.Bot, error)
 }
 func (m *mockBotsRepo) GetByOrgID(ctx context.Context, orgID int) ([]entity.Bot, error) {
 	return m.getByOrgIDFn(ctx, orgID)
+}
+func (m *mockBotsRepo) HasPOSLocations(ctx context.Context, botID int) (bool, error) {
+	if m.hasPOSFn != nil {
+		return m.hasPOSFn(ctx, botID)
+	}
+	return false, nil
 }
 func (m *mockBotsRepo) Update(ctx context.Context, bot *entity.Bot) error {
 	return m.updateFn(ctx, bot)
@@ -100,8 +107,8 @@ func TestCreate_Success(t *testing.T) {
 	if bot.OrgID != 10 {
 		t.Errorf("got OrgID %d, want 10", bot.OrgID)
 	}
-	if bot.Status != "inactive" {
-		t.Errorf("got Status %q, want %q", bot.Status, "inactive")
+	if bot.Status != "pending" {
+		t.Errorf("got Status %q, want %q", bot.Status, "pending")
 	}
 	if len(bot.Settings.Modules) != 0 {
 		t.Errorf("got %d modules, want empty", len(bot.Settings.Modules))
@@ -238,6 +245,9 @@ func TestUpdate_StatusOnly(t *testing.T) {
 		getByIDFn: func(_ context.Context, _ int) (*entity.Bot, error) {
 			return bot, nil
 		},
+		hasPOSFn: func(_ context.Context, _ int) (bool, error) {
+			return true, nil
+		},
 		updateFn: func(_ context.Context, _ *entity.Bot) error {
 			return nil
 		},
@@ -252,6 +262,56 @@ func TestUpdate_StatusOnly(t *testing.T) {
 	}
 	if got.Status != "active" {
 		t.Errorf("got Status %q, want %q", got.Status, "active")
+	}
+}
+
+func TestUpdate_StatusForcedPendingWithoutPOS(t *testing.T) {
+	bot := testBot(1, 10)
+	repo := &mockBotsRepo{
+		getByIDFn: func(_ context.Context, _ int) (*entity.Bot, error) {
+			return bot, nil
+		},
+		hasPOSFn: func(_ context.Context, _ int) (bool, error) {
+			return false, nil
+		},
+		updateFn: func(_ context.Context, _ *entity.Bot) error {
+			return nil
+		},
+	}
+	uc := newUC(repo, &mockBotClientsRepo{})
+
+	got, err := uc.Update(context.Background(), 1, 10, &entity.UpdateBotRequest{
+		Status: ptr("active"),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.Status != "pending" {
+		t.Errorf("got Status %q, want %q", got.Status, "pending")
+	}
+}
+
+func TestUpdate_ProgramID(t *testing.T) {
+	bot := testBot(1, 10)
+	repo := &mockBotsRepo{
+		getByIDFn: func(_ context.Context, _ int) (*entity.Bot, error) {
+			return bot, nil
+		},
+		updateFn: func(_ context.Context, _ *entity.Bot) error {
+			return nil
+		},
+	}
+	uc := newUC(repo, &mockBotClientsRepo{})
+
+	programID := 42
+	got, err := uc.Update(context.Background(), 1, 10, &entity.UpdateBotRequest{
+		ProgramID: &programID,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.ProgramID == nil || *got.ProgramID != 42 {
+		t.Fatalf("got ProgramID %#v, want 42", got.ProgramID)
 	}
 }
 

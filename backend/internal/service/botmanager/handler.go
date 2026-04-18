@@ -34,6 +34,11 @@ func newHandler(mgr *Manager, bot *telego.Bot, info *entity.Bot) *handler {
 }
 
 func (h *handler) Handle(ctx context.Context, update telego.Update) {
+	if update.CallbackQuery != nil {
+		h.handleCallbackQuery(ctx, update.CallbackQuery)
+		return
+	}
+
 	if update.Message == nil {
 		return
 	}
@@ -48,14 +53,28 @@ func (h *handler) Handle(ctx context.Context, update telego.Update) {
 	}
 
 	text := strings.TrimSpace(msg.Text)
+	state, _ := h.loadFlowState(ctx, chatID)
+
+	if state != nil && state.AwaitingFeedback && text != "" && !strings.HasPrefix(text, "/") {
+		h.handleFeedbackResponse(ctx, msg, text, *state)
+		return
+	}
 
 	switch {
 	case text == "/start":
 		h.handleStart(ctx, msg)
-	case text == btnBalance:
+	case text == btnHome:
+		h.handleStart(ctx, msg)
+	case text == btnLoyalty:
 		h.handleBalance(ctx, msg)
-	case text == btnLocations:
+	case text == btnContacts:
 		h.handleLocations(ctx, msg)
+	case text == btnMenu:
+		h.handleMenu(ctx, msg)
+	case text == btnBooking:
+		h.handleBooking(ctx, msg)
+	case text == btnFeedback:
+		h.handleFeedback(ctx, msg)
 	case text == btnAbout:
 		h.handleAbout(ctx, msg)
 	case text == btnBack:
@@ -69,6 +88,14 @@ func (h *handler) Handle(ctx context.Context, update telego.Update) {
 func (h *handler) handleStart(ctx context.Context, msg *telego.Message) {
 	chatID := msg.Chat.ID
 	telegramID := msg.From.ID
+
+	_ = h.clearFlowState(ctx, chatID)
+
+	posIDs, err := h.boundPOSIDs(ctx)
+	if err == nil && h.info.Settings.PosSelectorEnabled && len(posIDs) > 1 {
+		h.sendVenueChooser(ctx, chatID, posIDs)
+		return
+	}
 
 	// Check if user already registered
 	client, err := h.mgr.clientsRepo.GetByTelegramID(ctx, h.info.ID, telegramID)
@@ -241,7 +268,7 @@ func (h *handler) handleBalance(ctx context.Context, msg *telego.Message) {
 func (h *handler) handleLocations(ctx context.Context, msg *telego.Message) {
 	chatID := msg.Chat.ID
 
-	locations, err := h.mgr.posRepo.GetByOrgID(ctx, h.info.OrgID)
+	locations, err := h.filteredContactsLocations(ctx, chatID)
 	if err != nil || len(locations) == 0 {
 		h.sendText(chatID, h.locationsUnavailableText())
 		return
@@ -469,7 +496,7 @@ func (h *handler) locationsHeader() string {
 	if h.isBaratieDemo() {
 		return "⋆｡°✩ 🧭 Курс к Baratie 🧭 ✩°｡⋆\n\n"
 	}
-	return "📍 Наши точки:\n\n"
+	return "📍 Контакты:\n\n"
 }
 
 func (h *handler) welcomeBonusText(bonus float64, currencyName string) string {

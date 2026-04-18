@@ -1,6 +1,13 @@
 import { useApiQuery, useApiMutation } from '@/lib/swr'
 import { menusApi } from './api'
-import type { CreateMenuRequest, CreateMenuCategoryRequest, CreateMenuItemRequest, UpdateMenuItemRequest } from './types'
+import type {
+  CreateMenuRequest,
+  CreateMenuCategoryRequest,
+  CreateMenuItemRequest,
+  UpdateMenuCategoryRequest,
+  UpdateMenuItemRequest,
+  UpdateMenuRequest,
+} from './types'
 
 export function useMenusQuery() {
   return useApiQuery('menus', menusApi.list)
@@ -18,6 +25,14 @@ export function useCreateMenuMutation() {
   )
 }
 
+export function useUpdateMenuMutation() {
+  return useApiMutation(
+    'menus/update',
+    ({ id, data }: { id: number; data: UpdateMenuRequest }) => menusApi.update(id, data),
+    ['menus'],
+  )
+}
+
 export function useDeleteMenuMutation() {
   return useApiMutation(
     'menus/delete',
@@ -31,6 +46,15 @@ export function useAddCategoryMutation(menuId: number) {
     `menus/${menuId}/add-category`,
     (data: CreateMenuCategoryRequest) => menusApi.addCategory(menuId, data),
     [`menus-${menuId}`, 'menus'],
+  )
+}
+
+export function useUpdateCategoryMutation() {
+  return useApiMutation(
+    'menus/update-category',
+    ({ categoryId, data }: { categoryId: number; data: UpdateMenuCategoryRequest }) =>
+      menusApi.updateCategory(categoryId, data),
+    ['menus'],
   )
 }
 

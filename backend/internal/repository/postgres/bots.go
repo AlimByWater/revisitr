@@ -58,6 +58,15 @@ func (r *Bots) GetByOrgID(ctx context.Context, orgID int) ([]entity.Bot, error) 
 	return bots, nil
 }
 
+func (r *Bots) HasPOSLocations(ctx context.Context, botID int) (bool, error) {
+	var exists bool
+	if err := r.pg.DB().GetContext(ctx, &exists,
+		"SELECT EXISTS(SELECT 1 FROM bot_pos_locations WHERE bot_id = $1)", botID); err != nil {
+		return false, fmt.Errorf("bots.HasPOSLocations: %w", err)
+	}
+	return exists, nil
+}
+
 func (r *Bots) Update(ctx context.Context, bot *entity.Bot) error {
 	query := `UPDATE bots SET name = $1, status = $2, program_id = $3, updated_at = NOW() WHERE id = $4`
 	result, err := r.pg.DB().ExecContext(ctx, query, bot.Name, bot.Status, bot.ProgramID, bot.ID)

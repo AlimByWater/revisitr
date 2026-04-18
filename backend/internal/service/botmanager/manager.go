@@ -35,6 +35,17 @@ type posRepository interface {
 	GetByOrgID(ctx context.Context, orgID int) ([]entity.POSLocation, error)
 }
 
+type menusRepository interface {
+	GetBotPOSLocations(ctx context.Context, botID int) ([]int, error)
+	GetActiveMenuForPOS(ctx context.Context, orgID, posID int) (*entity.Menu, error)
+}
+
+type sessionStore interface {
+	Load(ctx context.Context, botID int, chatID int64) (*FlowState, error)
+	Save(ctx context.Context, botID int, chatID int64, state FlowState) error
+	Delete(ctx context.Context, botID int, chatID int64) error
+}
+
 type botInstance struct {
 	bot    *telego.Bot
 	cancel context.CancelFunc
@@ -42,13 +53,17 @@ type botInstance struct {
 }
 
 type Manager struct {
-	botsRepo    botsRepository
-	clientsRepo botClientsRepository
-	loyaltyRepo loyaltyRepository
-	posRepo     posRepository
-	tgSender    *tgService.Sender
-	logger      *slog.Logger
-	apiServer   string // custom Telegram Bot API server URL (empty = default)
+	botsRepo      botsRepository
+	clientsRepo   botClientsRepository
+	loyaltyRepo   loyaltyRepository
+	posRepo       posRepository
+	menusRepo     menusRepository
+	sessions      sessionStore
+	tgSender      *tgService.Sender
+	logger        *slog.Logger
+	apiServer     string // custom Telegram Bot API server URL (empty = default)
+	adminBotToken string
+	adminBot      *telego.Bot
 
 	mu        sync.RWMutex
 	instances map[int]*botInstance
@@ -62,6 +77,18 @@ func WithTelegramSender(ts *tgService.Sender) ManagerOption {
 
 func WithAPIServer(url string) ManagerOption {
 	return func(m *Manager) { m.apiServer = url }
+}
+
+func WithMenus(repo menusRepository) ManagerOption {
+	return func(m *Manager) { m.menusRepo = repo }
+}
+
+func WithSessionStore(store sessionStore) ManagerOption {
+	return func(m *Manager) { m.sessions = store }
+}
+
+func WithAdminBotToken(token string) ManagerOption {
+	return func(m *Manager) { m.adminBotToken = token }
 }
 
 func New(
@@ -87,6 +114,18 @@ func New(
 }
 
 func (m *Manager) Start(ctx context.Context) error {
+	if m.adminBot == nil && m.adminBotToken != "" {
+		var opts []telego.BotOption
+		if m.apiServer != "" {
+			opts = append(opts, telego.WithAPIServer(m.apiServer))
+		}
+		adminBot, err := telego.NewBot(m.adminBotToken, opts...)
+		if err != nil {
+			return fmt.Errorf("botmanager: create admin bot: %w", err)
+		}
+		m.adminBot = adminBot
+	}
+
 	bots, err := m.botsRepo.GetAllActive(ctx)
 	if err != nil {
 		return fmt.Errorf("botmanager: load active bots: %w", err)

@@ -8,35 +8,40 @@ import (
 )
 
 const (
-	btnBalance    = "💰 Баланс"
-	btnLocations  = "📍 Наши точки"
-	btnAbout      = "ℹ️ О нас"
-	btnBack       = "◀️ Назад"
+	btnLoyalty  = "Лояльность"
+	btnMenu     = "Меню"
+	btnBooking  = "Забронировать"
+	btnFeedback = "Связаться"
+	btnContacts = "Контакты"
+	btnHome     = "На главную"
+	btnAbout    = "ℹ️ О нас"
+	btnBack     = "◀️ Назад"
 )
 
 func buildMainMenu(settings entity.BotSettings) *telego.ReplyKeyboardMarkup {
 	var rows [][]telego.KeyboardButton
+	var contentButtons []telego.KeyboardButton
 
-	// Add custom buttons from settings in pairs
+	for _, label := range moduleButtonLabels(settings.Modules) {
+		contentButtons = append(contentButtons, tu.KeyboardButton(label))
+	}
+
 	if len(settings.Buttons) > 0 {
-		var row []telego.KeyboardButton
 		for _, btn := range settings.Buttons {
-			row = append(row, tu.KeyboardButton(btn.Label))
-			if len(row) == 2 {
-				rows = append(rows, row)
-				row = nil
-			}
-		}
-		if len(row) > 0 {
-			rows = append(rows, row)
+			contentButtons = append(contentButtons, tu.KeyboardButton(btn.Label))
 		}
 	}
 
-	// Default buttons
-	rows = append(rows, []telego.KeyboardButton{
-		tu.KeyboardButton(btnBalance),
-		tu.KeyboardButton(btnLocations),
-	})
+	contentButtons = append(contentButtons, tu.KeyboardButton(btnContacts))
+
+	for len(contentButtons) >= 2 {
+		rows = append(rows, []telego.KeyboardButton{contentButtons[0], contentButtons[1]})
+		contentButtons = contentButtons[2:]
+	}
+	if len(contentButtons) == 1 {
+		rows = append(rows, []telego.KeyboardButton{contentButtons[0]})
+	}
+	rows = append(rows, []telego.KeyboardButton{tu.KeyboardButton(btnHome)})
 
 	kb := &telego.ReplyKeyboardMarkup{
 		Keyboard:       rows,
@@ -65,4 +70,32 @@ func buildBackButton() *telego.ReplyKeyboardMarkup {
 		},
 		ResizeKeyboard: true,
 	}
+}
+
+func moduleButtonLabels(modules []string) []string {
+	seen := map[string]struct{}{}
+	var labels []string
+
+	add := func(label string) {
+		if _, ok := seen[label]; ok {
+			return
+		}
+		seen[label] = struct{}{}
+		labels = append(labels, label)
+	}
+
+	for _, module := range modules {
+		switch module {
+		case "loyalty":
+			add(btnLoyalty)
+		case "menu":
+			add(btnMenu)
+		case "booking":
+			add(btnBooking)
+		case "feedback":
+			add(btnFeedback)
+		}
+	}
+
+	return labels
 }

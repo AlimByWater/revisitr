@@ -53,6 +53,7 @@ func main() {
 	botClientsRepo := pgRepo.NewBotClients(pg)
 	loyaltyRepo := pgRepo.NewLoyalty(pg)
 	posRepo := pgRepo.NewPOS(pg)
+	menusRepo := pgRepo.NewMenus(pg)
 
 	campaignsRepo := pgRepo.NewCampaigns(pg)
 	scenariosRepo := pgRepo.NewAutoScenarios(pg)
@@ -64,6 +65,9 @@ func main() {
 	// Create and start bot manager
 	var mgrOpts []botmanager.ManagerOption
 	mgrOpts = append(mgrOpts, botmanager.WithTelegramSender(tgSender))
+	mgrOpts = append(mgrOpts, botmanager.WithMenus(menusRepo))
+	mgrOpts = append(mgrOpts, botmanager.WithSessionStore(botmanager.NewRedisSessionStore(rds.Client())))
+	mgrOpts = append(mgrOpts, botmanager.WithAdminBotToken(cfg.MasterBot.Token))
 	if cfg.TelegramAPIURL != "" {
 		logger.Info("using custom Telegram API server", "url", cfg.TelegramAPIURL)
 		mgrOpts = append(mgrOpts, botmanager.WithAPIServer(cfg.TelegramAPIURL))

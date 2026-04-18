@@ -1,10 +1,11 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Suspense, lazy, useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { useBotQuery } from '@/features/bots/queries'
 import { botsApi } from '@/features/bots/api'
 import { menusApi } from '@/features/menus/api'
 import { usePOSQuery } from '@/features/pos/queries'
+import { useProgramsQuery } from '@/features/loyalty/queries'
 import { ErrorState } from '@/components/common/ErrorState'
 import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 import {
@@ -37,10 +38,29 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Bot, BotSettings, BotButton, FormField } from '@/features/bots/types'
+import type {
+  BookingModuleConfig,
+  Bot,
+  BotSettings,
+  BotButton,
+  FormField,
+} from '@/features/bots/types'
 import type { POSLocation } from '@/features/pos/types'
 import { campaignsApi } from '@/features/campaigns/api'
 import type { MessageContent } from '@/features/telegram-preview'
+import {
+  canAddPreset,
+  deriveBotRequirements,
+  getEditableButtons,
+  getManagedButtonSummary,
+  MODULE_DEFS,
+  normalizeBookingConfig,
+  normalizeBotSettings,
+  normalizeTimeInput,
+  STANDARD_FIELD_PRESETS,
+  isStandardField,
+  withModuleDefaults,
+} from '@/features/bots/settings'
 
 const TelegramPreview = lazy(() =>
   import('@/features/telegram-preview').then((module) => ({ default: module.TelegramPreview })),
@@ -65,6 +85,7 @@ type TabId = (typeof TABS)[number]['id']
 const statusConfig = {
   active: { label: 'Активен', className: 'bg-green-500 text-white' },
   inactive: { label: 'Неактивен', className: 'bg-neutral-200 text-neutral-500' },
+  pending: { label: 'Ожидает', className: 'bg-amber-500 text-white' },
   error: { label: 'Ошибка', className: 'bg-red-500 text-white' },
 } as const
 
@@ -75,21 +96,6 @@ const inputClassName = cn(
   'transition-colors',
   'disabled:opacity-50 disabled:cursor-not-allowed',
 )
-
-const MODULE_DEFS = [
-  { key: 'loyalty', label: 'Лояльность', description: 'Начисление и списание бонусов' },
-  { key: 'menu', label: 'Меню', description: 'Показ меню заведения в боте' },
-  { key: 'marketplace', label: 'Маркетплейс', description: 'Каталог товаров для заказа' },
-  { key: 'feedback', label: 'Обратная связь', description: 'Сбор отзывов от клиентов' },
-  { key: 'booking', label: 'Бронирование', description: 'Бронирование столиков' },
-] as const
-
-const FORM_PRESETS: FormField[] = [
-  { name: 'first_name', label: 'Имя', type: 'text', required: true },
-  { name: 'phone', label: 'Телефон', type: 'phone', required: true },
-  { name: 'birthday', label: 'Дата рождения', type: 'date', required: false },
-  { name: 'city', label: 'Город', type: 'text', required: false },
-]
 
 const TEMPLATE_VARIABLES = ['{first_name}'] as const
 
@@ -210,6 +216,36 @@ function EditorFallback() {
   )
 }
 
+function WarningBanner({
+  items,
+  onSelectTab,
+}: {
+  items: ReturnType<typeof deriveBotRequirements>
+  onSelectTab: (tab: TabId) => void
+}) {
+  if (items.length === 0) return null
+
+  return (
+    <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900 animate-in animate-in-delay-1">
+      <div className="font-semibold">Для запуска бота не хватает настроек</div>
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-2">
+        {items.map((item, index) => (
+          <span key={item.id}>
+            <button
+              type="button"
+              onClick={() => onSelectTab(item.tab)}
+              className="font-medium underline decoration-amber-400 underline-offset-4 hover:text-amber-700"
+            >
+              {item.label}
+            </button>
+            {index < items.length - 1 ? <span className="ml-3 text-amber-500">•</span> : null}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /** Per-tab save hook returning state + handler */
 function useSaveAction(_id: number, updater: () => Promise<void>) {
   const [isSaving, setIsSaving] = useState(false)
@@ -324,23 +360,74 @@ function SortableItem({
 
 export default function BotDetailPage() {
   const { botId } = useParams<{ botId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
   const id = Number(botId)
   const { data: bot, isLoading, isError } = useBotQuery(isNaN(id) || id <= 0 ? 0 : id)
-  const [activeTab, setActiveTab] = useState<TabId>('connection')
-
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    const tab = searchParams.get('tab')
+    return TABS.some((item) => item.id === tab) ? (tab as TabId) : 'connection'
+  })
   const [settings, setSettings] = useState<BotSettings | null>(null)
+  const [selectedProgramId, setSelectedProgramId] = useState<number | undefined>(bot?.program_id)
+  const [boundPosIds, setBoundPosIds] = useState<number[]>([])
+  const [posBindingsLoaded, setPosBindingsLoaded] = useState(false)
+  const { data: posLocations = [] } = usePOSQuery()
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab && TABS.some((item) => item.id === tab) && tab !== activeTab) {
+      setActiveTab(tab as TabId)
+    }
+  }, [activeTab, searchParams])
 
   useEffect(() => {
     if (bot?.settings) {
+      const normalized = normalizeBotSettings(bot.settings)
       setSettings({
-        welcome_message: bot.settings.welcome_message ?? '',
-        welcome_content: bot.settings.welcome_content,
-        modules: bot.settings.modules ?? [],
-        buttons: (bot.settings.buttons ?? []).map(normalizeButton),
-        registration_form: bot.settings.registration_form ?? [],
+        ...normalized,
+        buttons: normalized.buttons.map(normalizeButton),
       })
     }
   }, [bot])
+
+  useEffect(() => {
+    setSelectedProgramId(bot?.program_id)
+  }, [bot?.program_id])
+
+  useEffect(() => {
+    if (!id || Number.isNaN(id) || id <= 0) return
+
+    let isMounted = true
+
+    menusApi
+      .getBotPOSLocations(id)
+      .then((response) => {
+        if (!isMounted) return
+        setBoundPosIds(response.pos_ids ?? [])
+        setPosBindingsLoaded(true)
+      })
+      .catch(() => {
+        if (!isMounted) return
+        setBoundPosIds([])
+        setPosBindingsLoaded(true)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [id])
+
+  useEffect(() => {
+    if (!settings || !posBindingsLoaded) return
+
+    if (
+      bot?.settings.contacts_pos_ids === undefined &&
+      (settings.contacts_pos_ids?.length ?? 0) === 0 &&
+      boundPosIds.length > 0
+    ) {
+      setSettings((current) => (current ? { ...current, contacts_pos_ids: boundPosIds } : current))
+    }
+  }, [bot?.settings.contacts_pos_ids, boundPosIds, posBindingsLoaded, settings])
 
   if (isLoading) {
     return (
@@ -382,6 +469,26 @@ export default function BotDetailPage() {
     className: 'bg-neutral-100 text-neutral-500',
   }
 
+  const requirements = settings
+    ? deriveBotRequirements({
+        bot: {
+          name: bot.name,
+          username: bot.username,
+          program_id: selectedProgramId,
+          created_by_telegram_id: bot.created_by_telegram_id,
+        },
+        settings,
+        boundPosIds,
+      })
+    : []
+
+  const handleTabChange = (tab: TabId) => {
+    setActiveTab(tab)
+    const next = new URLSearchParams(searchParams)
+    next.set('tab', tab)
+    setSearchParams(next, { replace: true })
+  }
+
   return (
     <div className="max-w-4xl">
       {/* Header */}
@@ -414,6 +521,8 @@ export default function BotDetailPage() {
         </div>
       </div>
 
+      <WarningBanner items={requirements} onSelectTab={handleTabChange} />
+
       {/* Tabs */}
       <div className="mb-6 border-b border-surface-border overflow-x-auto animate-in animate-in-delay-1">
         <div className="flex gap-1 min-w-max">
@@ -421,7 +530,7 @@ export default function BotDetailPage() {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={cn(
                 'inline-flex min-h-11 items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap',
                 'border-b-2 transition-colors',
@@ -441,12 +550,38 @@ export default function BotDetailPage() {
       <div className="animate-in animate-in-delay-2">
         {settings && (
           <>
-            {activeTab === 'connection' && <ConnectionTab bot={bot} botId={id} />}
+            {activeTab === 'connection' && (
+              <ConnectionTab
+                bot={bot}
+                botId={id}
+                settings={settings}
+                setSettings={setSettings}
+                selectedProgramId={selectedProgramId}
+                setSelectedProgramId={setSelectedProgramId}
+                boundPosIds={boundPosIds}
+                setBoundPosIds={setBoundPosIds}
+                posLocations={posLocations}
+                posBindingsLoaded={posBindingsLoaded}
+              />
+            )}
             {activeTab === 'general' && (
-              <GeneralTab botId={id} settings={settings} setSettings={setSettings} botName={bot.name} />
+              <GeneralTab
+                botId={id}
+                settings={settings}
+                setSettings={setSettings}
+                botName={bot.name}
+                boundPosIds={boundPosIds}
+                posLocations={posLocations}
+              />
             )}
             {activeTab === 'modules' && (
-              <ModulesTab botId={id} settings={settings} setSettings={setSettings} />
+              <ModulesTab
+                botId={id}
+                settings={settings}
+                setSettings={setSettings}
+                boundPosIds={boundPosIds}
+                posLocations={posLocations}
+              />
             )}
             {activeTab === 'preview' && <PreviewTab settings={settings} botName={bot.name} />}
           </>
@@ -460,8 +595,41 @@ export default function BotDetailPage() {
 // Tab: Подключение (Connection) — General info + POS
 // ===========================================================================
 
-function ConnectionTab({ bot, botId }: { bot: Bot; botId: number }) {
+function ConnectionTab({
+  bot,
+  botId,
+  settings,
+  setSettings,
+  selectedProgramId,
+  setSelectedProgramId,
+  boundPosIds,
+  setBoundPosIds,
+  posLocations,
+  posBindingsLoaded,
+}: {
+  bot: Bot
+  botId: number
+  settings: BotSettings
+  setSettings: React.Dispatch<React.SetStateAction<BotSettings | null>>
+  selectedProgramId?: number
+  setSelectedProgramId: React.Dispatch<React.SetStateAction<number | undefined>>
+  boundPosIds: number[]
+  setBoundPosIds: React.Dispatch<React.SetStateAction<number[]>>
+  posLocations: POSLocation[]
+  posBindingsLoaded: boolean
+}) {
   const [advanced, setAdvanced] = useState(false)
+  const { data: programs = [] } = useProgramsQuery()
+  const {
+    isSaving: isSavingGeneral,
+    saveError: generalSaveError,
+    saveSuccess: generalSaveSuccess,
+    save: saveGeneral,
+  } = useSaveAction(botId, () =>
+    botsApi.update(botId, {
+      program_id: selectedProgramId,
+    }).then(() => undefined),
+  )
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6">
@@ -492,17 +660,38 @@ function ConnectionTab({ bot, botId }: { bot: Bot; botId: number }) {
         <InfoRow label="Username" value={bot.username ? `@${bot.username}` : '---'} />
         <InfoRow label="Статус" value={bot.status} />
         <InfoRow label="Дата создания" value={formatDate(bot.created_at)} />
-        {bot.program_id && (
-          <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-neutral-500">Программа лояльности</span>
-            <Link
-              to={`/dashboard/loyalty/${bot.program_id}`}
-              className="text-sm text-accent hover:underline font-medium"
-            >
-              Программа #{bot.program_id}
-            </Link>
+        <div className="rounded-xl border border-surface-border bg-neutral-50/70 p-4">
+          <label className="text-sm text-neutral-500" htmlFor="loyalty-program">
+            Программа лояльности
+          </label>
+          <select
+            id="loyalty-program"
+            value={selectedProgramId ?? ''}
+            onChange={(event) => {
+              const nextValue = event.target.value
+              setSelectedProgramId(nextValue ? Number(nextValue) : undefined)
+            }}
+            className={cn(inputClassName, 'mt-2')}
+          >
+            <option value="">Без программы</option>
+            {programs.map((program) => (
+              <option key={program.id} value={program.id}>
+                {program.name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs text-neutral-500">
+            Сохраняется через основное обновление бота, без перехода в раздел лояльности.
+          </p>
+          <div className="mt-4">
+            <SaveButton
+              isSaving={isSavingGeneral}
+              saveError={generalSaveError}
+              saveSuccess={generalSaveSuccess}
+              onSave={saveGeneral}
+            />
           </div>
-        )}
+        </div>
 
         {advanced && (
           <>
@@ -540,7 +729,15 @@ function ConnectionTab({ bot, botId }: { bot: Bot; botId: number }) {
 
       {/* Section: POS */}
       <h3 className="text-base font-semibold text-neutral-900 mb-4">POS-точки бота</h3>
-      <POSSection botId={botId} />
+      <POSSection
+        botId={botId}
+        settings={settings}
+        setSettings={setSettings}
+        posLocations={posLocations}
+        boundPosIds={boundPosIds}
+        setBoundPosIds={setBoundPosIds}
+        isLoaded={posBindingsLoaded}
+      />
     </div>
   )
 }
@@ -555,26 +752,33 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 /** POS section embedded inside ConnectionTab */
-function POSSection({ botId }: { botId: number }) {
-  const { data: posLocations, isLoading: posLoading } = usePOSQuery()
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
-  const [loaded, setLoaded] = useState(false)
+function POSSection({
+  botId,
+  settings,
+  setSettings,
+  posLocations,
+  boundPosIds,
+  setBoundPosIds,
+  isLoaded,
+}: {
+  botId: number
+  settings: BotSettings
+  setSettings: React.Dispatch<React.SetStateAction<BotSettings | null>>
+  posLocations: POSLocation[]
+  boundPosIds: number[]
+  setBoundPosIds: React.Dispatch<React.SetStateAction<number[]>>
+  isLoaded: boolean
+}) {
   const { isSaving, saveError, saveSuccess, save } = useSaveAction(botId, () =>
-    menusApi.setBotPOSLocations(botId, selectedIds),
+    Promise.all([
+      menusApi.setBotPOSLocations(botId, boundPosIds),
+      botsApi.updateSettings(botId, {
+        pos_selector_enabled: settings.pos_selector_enabled,
+      }),
+    ]).then(() => undefined),
   )
 
-  // Load current bindings
-  useEffect(() => {
-    if (loaded) return
-    menusApi.getBotPOSLocations(botId).then((res) => {
-      setSelectedIds(res.pos_ids ?? [])
-      setLoaded(true)
-    }).catch(() => {
-      setLoaded(true)
-    })
-  }, [botId, loaded])
-
-  if (posLoading || !loaded) {
+  if (!isLoaded) {
     return <p className="text-sm text-neutral-500">Загружаем точки продаж…</p>
   }
 
@@ -600,7 +804,7 @@ function POSSection({ botId }: { botId: number }) {
   }
 
   const togglePos = (posId: number) => {
-    setSelectedIds((prev) =>
+    setBoundPosIds((prev) =>
       prev.includes(posId) ? prev.filter((x) => x !== posId) : [...prev, posId],
     )
   }
@@ -618,12 +822,12 @@ function POSSection({ botId }: { botId: number }) {
             key={loc.id}
             className={cn(
               'flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors',
-              selectedIds.includes(loc.id) ? 'bg-accent/5 border border-accent/20' : 'bg-neutral-50 border border-transparent',
+              boundPosIds.includes(loc.id) ? 'bg-accent/5 border border-accent/20' : 'bg-neutral-50 border border-transparent',
             )}
           >
             <input
               type="checkbox"
-              checked={selectedIds.includes(loc.id)}
+              checked={boundPosIds.includes(loc.id)}
               onChange={() => togglePos(loc.id)}
               disabled={isSaving}
               className="w-4 h-4 rounded border-neutral-300 text-accent focus:ring-accent/20"
@@ -634,6 +838,45 @@ function POSSection({ botId }: { botId: number }) {
             </div>
           </label>
         ))}
+      </div>
+
+      <div className="mt-5 rounded-xl border border-surface-border bg-neutral-50/70 p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-neutral-900">
+              Добавить выбор заведения при запуске бота
+            </p>
+            <p className="text-xs text-neutral-500 mt-1">
+              Если к боту привязано больше одной точки, перед приветствием покажем выбор заведения.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={Boolean(settings.pos_selector_enabled)}
+            onClick={() =>
+              setSettings((current) => (
+                current
+                  ? {
+                      ...current,
+                      pos_selector_enabled: !current.pos_selector_enabled,
+                    }
+                  : current
+              ))
+            }
+            className={cn(
+              'relative h-6 w-10 shrink-0 rounded-full transition-colors',
+              settings.pos_selector_enabled ? 'bg-accent' : 'bg-neutral-300',
+            )}
+          >
+            <span
+              className={cn(
+                'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
+                settings.pos_selector_enabled && 'translate-x-4',
+              )}
+            />
+          </button>
+        </div>
       </div>
 
       <SaveButton isSaving={isSaving} saveError={saveError} saveSuccess={saveSuccess} onSave={save} />
@@ -650,11 +893,15 @@ function GeneralTab({
   settings,
   setSettings,
   botName,
+  boundPosIds,
+  posLocations,
 }: {
   botId: number
   settings: BotSettings
   setSettings: React.Dispatch<React.SetStateAction<BotSettings | null>>
   botName: string
+  boundPosIds: number[]
+  posLocations: POSLocation[]
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [expandedButtonId, setExpandedButtonId] = useState<string | null>(null)
@@ -670,8 +917,18 @@ function GeneralTab({
         content: button.content,
       })),
       registration_form: settings.registration_form,
+      contacts_pos_ids: settings.contacts_pos_ids,
     }),
   )
+
+  const editableButtonIndexes = settings.buttons.reduce<number[]>((accumulator, button, index) => {
+    if (!button.is_system && !button.managed_by_module) {
+      accumulator.push(index)
+    }
+    return accumulator
+  }, [])
+  const editableButtons = editableButtonIndexes.map((index) => settings.buttons[index])
+  const managedButtons = getManagedButtonSummary(settings.modules)
 
   // --- Buttons dnd ---
   const buttonSensors = useSensors(
@@ -679,21 +936,32 @@ function GeneralTab({
     useSensor(KeyboardSensor),
   )
 
-  const buttonIds = settings.buttons.map((_, i) => `btn-${i}`)
+  const buttonIds = editableButtons.map((_, i) => `btn-${i}`)
 
   const handleButtonDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
     const oldIndex = buttonIds.indexOf(String(active.id))
     const newIndex = buttonIds.indexOf(String(over.id))
-    setSettings((s) =>
-      s ? { ...s, buttons: arrayMove(s.buttons, oldIndex, newIndex) } : s,
-    )
+    setSettings((current) => {
+      if (!current) return current
+      const reorderedEditable = arrayMove(editableButtons, oldIndex, newIndex)
+      let editableIndex = 0
+      return {
+        ...current,
+        buttons: current.buttons.map((button) => {
+          if (button.is_system || button.managed_by_module) return button
+          const nextButton = reorderedEditable[editableIndex]
+          editableIndex += 1
+          return nextButton
+        }),
+      }
+    })
   }
 
   const addButton = () => {
-    if (settings.buttons.length >= 10) return
-    const nextId = `btn-${settings.buttons.length}`
+    if (editableButtons.length >= 10) return
+    const nextId = `btn-${editableButtons.length}`
     setSettings((s) =>
       s
         ? {
@@ -709,22 +977,27 @@ function GeneralTab({
   }
 
   const updateButton = (index: number, field: keyof BotButton, value: string) => {
+    const actualIndex = editableButtonIndexes[index]
     setSettings((s) => {
       if (!s) return s
-      const updated = s.buttons.map((btn, i) => (i === index ? { ...btn, [field]: value } : btn))
+      const updated = s.buttons.map((btn, i) => (
+        i === actualIndex ? { ...btn, [field]: value } : btn
+      ))
       return { ...s, buttons: updated }
     })
   }
 
   const removeButton = (index: number) => {
-    setSettings((s) => (s ? { ...s, buttons: s.buttons.filter((_, i) => i !== index) } : s))
+    const actualIndex = editableButtonIndexes[index]
+    setSettings((s) => (s ? { ...s, buttons: s.buttons.filter((_, i) => i !== actualIndex) } : s))
   }
 
   const updateButtonContent = (index: number, content: MessageContent) => {
+    const actualIndex = editableButtonIndexes[index]
     setSettings((s) => {
       if (!s) return s
       const updated = s.buttons.map((btn, i) =>
-        i === index
+        i === actualIndex
           ? {
               ...btn,
               content,
@@ -773,6 +1046,7 @@ function GeneralTab({
   }
 
   const addPreset = (preset: FormField) => {
+    if (!canAddPreset(settings.registration_form, preset.name)) return
     setSettings((s) =>
       s ? { ...s, registration_form: [...s.registration_form, { ...preset }] } : s,
     )
@@ -874,12 +1148,12 @@ function GeneralTab({
         <SectionBlock
           eyebrow="Клавиатура"
           title="Кнопки меню бота"
-          description="Это кнопки в нижней клавиатуре Telegram. Нажатие на кнопку открывает готовый ответ: текст, медиа, несколько сообщений подряд или inline-кнопки."
+          description="Это только пользовательские кнопки. Системные кнопки модулей и фиксированные кнопки «Контакты» и «На главную» управляются автоматически и здесь не редактируются."
           actions={(
             <button
               type="button"
               onClick={addButton}
-              disabled={isSaving || settings.buttons.length >= 10}
+              disabled={isSaving || editableButtons.length >= 10}
               className={cn(
                 'inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium text-accent sm:w-auto',
                 'hover:text-accent/80 transition-colors',
@@ -891,13 +1165,20 @@ function GeneralTab({
             </button>
           )}
         >
-          {settings.buttons.length === 0 ? (
+          <div className="mb-4 rounded-xl border border-surface-border bg-neutral-50/70 p-4 text-sm text-neutral-600">
+            <div className="font-medium text-neutral-900">Системные кнопки</div>
+            <div className="mt-1">
+              {managedButtons.join(' · ')}
+            </div>
+          </div>
+
+          {editableButtons.length === 0 ? (
             <p className="text-sm text-neutral-400 text-center py-6">Кнопки ещё не добавлены. Создайте первую кнопку для меню бота.</p>
           ) : (
             <DndContext sensors={buttonSensors} collisionDetection={closestCenter} onDragEnd={handleButtonDragEnd}>
               <SortableContext items={buttonIds} strategy={verticalListSortingStrategy}>
                 <div className="space-y-3">
-                  {settings.buttons.map((button, index) => (
+                  {editableButtons.map((button, index) => (
                     <SortableItem key={buttonIds[index]} id={buttonIds[index]}>
                       {({ listeners, attributes }) => {
                         const isExpanded = expandedButtonId === buttonIds[index]
@@ -998,8 +1279,60 @@ function GeneralTab({
             </DndContext>
           )}
 
-          {settings.buttons.length >= 10 && (
+          {editableButtons.length >= 10 && (
             <p className="text-xs text-neutral-400 mt-3">Максимум 10 кнопок</p>
+          )}
+        </SectionBlock>
+
+        <SectionBlock
+          eyebrow="Контакты"
+          title="Точки продаж для кнопки «Контакты»"
+          description="Отметьте, какие точки продаж отправлять по кнопке «Контакты». Если ничего не выбрать, по умолчанию берём все привязанные к боту точки."
+        >
+          {boundPosIds.length === 0 ? (
+            <p className="text-sm text-neutral-400">Сначала привяжите хотя бы одну точку продаж во вкладке «Подключение».</p>
+          ) : (
+            <div className="space-y-2">
+              {posLocations
+                .filter((location) => boundPosIds.includes(location.id))
+                .map((location) => {
+                  const isChecked = (settings.contacts_pos_ids ?? []).includes(location.id)
+
+                  return (
+                    <label
+                      key={location.id}
+                      className={cn(
+                        'flex items-center gap-3 rounded-xl border p-3 transition-colors',
+                        isChecked
+                          ? 'border-accent/25 bg-accent/5'
+                          : 'border-surface-border bg-neutral-50/70',
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          setSettings((current) => {
+                            if (!current) return current
+                            const currentIds = current.contacts_pos_ids ?? []
+                            return {
+                              ...current,
+                              contacts_pos_ids: currentIds.includes(location.id)
+                                ? currentIds.filter((id) => id !== location.id)
+                                : [...currentIds, location.id],
+                            }
+                          })
+                        }}
+                        className="h-4 w-4 rounded border-neutral-300 text-accent focus:ring-accent/20"
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-neutral-900">{location.name}</div>
+                        <div className="text-xs text-neutral-500">{location.address}</div>
+                      </div>
+                    </label>
+                  )
+                })}
+            </div>
           )}
         </SectionBlock>
 
@@ -1024,12 +1357,12 @@ function GeneralTab({
           )}
         >
           <div className="flex flex-wrap gap-2 mb-4">
-            {FORM_PRESETS.map((preset) => (
+            {STANDARD_FIELD_PRESETS.map((preset) => (
               <button
                 key={preset.name}
                 type="button"
                 onClick={() => addPreset(preset)}
-                disabled={isSaving}
+                disabled={isSaving || !canAddPreset(settings.registration_form, preset.name)}
                 className={cn(
                   'inline-flex min-h-11 items-center rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
                   'bg-neutral-100 text-neutral-600 hover:bg-neutral-200',
@@ -1061,15 +1394,22 @@ function GeneralTab({
                             <GripVertical className="w-4 h-4" />
                           </button>
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <input
-                          type="text"
-                          value={field.name}
-                          onChange={(e) => updateField(index, 'name', e.target.value)}
-                          placeholder="Внутреннее имя, например phone"
-                          disabled={isSaving}
-                          className={inputClassName}
-                          aria-label={`Ключ поля ${index + 1}`}
-                        />
+                        {isStandardField(field) ? (
+                          <div className="rounded-lg border border-surface-border bg-neutral-50 px-4 py-2.5">
+                            <div className="text-[11px] uppercase tracking-[0.18em] text-neutral-400">Внутреннее имя</div>
+                            <div className="mt-1 text-sm font-medium text-neutral-700">{field.name}</div>
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            value={field.name}
+                            onChange={(e) => updateField(index, 'name', e.target.value)}
+                            placeholder="Внутреннее имя, например favorite_drink"
+                            disabled={isSaving}
+                            className={inputClassName}
+                            aria-label={`Ключ поля ${index + 1}`}
+                          />
+                        )}
                         <input
                           type="text"
                           value={field.label}
@@ -1131,6 +1471,11 @@ function GeneralTab({
                             {field.type === 'date' && 'Бот подскажет нужный формат даты: ДД.ММ.ГГГГ.'}
                           </p>
                         )}
+                        {field.name === 'gender' && (
+                          <p className="col-span-2 text-[11px] text-neutral-400">
+                            Пол добавлен как стандартное поле. Внутреннее имя фиксировано и не редактируется.
+                          </p>
+                        )}
                           </div>
                           <button
                             type="button"
@@ -1165,23 +1510,60 @@ function ModulesTab({
   botId,
   settings,
   setSettings,
+  boundPosIds,
+  posLocations,
 }: {
   botId: number
   settings: BotSettings
   setSettings: React.Dispatch<React.SetStateAction<BotSettings | null>>
+  boundPosIds: number[]
+  posLocations: POSLocation[]
 }) {
   const { isSaving, saveError, saveSuccess, save } = useSaveAction(botId, () =>
-    botsApi.updateSettings(botId, { modules: settings.modules }),
+    botsApi.updateSettings(botId, {
+      modules: settings.modules,
+      module_configs: settings.module_configs,
+    }),
   )
 
   const toggleModule = (moduleKey: string) => {
     setSettings((s) => {
       if (!s) return s
+      const isEnabled = s.modules.includes(moduleKey)
       const modules = s.modules.includes(moduleKey)
         ? s.modules.filter((m) => m !== moduleKey)
         : [...s.modules, moduleKey]
-      return { ...s, modules }
+      return {
+        ...s,
+        modules,
+        module_configs: isEnabled
+          ? s.module_configs
+          : withModuleDefaults(moduleKey, s.module_configs, posLocations, boundPosIds),
+      }
     })
+  }
+
+  const bookingConfig = normalizeBookingConfig(
+    settings.module_configs?.booking,
+    posLocations,
+    boundPosIds,
+  )
+
+  const updateBookingConfig = (patch: Partial<BookingModuleConfig>) => {
+    setSettings((current) => (
+      current
+        ? {
+            ...current,
+            module_configs: {
+              ...current.module_configs,
+              booking: {
+                ...bookingConfig,
+                ...patch,
+              },
+            },
+          }
+        : current
+    ))
   }
 
   return (
@@ -1196,9 +1578,7 @@ function ModulesTab({
       <div className="grid gap-3 sm:grid-cols-2">
         {MODULE_DEFS.map((mod) => {
           const isActive = settings.modules.includes(mod.key)
-          const configHref = mod.key === 'menu' ? '/dashboard/menus'
-            : mod.key === 'marketplace' ? '/dashboard/marketplace'
-            : null
+          const configHref = mod.key === 'menu' ? `/dashboard/menus?botId=${botId}` : null
           return (
             <div
               key={mod.key}
@@ -1274,9 +1654,31 @@ function ModulesTab({
       {settings.modules.includes('menu') && (
         <div id="module-menu" className="mt-5 pt-5 border-t border-surface-border scroll-mt-20">
           <h3 className="text-sm font-semibold text-neutral-900 mb-2">Настройка: Меню</h3>
-          <p className="text-xs text-neutral-400 mb-3">Здесь вы управляете блюдами и категориями, которые увидит гость в боте.</p>
+          <p className="text-xs text-neutral-400 mb-3">Здесь вы управляете первым сообщением, категориями, позициями и POS-привязками меню.</p>
+          <textarea
+            value={settings.module_configs?.menu?.unavailable_message ?? ''}
+            onChange={(event) =>
+              setSettings((current) => (
+                current
+                  ? {
+                      ...current,
+                      module_configs: {
+                        ...current.module_configs,
+                        menu: {
+                          ...current.module_configs?.menu,
+                          unavailable_message: event.target.value,
+                        },
+                      },
+                    }
+                  : current
+              ))
+            }
+            rows={3}
+            className={cn(inputClassName, 'mb-3')}
+            placeholder="Сообщение, если для выбранной точки продаж нет активного меню"
+          />
           <Link
-            to="/dashboard/menus"
+            to={`/dashboard/menus?botId=${botId}`}
             className="inline-flex items-center gap-1.5 text-sm text-accent hover:text-accent/80 font-medium transition-colors"
           >
             Открыть меню <ChevronRight className="w-3.5 h-3.5" />
@@ -1284,16 +1686,238 @@ function ModulesTab({
         </div>
       )}
 
-      {settings.modules.includes('marketplace') && (
-        <div id="module-marketplace" className="mt-5 pt-5 border-t border-surface-border scroll-mt-20">
-          <h3 className="text-sm font-semibold text-neutral-900 mb-2">Настройка: Маркетплейс</h3>
-          <p className="text-xs text-neutral-400 mb-3">Здесь находятся товары, которые гость сможет заказать через бота.</p>
-          <Link
-            to="/dashboard/marketplace"
-            className="inline-flex items-center gap-1.5 text-sm text-accent hover:text-accent/80 font-medium transition-colors"
-          >
-            Открыть каталог товаров <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
+      {settings.modules.includes('booking') && (
+        <div id="module-booking" className="mt-5 pt-5 border-t border-surface-border scroll-mt-20">
+          <h3 className="text-sm font-semibold text-neutral-900 mb-3">Настройка: Бронирование</h3>
+
+          <div className="space-y-4 rounded-xl border border-surface-border bg-neutral-50/70 p-4">
+            <div>
+              <div className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400 mb-2">Первое сообщение</div>
+              <Suspense fallback={<EditorFallback />}>
+                <MessageContentEditor
+                  value={bookingConfig.intro_content ?? { parts: [{ type: 'text', text: '', parse_mode: 'Markdown' }] }}
+                  onChange={(content) => updateBookingConfig({ intro_content: content })}
+                  onUpload={campaignsApi.uploadFile}
+                  maxParts={4}
+                />
+              </Suspense>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-neutral-700">Бронь доступна от</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={32}
+                  value={bookingConfig.date_from_days ?? 0}
+                  onChange={(event) => updateBookingConfig({ date_from_days: Number(event.target.value) })}
+                  className={inputClassName}
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-neutral-700">Бронь доступна до</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={32}
+                  value={bookingConfig.date_to_days ?? 7}
+                  onChange={(event) => updateBookingConfig({ date_to_days: Number(event.target.value) })}
+                  className={inputClassName}
+                />
+              </label>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium text-neutral-700">Слоты времени</div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateBookingConfig({
+                      time_slots: [...(bookingConfig.time_slots ?? []), { start: '10:00', end: '11:00' }],
+                    })
+                  }
+                  className="text-xs font-medium text-accent hover:text-accent/80"
+                >
+                  + Добавить слот
+                </button>
+              </div>
+              <div className="space-y-2">
+                {(bookingConfig.time_slots ?? []).map((slot, index) => (
+                  <div key={`${slot.start}-${slot.end}-${index}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2">
+                    <input
+                      type="text"
+                      value={slot.start}
+                      onChange={(event) => {
+                        const next = [...(bookingConfig.time_slots ?? [])]
+                        next[index] = { ...slot, start: normalizeTimeInput(event.target.value) }
+                        updateBookingConfig({ time_slots: next })
+                      }}
+                      className={inputClassName}
+                      placeholder="10:00"
+                    />
+                    <input
+                      type="text"
+                      value={slot.end}
+                      onChange={(event) => {
+                        const next = [...(bookingConfig.time_slots ?? [])]
+                        next[index] = { ...slot, end: normalizeTimeInput(event.target.value) }
+                        updateBookingConfig({ time_slots: next })
+                      }}
+                      className={inputClassName}
+                      placeholder="11:00"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateBookingConfig({
+                          time_slots: (bookingConfig.time_slots ?? []).filter((_, slotIndex) => slotIndex !== index),
+                        })
+                      }
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium text-neutral-700 mb-2">Количество гостей</div>
+              <div className="space-y-2">
+                {(bookingConfig.party_size_options ?? []).map((option, index) => (
+                  <div key={`${option}-${index}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                    <input
+                      type="text"
+                      value={option}
+                      onChange={(event) => {
+                        const next = [...(bookingConfig.party_size_options ?? [])]
+                        next[index] = event.target.value
+                        updateBookingConfig({ party_size_options: next })
+                      }}
+                      className={inputClassName}
+                      placeholder="1, 2, 3-5, 6+"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateBookingConfig({
+                          party_size_options: (bookingConfig.party_size_options ?? []).filter((_, optionIndex) => optionIndex !== index),
+                        })
+                      }
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateBookingConfig({
+                      party_size_options: [...(bookingConfig.party_size_options ?? []), ''],
+                    })
+                  }
+                  className="text-xs font-medium text-accent hover:text-accent/80"
+                >
+                  + Добавить вариант
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium text-neutral-700 mb-2">Точки продаж для бронирования</div>
+              {boundPosIds.length === 0 ? (
+                <p className="text-xs text-neutral-500">Сначала привяжите точки продаж во вкладке «Подключение».</p>
+              ) : (
+                <div className="space-y-2">
+                  {posLocations
+                    .filter((location) => boundPosIds.includes(location.id))
+                    .map((location) => {
+                      const isChecked = (bookingConfig.pos_ids ?? []).includes(location.id)
+                      return (
+                        <label key={location.id} className="flex items-center gap-3 rounded-lg border border-surface-border bg-white px-3 py-2.5">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() =>
+                              updateBookingConfig({
+                                pos_ids: isChecked
+                                  ? (bookingConfig.pos_ids ?? []).filter((id) => id !== location.id)
+                                  : [...(bookingConfig.pos_ids ?? []), location.id],
+                              })
+                            }
+                            className="h-4 w-4 rounded border-neutral-300 text-accent focus:ring-accent/20"
+                          />
+                          <span className="text-sm text-neutral-800">{location.name}</span>
+                        </label>
+                      )
+                    })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {settings.modules.includes('feedback') && (
+        <div id="module-feedback" className="mt-5 pt-5 border-t border-surface-border scroll-mt-20">
+          <h3 className="text-sm font-semibold text-neutral-900 mb-3">Настройка: Связаться</h3>
+          <div className="space-y-3 rounded-xl border border-surface-border bg-neutral-50/70 p-4">
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-neutral-700">Первое сообщение</span>
+              <textarea
+                rows={3}
+                value={settings.module_configs?.feedback?.prompt_message ?? ''}
+                onChange={(event) =>
+                  setSettings((current) => (
+                    current
+                      ? {
+                          ...current,
+                          module_configs: {
+                            ...current.module_configs,
+                            feedback: {
+                              ...current.module_configs?.feedback,
+                              prompt_message: event.target.value,
+                            },
+                          },
+                        }
+                      : current
+                  ))
+                }
+                className={inputClassName}
+                placeholder="Напишите ваш вопрос:"
+              />
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-neutral-700">Сообщение после отправки</span>
+              <textarea
+                rows={3}
+                value={settings.module_configs?.feedback?.success_message ?? ''}
+                onChange={(event) =>
+                  setSettings((current) => (
+                    current
+                      ? {
+                          ...current,
+                          module_configs: {
+                            ...current.module_configs,
+                            feedback: {
+                              ...current.module_configs?.feedback,
+                              success_message: event.target.value,
+                            },
+                          },
+                        }
+                      : current
+                  ))
+                }
+                className={inputClassName}
+                placeholder="Ваше сообщение отправлено."
+              />
+            </label>
+          </div>
         </div>
       )}
 
