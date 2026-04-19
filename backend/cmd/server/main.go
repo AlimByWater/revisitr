@@ -38,6 +38,7 @@ import (
 	pgRepo "revisitr/internal/repository/postgres"
 	redisRepo "revisitr/internal/repository/redis"
 	autoactionService "revisitr/internal/service/autoaction"
+	emojisyncService "revisitr/internal/service/emojisync"
 	"revisitr/internal/service/eventbus"
 	posService "revisitr/internal/service/pos"
 	rfmService "revisitr/internal/service/rfm"
@@ -156,7 +157,10 @@ func main() {
 	marketplaceUsecase := marketplaceUC.New(marketplaceRepo, marketplaceRepo, loyaltyUsecase)
 
 	// Emoji packs usecase
-	emojiPacksUsecase := emojipacksUC.New(emojiPacksRepo)
+	emojiSyncSvc := emojisyncService.New(logger)
+	emojiPacksUsecase := emojipacksUC.New(emojiPacksRepo,
+		emojipacksUC.WithSync(botsRepo, emojiSyncSvc),
+	)
 
 	// Phase 3 usecases
 	menusUsecase := menusUC.New(menusRepo)

@@ -24,6 +24,7 @@ type emojiPacksUsecase interface {
 	UpdateItem(ctx context.Context, orgID, itemID int, req entity.UpdateEmojiItemRequest) (*entity.EmojiItem, error)
 	DeleteItem(ctx context.Context, orgID, itemID int) error
 	ReorderItems(ctx context.Context, orgID, packID int, req entity.ReorderEmojiItemsRequest) error
+	SyncToTelegram(ctx context.Context, orgID, packID, botID int) (*entity.EmojiPack, error)
 }
 
 type Group struct {
@@ -54,6 +55,7 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handleUpdateItem,
 		g.handleDeleteItem,
 		g.handleReorderItems,
+		g.handleSyncToTelegram,
 	}
 }
 
@@ -251,6 +253,34 @@ func (g *Group) handleReorderItems() (string, string, gin.HandlerFunc) {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "items reordered"})
+	}
+}
+
+func (g *Group) handleSyncToTelegram() (string, string, gin.HandlerFunc) {
+	return http.MethodPost, "/:id/sync", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		packID, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pack id"})
+			return
+		}
+
+		var req struct {
+			BotID int `json:"bot_id" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		pack, err := g.uc.SyncToTelegram(c.Request.Context(), orgID.(int), packID, req.BotID)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, pack)
 	}
 }
 

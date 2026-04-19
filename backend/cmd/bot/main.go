@@ -54,6 +54,7 @@ func main() {
 	loyaltyRepo := pgRepo.NewLoyalty(pg)
 	posRepo := pgRepo.NewPOS(pg)
 	menusRepo := pgRepo.NewMenus(pg)
+	emojiPacksRepo := pgRepo.NewEmojiPacks(pg)
 
 	campaignsRepo := pgRepo.NewCampaigns(pg)
 	scenariosRepo := pgRepo.NewAutoScenarios(pg)
@@ -66,6 +67,7 @@ func main() {
 	var mgrOpts []botmanager.ManagerOption
 	mgrOpts = append(mgrOpts, botmanager.WithTelegramSender(tgSender))
 	mgrOpts = append(mgrOpts, botmanager.WithMenus(menusRepo))
+	mgrOpts = append(mgrOpts, botmanager.WithEmoji(emojiPacksRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithSessionStore(botmanager.NewRedisSessionStore(rds.Client())))
 	mgrOpts = append(mgrOpts, botmanager.WithAdminBotToken(cfg.MasterBot.Token))
 	if cfg.TelegramAPIURL != "" {

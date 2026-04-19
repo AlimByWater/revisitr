@@ -932,10 +932,81 @@ func (h *handler) replaceFlowMessage(ctx context.Context, chatID int64, state Fl
 	return messageID
 }
 
-var emojiMarkerRe = regexp.MustCompile(`\{\{emoji:[^}]+\}\}`)
+var emojiMarkerRe = regexp.MustCompile(`\{\{emoji:([^}]+)\}\}`)
 
 func stripEmojiMarkers(text string) string {
 	return strings.TrimSpace(emojiMarkerRe.ReplaceAllString(text, ""))
+}
+
+// processEmojiMarkers replaces {{emoji:URL}} markers with a placeholder char
+// and builds MessageEntity array with custom_emoji references.
+// Returns cleaned text + entities. If no synced emoji found, strips markers.
+func (h *handler) processEmojiMarkers(ctx context.Context, text string) (string, []telego.MessageEntity) {
+	if !strings.Contains(text, "{{emoji:") {
+		return text, nil
+	}
+
+	// Load synced emoji items for this org
+	var emojiMap map[string]string // image_url → custom_emoji_id
+	if h.mgr.emojiRepo != nil {
+		items, err := h.mgr.emojiRepo.GetSyncedItemsByOrgID(ctx, h.info.OrgID)
+		if err != nil {
+			h.logger.Error("load synced emoji", "error", err)
+		} else {
+			emojiMap = make(map[string]string, len(items))
+			for _, item := range items {
+				if item.TgCustomEmojiID != nil {
+					emojiMap[item.ImageURL] = *item.TgCustomEmojiID
+				}
+			}
+		}
+	}
+
+	if len(emojiMap) == 0 {
+		return stripEmojiMarkers(text), nil
+	}
+
+	var entities []telego.MessageEntity
+	// Replace markers with placeholder emoji char "⭐" and track positions
+	result := emojiMarkerRe.ReplaceAllStringFunc(text, func(match string) string {
+		sub := emojiMarkerRe.FindStringSubmatch(match)
+		if len(sub) < 2 {
+			return ""
+		}
+		imageURL := sub[1]
+		customEmojiID, ok := emojiMap[imageURL]
+		if !ok {
+			return "" // not synced, strip
+		}
+		// Will add entity after we know final position
+		placeholder := "⭐"
+		return placeholder + "\x00" + customEmojiID + "\x00"
+	})
+
+	// Now parse the intermediate result to build proper text + entities
+	var finalText strings.Builder
+	parts := strings.Split(result, "\x00")
+	for i := 0; i < len(parts); i++ {
+		if i > 0 && i+1 < len(parts) && i%2 == 1 {
+			// This is a customEmojiID, previous part ended with placeholder
+			customEmojiID := parts[i]
+			offset := len([]rune(finalText.String())) - 1 // position of the ⭐ we just wrote
+			entities = append(entities, telego.MessageEntity{
+				Type:          "custom_emoji",
+				Offset:        offset,
+				Length:        1,
+				CustomEmojiID: customEmojiID,
+			})
+			i++ // skip next part processing flag
+			if i < len(parts) {
+				finalText.WriteString(parts[i])
+			}
+		} else {
+			finalText.WriteString(parts[i])
+		}
+	}
+
+	return strings.TrimSpace(finalText.String()), entities
 }
 
 func (h *handler) sendContentMessage(ctx context.Context, chatID int64, content entity.MessageContent) int {
@@ -944,16 +1015,22 @@ func (h *handler) sendContentMessage(ctx context.Context, chatID int64, content 
 	}
 
 	part := content.Parts[0]
-	part.Text = stripEmojiMarkers(part.Text)
 	markup := h.inlineKeyboard(content.Buttons)
+
+	// Process emoji markers → clean text + custom emoji entities
+	cleanText, emojiEntities := h.processEmojiMarkers(ctx, part.Text)
+	part.Text = cleanText
 
 	switch part.Type {
 	case entity.PartPhoto:
 		photo := tu.Photo(tu.ID(chatID), h.inputFile(part))
 		if part.Text != "" {
 			photo = photo.WithCaption(part.Text)
+			if len(emojiEntities) > 0 {
+				photo = photo.WithCaptionEntities(emojiEntities...)
+			}
 		}
-		if part.ParseMode != "" {
+		if part.ParseMode != "" && len(emojiEntities) == 0 {
 			photo = photo.WithParseMode(part.ParseMode)
 		}
 		if markup != nil {
@@ -967,7 +1044,10 @@ func (h *handler) sendContentMessage(ctx context.Context, chatID int64, content 
 		return message.MessageID
 	default:
 		msg := tu.Message(tu.ID(chatID), part.Text)
-		if part.ParseMode != "" {
+		if len(emojiEntities) > 0 {
+			msg = msg.WithEntities(emojiEntities...)
+		}
+		if part.ParseMode != "" && len(emojiEntities) == 0 {
 			msg = msg.WithParseMode(part.ParseMode)
 		}
 		if markup != nil {

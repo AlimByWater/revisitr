@@ -125,6 +125,16 @@ func (r *EmojiPacks) GetItemByID(ctx context.Context, id int) (*entity.EmojiItem
 	return &item, nil
 }
 
+func (r *EmojiPacks) UpdateItemTg(ctx context.Context, itemID int, stickerSet, customEmojiID string) error {
+	_, err := r.pg.DB().ExecContext(ctx,
+		"UPDATE emoji_items SET tg_sticker_set = $1, tg_custom_emoji_id = $2 WHERE id = $3",
+		stickerSet, customEmojiID, itemID)
+	if err != nil {
+		return fmt.Errorf("emoji_packs.UpdateItemTg: %w", err)
+	}
+	return nil
+}
+
 func (r *EmojiPacks) ReorderItems(ctx context.Context, packID int, itemIDs []int) error {
 	for i, id := range itemIDs {
 		_, err := r.pg.DB().ExecContext(ctx,
@@ -135,6 +145,19 @@ func (r *EmojiPacks) ReorderItems(ctx context.Context, packID int, itemIDs []int
 		}
 	}
 	return nil
+}
+
+func (r *EmojiPacks) GetSyncedItemsByOrgID(ctx context.Context, orgID int) ([]entity.EmojiItem, error) {
+	var items []entity.EmojiItem
+	err := r.pg.DB().SelectContext(ctx, &items, `
+		SELECT ei.* FROM emoji_items ei
+		JOIN emoji_packs ep ON ep.id = ei.pack_id
+		WHERE ep.org_id = $1 AND ei.tg_custom_emoji_id IS NOT NULL`,
+		orgID)
+	if err != nil {
+		return nil, fmt.Errorf("emoji_packs.GetSyncedItemsByOrgID: %w", err)
+	}
+	return items, nil
 }
 
 func (r *EmojiPacks) getItems(ctx context.Context, packID int) ([]entity.EmojiItem, error) {

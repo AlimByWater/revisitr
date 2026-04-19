@@ -40,6 +40,10 @@ type menusRepository interface {
 	GetActiveMenuForPOS(ctx context.Context, orgID, posID int) (*entity.Menu, error)
 }
 
+type emojiRepository interface {
+	GetSyncedItemsByOrgID(ctx context.Context, orgID int) ([]entity.EmojiItem, error)
+}
+
 type sessionStore interface {
 	Load(ctx context.Context, botID int, chatID int64) (*FlowState, error)
 	Save(ctx context.Context, botID int, chatID int64, state FlowState) error
@@ -58,6 +62,7 @@ type Manager struct {
 	loyaltyRepo   loyaltyRepository
 	posRepo       posRepository
 	menusRepo     menusRepository
+	emojiRepo     emojiRepository
 	sessions      sessionStore
 	tgSender      *tgService.Sender
 	logger        *slog.Logger
@@ -81,6 +86,10 @@ func WithAPIServer(url string) ManagerOption {
 
 func WithMenus(repo menusRepository) ManagerOption {
 	return func(m *Manager) { m.menusRepo = repo }
+}
+
+func WithEmoji(repo emojiRepository) ManagerOption {
+	return func(m *Manager) { m.emojiRepo = repo }
 }
 
 func WithSessionStore(store sessionStore) ManagerOption {

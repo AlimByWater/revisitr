@@ -8,6 +8,9 @@ import (
 	"log/slog"
 
 	"revisitr/internal/entity"
+	"revisitr/internal/service/emojisync"
+
+	"github.com/mymmrac/telego"
 )
 
 var (
@@ -24,17 +27,37 @@ type emojiPacksRepo interface {
 	CreateItem(ctx context.Context, item *entity.EmojiItem) error
 	GetItemByID(ctx context.Context, id int) (*entity.EmojiItem, error)
 	UpdateItem(ctx context.Context, item *entity.EmojiItem) error
+	UpdateItemTg(ctx context.Context, itemID int, stickerSet, customEmojiID string) error
 	DeleteItem(ctx context.Context, id int) error
 	ReorderItems(ctx context.Context, packID int, itemIDs []int) error
 }
 
-type Usecase struct {
-	logger *slog.Logger
-	repo   emojiPacksRepo
+type botsRepo interface {
+	GetByID(ctx context.Context, id int) (*entity.Bot, error)
 }
 
-func New(repo emojiPacksRepo) *Usecase {
-	return &Usecase{repo: repo}
+type Usecase struct {
+	logger    *slog.Logger
+	repo      emojiPacksRepo
+	bots      botsRepo
+	syncSvc   *emojisync.Service
+}
+
+func New(repo emojiPacksRepo, opts ...Option) *Usecase {
+	uc := &Usecase{repo: repo}
+	for _, opt := range opts {
+		opt(uc)
+	}
+	return uc
+}
+
+type Option func(*Usecase)
+
+func WithSync(bots botsRepo, syncSvc *emojisync.Service) Option {
+	return func(uc *Usecase) {
+		uc.bots = bots
+		uc.syncSvc = syncSvc
+	}
 }
 
 func (uc *Usecase) Init(_ context.Context, logger *slog.Logger) error {
@@ -198,4 +221,60 @@ func (uc *Usecase) ReorderItems(ctx context.Context, orgID, packID int, req enti
 		return ErrNotOwner
 	}
 	return uc.repo.ReorderItems(ctx, packID, req.ItemIDs)
+}
+
+var (
+	ErrSyncNotConfigured = errors.New("emoji sync not configured")
+	ErrBotNoOwner        = errors.New("bot has no owner telegram ID")
+)
+
+func (uc *Usecase) SyncToTelegram(ctx context.Context, orgID, packID, botID int) (*entity.EmojiPack, error) {
+	if uc.syncSvc == nil || uc.bots == nil {
+		return nil, ErrSyncNotConfigured
+	}
+
+	pack, err := uc.repo.GetByID(ctx, packID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if pack.OrgID != orgID {
+		return nil, ErrNotOwner
+	}
+
+	bot, err := uc.bots.GetByID(ctx, botID)
+	if err != nil {
+		return nil, fmt.Errorf("get bot: %w", err)
+	}
+	if bot.OrgID != orgID {
+		return nil, ErrNotOwner
+	}
+	if bot.CreatedByTelegramID == nil {
+		return nil, ErrBotNoOwner
+	}
+
+	// Create telego bot from token
+	tgBot, err := telego.NewBot(bot.Token)
+	if err != nil {
+		return nil, fmt.Errorf("create telego bot: %w", err)
+	}
+
+	syncedItems, err := uc.syncSvc.SyncPack(ctx, tgBot, bot.Username, *bot.CreatedByTelegramID, pack)
+	if err != nil {
+		return nil, fmt.Errorf("sync pack: %w", err)
+	}
+
+	// Persist custom_emoji_ids
+	for _, item := range syncedItems {
+		if item.TgCustomEmojiID != nil && *item.TgCustomEmojiID != "" {
+			if err := uc.repo.UpdateItemTg(ctx, item.ID, *item.TgStickerSet, *item.TgCustomEmojiID); err != nil {
+				uc.logger.Error("persist custom_emoji_id", "error", err, "item_id", item.ID)
+			}
+		}
+	}
+
+	// Return updated pack
+	return uc.repo.GetByID(ctx, packID)
 }
