@@ -16,6 +16,7 @@ import {
   Workflow,
   CreditCard,
   ChevronDown,
+  Smile,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -109,14 +110,19 @@ const navigation: NavItem[] = [
       { label: 'Счета', href: '/dashboard/billing/invoices' },
     ],
   },
+  {
+    label: 'Эмодзи',
+    icon: Smile,
+    href: '/dashboard/emoji-packs',
+  },
 ]
 
 // Group indices for default theme ordering:
 // Group 1 (top): Дашборд (index 0)
 // Group 2 (business): Аналитика(1), Клиенты(2), Лояльность(3), Рассылки(4), Акции(5)
-// Group 3 (config): Мои боты(6), Точки продаж(7), Интеграции(8), Биллинг(9)
+// Group 3 (config): Мои боты(6), Точки продаж(7), Интеграции(8), Биллинг(9), Эмодзи(10)
 const groupBusiness = [1, 2, 3, 4, 5]
-const groupConfig = [6, 7, 8, 9]
+const groupConfig = [6, 7, 8, 9, 10]
 
 // Collect ALL child hrefs across all nav groups for global best-match logic
 const allNavHrefs = navigation.flatMap(item =>

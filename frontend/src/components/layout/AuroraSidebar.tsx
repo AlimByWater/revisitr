@@ -15,6 +15,7 @@ import {
   Workflow,
   CreditCard,
   ChevronRight,
+  Smile,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -86,6 +87,7 @@ const navigation: NavItem[] = [
       { label: 'Счета', href: '/dashboard/billing/invoices' },
     ],
   },
+  { label: 'Эмодзи', icon: Smile, href: '/dashboard/emoji-packs' },
 ]
 
 function AuroraNavItem({ item, badges, expanded }: { item: NavItem; badges: Record<string, number>; expanded: boolean }) {

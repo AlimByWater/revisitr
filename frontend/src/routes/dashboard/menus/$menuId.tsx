@@ -18,6 +18,7 @@ import type {
   MenuPOSBindingRequest,
 } from '@/features/menus/types'
 import { usePOSQuery } from '@/features/pos/queries'
+import { EmojiPickerField } from '@/features/emoji-packs'
 import { ErrorState } from '@/components/common/ErrorState'
 import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 import { campaignsApi } from '@/features/campaigns/api'
@@ -139,12 +140,6 @@ export default function MenuDetailPage() {
     setNewCategory({ name: '', icon_emoji: '', icon_image_url: '' })
     setShowAddCategory(false)
     mutate()
-  }
-
-  const handleNewCategoryIconUpload = async (file?: File | null) => {
-    if (!file) return
-    const uploaded = await campaignsApi.uploadFile(file)
-    setNewCategory((current) => ({ ...current, icon_image_url: uploaded }))
   }
 
   if (isLoading || !draft) {
@@ -331,29 +326,18 @@ export default function MenuDetailPage() {
               placeholder="Название категории"
               className={inputClassName}
             />
+            <EmojiPickerField
+              value={newCategory.icon_image_url || undefined}
+              onChange={(imageUrl) => setNewCategory((current) => ({ ...current, icon_image_url: imageUrl, icon_emoji: '' }))}
+              onClear={() => setNewCategory((current) => ({ ...current, icon_image_url: '' }))}
+            />
             <input
               type="text"
               value={newCategory.icon_emoji}
               onChange={(event) => setNewCategory((current) => ({ ...current, icon_emoji: event.target.value }))}
-              placeholder="Emoji"
-              className={inputClassName}
+              placeholder="Emoji (текст)"
+              className={cn(inputClassName, 'md:col-span-2')}
             />
-            <input
-              type="text"
-              value={newCategory.icon_image_url}
-              onChange={(event) => setNewCategory((current) => ({ ...current, icon_image_url: event.target.value }))}
-              placeholder="URL иконки"
-              className={inputClassName}
-            />
-            <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-dashed border-surface-border px-3 text-sm text-neutral-600 hover:border-accent hover:text-accent">
-              Загрузить иконку
-              <input
-                type="file"
-                accept="image/png,image/svg+xml,image/*"
-                className="hidden"
-                onChange={(event) => void handleNewCategoryIconUpload(event.target.files?.[0])}
-              />
-            </label>
           </div>
           <div className="mt-4 flex gap-3">
             <button
@@ -449,12 +433,6 @@ function CategorySection({
     onUpdate()
   }
 
-  const handleCategoryIconUpload = async (file?: File | null) => {
-    if (!file) return
-    const uploaded = await campaignsApi.uploadFile(file)
-    setDraftCategory((current) => ({ ...current, icon_image_url: uploaded }))
-  }
-
   const handleAddItem = async () => {
     if (!newItem.name.trim()) return
     await addItem.mutate({
@@ -492,10 +470,12 @@ function CategorySection({
         className="w-full flex items-center justify-between px-6 py-4 hover:bg-neutral-50 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <h3 className="text-base font-semibold text-neutral-900">
-            {draftCategory.icon_emoji ? `${draftCategory.icon_emoji} ` : ''}
-            {category.name}
-          </h3>
+          {draftCategory.icon_image_url ? (
+            <img src={draftCategory.icon_image_url} alt="" className="w-5 h-5 object-cover rounded shrink-0" />
+          ) : draftCategory.icon_emoji ? (
+            <span className="text-base leading-none shrink-0">{draftCategory.icon_emoji}</span>
+          ) : null}
+          <h3 className="text-base font-semibold text-neutral-900">{category.name}</h3>
           <span className="text-xs text-neutral-400">{items.length} позиций</span>
         </div>
         <ChevronDown className={cn('w-4 h-4 text-neutral-400 transition-transform', expanded && 'rotate-180')} />
@@ -503,7 +483,7 @@ function CategorySection({
 
       {expanded && (
         <div className="border-t border-neutral-200 space-y-4 p-6">
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_120px_minmax(0,1fr)_auto_auto]">
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_120px_auto]">
             <input
               type="text"
               value={draftCategory.name}
@@ -511,29 +491,18 @@ function CategorySection({
               placeholder="Название категории"
               className={inputClassName}
             />
+            <EmojiPickerField
+              value={draftCategory.icon_image_url || undefined}
+              onChange={(imageUrl) => setDraftCategory((current) => ({ ...current, icon_image_url: imageUrl, icon_emoji: '' }))}
+              onClear={() => setDraftCategory((current) => ({ ...current, icon_image_url: '' }))}
+            />
             <input
               type="text"
               value={draftCategory.icon_emoji}
               onChange={(event) => setDraftCategory((current) => ({ ...current, icon_emoji: event.target.value }))}
-              placeholder="Emoji"
+              placeholder="Emoji (текст)"
               className={inputClassName}
             />
-            <input
-              type="text"
-              value={draftCategory.icon_image_url}
-              onChange={(event) => setDraftCategory((current) => ({ ...current, icon_image_url: event.target.value }))}
-              placeholder="URL иконки"
-              className={inputClassName}
-            />
-            <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-dashed border-surface-border px-3 text-sm text-neutral-600 hover:border-accent hover:text-accent">
-              Загрузить
-              <input
-                type="file"
-                accept="image/png,image/svg+xml,image/*"
-                className="hidden"
-                onChange={(event) => void handleCategoryIconUpload(event.target.files?.[0])}
-              />
-            </label>
             <button
               type="button"
               onClick={handleSaveCategory}

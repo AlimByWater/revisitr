@@ -23,6 +23,7 @@ import (
 	loyaltyGroup "revisitr/internal/controller/http/group/loyalty"
 	marketplaceGroup "revisitr/internal/controller/http/group/marketplace"
 	masterbotGroup "revisitr/internal/controller/http/group/masterbot"
+	emojipacksGroup "revisitr/internal/controller/http/group/emojipacks"
 	menusGroup "revisitr/internal/controller/http/group/menus"
 	onboardingGroup "revisitr/internal/controller/http/group/onboarding"
 	posGroup "revisitr/internal/controller/http/group/pos"
@@ -50,6 +51,7 @@ import (
 	integrationsUC "revisitr/internal/usecase/integrations"
 	loyaltyUC "revisitr/internal/usecase/loyalty"
 	marketplaceUC "revisitr/internal/usecase/marketplace"
+	emojipacksUC "revisitr/internal/usecase/emojipacks"
 	menusUC "revisitr/internal/usecase/menus"
 	onboardingUC "revisitr/internal/usecase/onboarding"
 	posUC "revisitr/internal/usecase/pos"
@@ -101,6 +103,9 @@ func main() {
 	marketplaceRepo := pgRepo.NewMarketplace(pg)
 	postCodesRepo := pgRepo.NewPostCodes(pg)
 
+	// Emoji packs repo
+	emojiPacksRepo := pgRepo.NewEmojiPacks(pg)
+
 	// Phase 3 repos
 	menusRepo := pgRepo.NewMenus(pg)
 	rfmRepo := pgRepo.NewRFM(pg)
@@ -149,6 +154,9 @@ func main() {
 	managedBotAdapter := botsUC.NewManagedBotAdapter(botsUsecase, masterBotAuthRepo)
 	walletUsecase := walletUC.New(walletRepo, walletRepo)
 	marketplaceUsecase := marketplaceUC.New(marketplaceRepo, marketplaceRepo, loyaltyUsecase)
+
+	// Emoji packs usecase
+	emojiPacksUsecase := emojipacksUC.New(emojiPacksRepo)
 
 	// Phase 3 usecases
 	menusUsecase := menusUC.New(menusRepo)
@@ -221,6 +229,9 @@ func main() {
 	marketplaceGrp := marketplaceGroup.New(marketplaceUsecase, jwtSecret)
 	postsGrp := postsGroup.New(postCodesRepo, jwtSecret)
 
+	// Emoji packs group
+	emojiPacksGrp := emojipacksGroup.New(emojiPacksUsecase, jwtSecret)
+
 	// Phase 3 groups
 	menusGrp := menusGroup.New(menusUsecase, jwtSecret)
 	rfmGrp := rfmGroup.New(rfmUsecase, jwtSecret,
@@ -235,6 +246,7 @@ func main() {
 		filesGrp,
 		menusGrp, rfmGrp, onboardingGrp,
 		billingGrp, masterbotGrp, walletGrp, marketplaceGrp, postsGrp,
+		emojiPacksGrp,
 	)
 
 	// ── Scheduler ─────────────────────────────────────────────────────────────
@@ -300,6 +312,7 @@ func main() {
 			analyticsUsecase, segmentsUsecase, promotionsUsecase, integrationsUsecase,
 			menusUsecase, rfmUsecase, onboardingUsecase,
 			billingUsecase, walletUsecase, marketplaceUsecase,
+			emojiPacksUsecase,
 		},
 		[]application.Controller{httpModule},
 	)

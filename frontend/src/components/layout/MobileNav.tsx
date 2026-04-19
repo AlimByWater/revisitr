@@ -8,6 +8,7 @@ import {
   Mail,
   Bot,
   Store,
+  Smile,
   X,
   LogOut,
   type LucideIcon,
@@ -27,6 +28,7 @@ const mobileNav: MobileNavItem[] = [
   { label: 'Рассылки', icon: Mail, href: '/dashboard/campaigns' },
   { label: 'Боты', icon: Bot, href: '/dashboard/bots' },
   { label: 'Точки продаж', icon: Store, href: '/dashboard/pos' },
+  { label: 'Эмодзи', icon: Smile, href: '/dashboard/emoji-packs' },
 ]
 
 interface MobileNavProps {
