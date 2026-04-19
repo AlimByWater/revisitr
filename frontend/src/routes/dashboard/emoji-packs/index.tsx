@@ -326,6 +326,17 @@ export default function EmojiPacksPage() {
           <p className="text-sm text-neutral-400 max-w-xs leading-relaxed">
             Создайте пак и добавьте иконки для категорий меню
           </p>
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className={cn(
+              'mt-4 flex items-center gap-1.5 py-2 px-4 rounded text-sm font-medium',
+              'bg-accent text-white hover:bg-accent-hover transition-all',
+            )}
+          >
+            <Plus className="w-4 h-4" />
+            Создать эмодзи-пак
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
