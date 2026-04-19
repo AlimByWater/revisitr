@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef, useLayoutEffect, type TextareaHTMLAttributes } from "react";
+import { useState, useCallback, useRef, useLayoutEffect, forwardRef, type TextareaHTMLAttributes } from "react";
+import { EmojiPicker } from "@/features/emoji-packs";
 import {
   DndContext,
   closestCenter,
@@ -359,16 +360,42 @@ function TextPartEditor({
   part: MessagePart;
   onChange: (u: Partial<MessagePart>) => void;
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleEmojiInsert = (item: { name: string; image_url: string }) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      onChange({ text: (part.text || "") + item.name });
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = part.text || "";
+    const newText = text.slice(0, start) + item.name + text.slice(end);
+    onChange({ text: newText });
+    requestAnimationFrame(() => {
+      const pos = start + item.name.length;
+      textarea.setSelectionRange(pos, pos);
+      textarea.focus();
+    });
+  };
+
   return (
     <div className="space-y-2">
-      <AutoResizeTextarea
-        value={part.text || ""}
-        onChange={(e) => onChange({ text: e.target.value })}
-        placeholder="Текст сообщения..."
-        rows={3}
-        maxLength={4096}
-        className="w-full overflow-hidden px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-      />
+      <div className="relative">
+        <AutoResizeTextarea
+          ref={textareaRef}
+          value={part.text || ""}
+          onChange={(e) => onChange({ text: e.target.value })}
+          placeholder="Текст сообщения..."
+          rows={3}
+          maxLength={4096}
+          className="w-full overflow-hidden px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+        />
+        <div className="absolute top-2 right-2">
+          <EmojiPicker onSelect={handleEmojiInsert} triggerClassName="w-6 h-6 border-0 bg-transparent hover:bg-gray-100" />
+        </div>
+      </div>
       <div className="flex items-center justify-between text-xs text-gray-400">
         <span>*жирный*, _курсив_, `код`</span>
         <span>{(part.text || "").length}/4096</span>
@@ -420,21 +447,22 @@ function MediaPartEditor({
   );
 }
 
-function AutoResizeTextarea(
-  props: TextareaHTMLAttributes<HTMLTextAreaElement>,
-) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+const AutoResizeTextarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
+  function AutoResizeTextarea(props, ref) {
+    const internalRef = useRef<HTMLTextAreaElement>(null);
+    const resolvedRef = (ref as React.RefObject<HTMLTextAreaElement>) || internalRef;
 
-  useLayoutEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+    useLayoutEffect(() => {
+      const textarea = resolvedRef.current;
+      if (!textarea) return;
 
-    textarea.style.height = "0px";
-    textarea.style.height = `${textarea.scrollHeight}px`;
-  }, [props.value]);
+      textarea.style.height = "0px";
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }, [props.value]);
 
-  return <textarea ref={textareaRef} {...props} />;
-}
+    return <textarea ref={resolvedRef} {...props} />;
+  },
+);
 
 // ── Media Upload Field ────────────────────────────────────────────────────────
 

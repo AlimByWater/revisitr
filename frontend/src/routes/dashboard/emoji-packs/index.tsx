@@ -25,9 +25,9 @@ interface AddItemFormProps {
 }
 
 function AddItemForm({ packId, onDone }: AddItemFormProps) {
-  const [name, setName] = useState('')
   const [uploading, setUploading] = useState(false)
   const [imageUrl, setImageUrl] = useState('')
+  const [fileName, setFileName] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const addItem = useAddEmojiItemMutation(packId)
 
@@ -38,27 +38,22 @@ function AddItemForm({ packId, onDone }: AddItemFormProps) {
     try {
       const url = await campaignsApi.uploadFile(file)
       setImageUrl(url)
+      setFileName(file.name.replace(/\.[^.]+$/, ''))
     } finally {
       setUploading(false)
     }
   }
 
   const handleSubmit = async () => {
-    if (!name.trim() || !imageUrl) return
-    await addItem.mutate({ name: name.trim(), image_url: imageUrl })
+    if (!imageUrl) return
+    const itemName = fileName || 'emoji'
+    await addItem.mutate({ name: itemName, image_url: imageUrl })
     onDone()
   }
 
   return (
     <div className="mt-3 p-3 rounded border border-neutral-200 bg-neutral-50 space-y-2">
       <div className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Новый эмодзи</div>
-      <input
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Название"
-        className={cn(inputClassName, 'w-full')}
-      />
       <div className="flex items-center gap-2">
         {imageUrl ? (
           <img src={imageUrl} alt="preview" className="w-10 h-10 rounded border border-neutral-200 object-cover" />
@@ -84,7 +79,7 @@ function AddItemForm({ packId, onDone }: AddItemFormProps) {
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={addItem.isPending || !name.trim() || !imageUrl}
+          disabled={addItem.isPending || !imageUrl}
           className={cn(
             'py-1.5 px-3 rounded text-xs font-medium bg-accent text-white hover:bg-accent-hover',
             'disabled:opacity-50 transition-all',
