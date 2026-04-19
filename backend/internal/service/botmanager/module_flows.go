@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"html"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -931,12 +932,19 @@ func (h *handler) replaceFlowMessage(ctx context.Context, chatID int64, state Fl
 	return messageID
 }
 
+var emojiMarkerRe = regexp.MustCompile(`\{\{emoji:[^}]+\}\}`)
+
+func stripEmojiMarkers(text string) string {
+	return strings.TrimSpace(emojiMarkerRe.ReplaceAllString(text, ""))
+}
+
 func (h *handler) sendContentMessage(ctx context.Context, chatID int64, content entity.MessageContent) int {
 	if len(content.Parts) == 0 {
 		return 0
 	}
 
 	part := content.Parts[0]
+	part.Text = stripEmojiMarkers(part.Text)
 	markup := h.inlineKeyboard(content.Buttons)
 
 	switch part.Type {
