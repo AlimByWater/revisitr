@@ -157,7 +157,7 @@ func main() {
 	marketplaceUsecase := marketplaceUC.New(marketplaceRepo, marketplaceRepo, loyaltyUsecase)
 
 	// Emoji packs usecase
-	emojiSyncSvc := emojisyncService.New(logger)
+	emojiSyncSvc := emojisyncService.New(logger, cfg.GetBaseURL())
 	emojiPacksUsecase := emojipacksUC.New(emojiPacksRepo,
 		emojipacksUC.WithSync(botsRepo, emojiSyncSvc),
 	)

@@ -28,11 +28,12 @@ func (r namedReader) Name() string { return r.name }
 
 // Service syncs emoji pack items to Telegram custom emoji sticker sets.
 type Service struct {
-	logger *slog.Logger
+	logger  *slog.Logger
+	baseURL string // e.g. "https://elysium.fm"
 }
 
-func New(logger *slog.Logger) *Service {
-	return &Service{logger: logger}
+func New(logger *slog.Logger, baseURL string) *Service {
+	return &Service{logger: logger, baseURL: strings.TrimRight(baseURL, "/")}
 }
 
 // SyncPack creates or updates a Telegram custom emoji sticker set for the given pack.
@@ -114,8 +115,16 @@ func (s *Service) SyncPack(ctx context.Context, bot *telego.Bot, botUsername str
 	return results, nil
 }
 
+func (s *Service) resolveURL(imageURL string) string {
+	if strings.HasPrefix(imageURL, "http://") || strings.HasPrefix(imageURL, "https://") {
+		return imageURL
+	}
+	return s.baseURL + imageURL
+}
+
 func (s *Service) prepareSticker(ctx context.Context, imageURL string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
+	fullURL := s.resolveURL(imageURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
