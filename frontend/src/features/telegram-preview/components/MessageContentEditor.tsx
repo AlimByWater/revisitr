@@ -363,18 +363,19 @@ function TextPartEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleEmojiInsert = (item: { name: string; image_url: string }) => {
+    const marker = `{{emoji:${item.image_url}}}`;
     const textarea = textareaRef.current;
     if (!textarea) {
-      onChange({ text: (part.text || "") + item.name });
+      onChange({ text: (part.text || "") + marker });
       return;
     }
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const text = part.text || "";
-    const newText = text.slice(0, start) + item.name + text.slice(end);
+    const newText = text.slice(0, start) + marker + text.slice(end);
     onChange({ text: newText });
     requestAnimationFrame(() => {
-      const pos = start + item.name.length;
+      const pos = start + marker.length;
       textarea.setSelectionRange(pos, pos);
       textarea.focus();
     });

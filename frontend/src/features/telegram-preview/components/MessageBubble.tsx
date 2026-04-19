@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import type { ReactNode } from 'react'
+import { renderChildren } from './renderEmoji'
 
 interface MessageBubbleProps {
   children: ReactNode
@@ -21,7 +22,7 @@ export function MessageBubble({ children, theme = 'light', showTail = false }: M
           showTail && 'tg-bubble-tail'
         )}
       >
-        <span className="whitespace-pre-wrap">{children}</span>
+        <span className="whitespace-pre-wrap">{renderChildren(children)}</span>
         <span className={cn('tg-timestamp', isDark && 'tg-timestamp-dark')}>
           {timestamp}
         </span>

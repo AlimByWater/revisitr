@@ -6,6 +6,7 @@ import { MediaMessage } from './MediaMessage'
 import { StickerMessage } from './StickerMessage'
 import { InlineKeyboard } from './InlineKeyboard'
 import { PhoneFrame } from './PhoneFrame'
+import { renderTextWithEmoji } from './renderEmoji'
 import '../styles/telegram.css'
 
 export interface TelegramPreviewProps {
@@ -92,7 +93,7 @@ export function TelegramPreview({
                       </div>
                     </div>
                   </div>
-                  {part.text && <div className="tg-bubble-caption">{part.text}</div>}
+                  {part.text && <div className="tg-bubble-caption">{renderTextWithEmoji(part.text)}</div>}
                 </MessageBubble>
                 {buttons && buttons.length > 0 && (
                   <InlineKeyboard buttons={buttons} theme={theme} />

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { ImageIcon, Play } from 'lucide-react'
+import { renderTextWithEmoji } from './renderEmoji'
 
 interface MediaMessageProps {
   type: 'photo' | 'video' | 'animation'
@@ -77,7 +78,7 @@ export function MediaMessage({
         </div>
         {caption && (
           <div className="tg-bubble-caption">
-            <span className="whitespace-pre-wrap">{caption}</span>
+            <span className="whitespace-pre-wrap">{renderTextWithEmoji(caption)}</span>
             <span className={cn('tg-timestamp', isDark && 'tg-timestamp-dark')}>
               {timestamp}
             </span>
