@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/disintegration/imaging"
+	_ "golang.org/x/image/webp" // register WebP decoder
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
 
