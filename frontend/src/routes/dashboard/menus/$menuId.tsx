@@ -329,14 +329,7 @@ export default function MenuDetailPage() {
             <EmojiPickerField
               value={newCategory.icon_image_url || undefined}
               onChange={(imageUrl) => setNewCategory((current) => ({ ...current, icon_image_url: imageUrl, icon_emoji: '' }))}
-              onClear={() => setNewCategory((current) => ({ ...current, icon_image_url: '' }))}
-            />
-            <input
-              type="text"
-              value={newCategory.icon_emoji}
-              onChange={(event) => setNewCategory((current) => ({ ...current, icon_emoji: event.target.value }))}
-              placeholder="Emoji (текст)"
-              className={cn(inputClassName, 'md:col-span-2')}
+              onClear={() => setNewCategory((current) => ({ ...current, icon_image_url: '', icon_emoji: '' }))}
             />
           </div>
           <div className="mt-4 flex gap-3">
@@ -494,14 +487,7 @@ function CategorySection({
             <EmojiPickerField
               value={draftCategory.icon_image_url || undefined}
               onChange={(imageUrl) => setDraftCategory((current) => ({ ...current, icon_image_url: imageUrl, icon_emoji: '' }))}
-              onClear={() => setDraftCategory((current) => ({ ...current, icon_image_url: '' }))}
-            />
-            <input
-              type="text"
-              value={draftCategory.icon_emoji}
-              onChange={(event) => setDraftCategory((current) => ({ ...current, icon_emoji: event.target.value }))}
-              placeholder="Emoji (текст)"
-              className={inputClassName}
+              onClear={() => setDraftCategory((current) => ({ ...current, icon_image_url: '', icon_emoji: '' }))}
             />
             <button
               type="button"

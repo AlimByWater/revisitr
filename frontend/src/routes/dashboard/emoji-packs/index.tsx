@@ -28,17 +28,21 @@ function AddItemForm({ packId, onDone }: AddItemFormProps) {
   const [uploading, setUploading] = useState(false)
   const [imageUrl, setImageUrl] = useState('')
   const [fileName, setFileName] = useState('')
+  const [uploadError, setUploadError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const addItem = useAddEmojiItemMutation(packId)
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setUploadError('')
     setUploading(true)
     try {
       const url = await campaignsApi.uploadFile(file)
       setImageUrl(url)
       setFileName(file.name.replace(/\.[^.]+$/, ''))
+    } catch {
+      setUploadError('Не удалось загрузить файл. Проверьте формат и размер.')
     } finally {
       setUploading(false)
     }
@@ -73,8 +77,10 @@ function AddItemForm({ packId, onDone }: AddItemFormProps) {
         >
           {uploading ? 'Загрузка...' : 'Выбрать файл'}
         </button>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+        <input ref={fileRef} type="file" accept="image/png,image/svg+xml,image/webp,image/jpeg" className="hidden" onChange={handleFileChange} />
       </div>
+      <p className="text-[11px] text-neutral-400">PNG, SVG, WebP или JPEG, до 1 МБ</p>
+      {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
       <div className="flex gap-2 pt-1">
         <button
           type="button"
@@ -127,6 +133,7 @@ function PackCard({ pack, onDelete, onMutate }: PackCardProps) {
   }
 
   const handleDeleteItem = async (itemId: number) => {
+    if (!window.confirm('Удалить этот эмодзи?')) return
     setDeletingItem(itemId)
     try {
       await deleteItem.mutate(itemId)
@@ -229,6 +236,12 @@ export default function EmojiPacksPage() {
   }
 
   const handleDelete = async (id: number) => {
+    const pack = packs?.find((p) => p.id === id)
+    const itemCount = pack?.items?.length ?? 0
+    const msg = itemCount > 0
+      ? `Удалить пак «${pack?.name}» и ${itemCount} эмодзи в нём? Это действие нельзя отменить.`
+      : `Удалить пак «${pack?.name}»?`
+    if (!window.confirm(msg)) return
     await deletePack.mutate(id)
     mutate()
   }

@@ -17,11 +17,18 @@ export function EmojiPicker({ onSelect, selected, triggerClassName }: EmojiPicke
   const { data: packs = [], isLoading } = useEmojiPacksQuery()
 
   useEffect(() => {
-    function handler(e: MouseEvent) {
+    function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
   }, [])
 
   const allItems = packs.flatMap((p) => p.items ?? [])
@@ -41,6 +48,8 @@ export function EmojiPicker({ onSelect, selected, triggerClassName }: EmojiPicke
       </button>
 
       <div
+        role="dialog"
+        aria-label="Выбор эмодзи"
         className={cn(
           'absolute top-full left-0 mt-1 z-50 bg-white border border-neutral-900 rounded shadow-md w-64 max-h-72 overflow-y-auto',
           'transition-all duration-150 origin-top',
