@@ -50,6 +50,7 @@ const RFMTemplatePage = lazy(() => import('./routes/dashboard/rfm/template'))
 const SegmentDetailPage = lazy(() => import('./routes/dashboard/rfm/segments/$segment'))
 const AccountPage = lazy(() => import('./routes/dashboard/account/index'))
 const CustomSegmentsPage = lazy(() => import('./routes/dashboard/clients/custom-segments'))
+const EmojiPacksPage = lazy(() => import('./routes/dashboard/emoji-packs/index'))
 
 function RouteFallback() {
   return (
@@ -165,6 +166,7 @@ export const router = createBrowserRouter(
             { path: 'billing', element: lazyElement(BillingPage) },
             { path: 'billing/invoices', element: lazyElement(InvoicesPage) },
             { path: 'account', element: lazyElement(AccountPage) },
+            { path: 'emoji-packs', element: lazyElement(EmojiPacksPage) },
           ],
         },
       ],
