@@ -20,7 +20,6 @@ import type {
 import { usePOSQuery } from '@/features/pos/queries'
 import { ErrorState } from '@/components/common/ErrorState'
 import { CardSkeleton } from '@/components/common/LoadingSkeleton'
-import { MessageContentEditor, type MessageContent } from '@/features/telegram-preview'
 import { campaignsApi } from '@/features/campaigns/api'
 import {
   ArrowLeft,
@@ -28,6 +27,7 @@ import {
   ChevronDown,
   ChevronRight,
   Edit3,
+  Info,
   Package,
   Plus,
   Save,
@@ -237,18 +237,19 @@ export default function MenuDetailPage() {
           </div>
         </div>
 
-        <section className="rounded-xl border border-surface-border bg-neutral-50/70 p-4 mb-6">
-          <div className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400 mb-3">
-            Первое сообщение
+        <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+            <div>
+              <div className="text-sm font-medium text-blue-900">Приветственное сообщение</div>
+              <div className="text-sm text-blue-700 mt-1">
+                Настройте текст и медиа, которые бот отправит при нажатии кнопки «Меню», в{' '}
+                <Link to={`/dashboard/bots/${botId}`} className="underline font-medium hover:text-blue-900">
+                  настройках бота → Основные → кнопка Меню
+                </Link>.
+              </div>
+            </div>
           </div>
-          <MessageContentEditor
-            value={draft.intro_content as MessageContent}
-            onChange={(content) =>
-              setDraft((current) => (current ? { ...current, intro_content: content } : current))
-            }
-            onUpload={campaignsApi.uploadFile}
-            maxParts={4}
-          />
         </section>
 
         <section className="rounded-xl border border-surface-border bg-neutral-50/70 p-4">

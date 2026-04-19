@@ -116,25 +116,26 @@ export interface SystemButtonMeta {
   label: string
   managed_by_module: string
   configureLabel: string
+  isExpandable: boolean
 }
 
 export function getSystemButtons(modules: string[]): SystemButtonMeta[] {
   const buttons: SystemButtonMeta[] = [
-    { label: 'Контакты', managed_by_module: 'contacts', configureLabel: 'Контакты' },
-    { label: 'На главную', managed_by_module: 'home', configureLabel: 'Главная' },
+    { label: 'Контакты', managed_by_module: 'contacts', configureLabel: 'Контакты', isExpandable: false },
+    { label: 'На главную', managed_by_module: 'home', configureLabel: 'Главная', isExpandable: false },
   ]
 
   if (modules.includes('loyalty')) {
-    buttons.push({ label: 'Лояльность', managed_by_module: 'loyalty', configureLabel: 'Лояльность' })
+    buttons.push({ label: 'Лояльность', managed_by_module: 'loyalty', configureLabel: 'Лояльность', isExpandable: false })
   }
   if (modules.includes('menu')) {
-    buttons.push({ label: 'Меню', managed_by_module: 'menu', configureLabel: 'Меню' })
+    buttons.push({ label: 'Меню', managed_by_module: 'menu', configureLabel: 'Меню', isExpandable: true })
   }
   if (modules.includes('booking')) {
-    buttons.push({ label: 'Забронировать', managed_by_module: 'booking', configureLabel: 'Бронирование' })
+    buttons.push({ label: 'Забронировать', managed_by_module: 'booking', configureLabel: 'Бронирование', isExpandable: true })
   }
   if (modules.includes('feedback')) {
-    buttons.push({ label: 'Связаться', managed_by_module: 'feedback', configureLabel: 'Связаться' })
+    buttons.push({ label: 'Связаться', managed_by_module: 'feedback', configureLabel: 'Связаться', isExpandable: true })
   }
 
   return buttons
@@ -167,7 +168,7 @@ export function syncSystemButtons(
       if (!managedKey || !replacement || seenManagedButtons.has(managedKey)) {
         continue
       }
-      nextButtons.push(replacement)
+      nextButtons.push({ ...replacement, content: button.content })
       seenManagedButtons.add(managedKey)
       continue
     }

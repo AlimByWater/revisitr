@@ -814,9 +814,18 @@ func (h *handler) resolveMenuForChat(ctx context.Context, chatID int64) (*entity
 }
 
 func (h *handler) menuIntroContent(menu *entity.Menu) entity.MessageContent {
+	// Layer 1: Per-menu IntroContent (per-POS override)
 	if menu != nil && menu.IntroContent != nil && len(menu.IntroContent.Parts) > 0 {
 		return *menu.IntroContent
 	}
+	// Layer 2: BotButton.Content from General tab
+	for _, btn := range h.info.Settings.Buttons {
+		if btn.ManagedByModule != nil && *btn.ManagedByModule == "menu" &&
+			btn.Content != nil && len(btn.Content.Parts) > 0 {
+			return *btn.Content
+		}
+	}
+	// Layer 3: Hardcoded fallback
 	text := "Выберите категорию:"
 	if menu != nil && menu.Name != "" {
 		text = menu.Name + "\n\nВыберите категорию:"

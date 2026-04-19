@@ -142,7 +142,9 @@ func orderedMainMenuButtons(settings entity.BotSettings) []entity.BotButton {
 			if _, exists := required[button.Label]; !exists {
 				continue
 			}
-			ordered = append(ordered, required[button.Label])
+			req := required[button.Label]
+			req.Content = button.Content
+			ordered = append(ordered, req)
 			seen[button.Label] = struct{}{}
 			continue
 		}

@@ -1166,6 +1166,7 @@ function GeneralTab({
                           : buttonContentFromValue(button.value)
                         const isSystemButton = Boolean(button.is_system || button.managed_by_module)
                         const buttonModule = systemButtons.find((item) => item.managed_by_module === button.managed_by_module)
+                        const canExpand = !isSystemButton || (isSystemButton && buttonModule?.isExpandable)
                         const configureHref = button.managed_by_module === 'menu'
                           ? `/dashboard/menus?botId=${botId}`
                           : button.managed_by_module === 'contacts'
@@ -1198,7 +1199,7 @@ function GeneralTab({
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    if (!isSystemButton) toggleButtonExpanded(buttonIds[index])
+                                    if (canExpand) toggleButtonExpanded(buttonIds[index])
                                   }}
                                   className="w-full text-left min-w-0"
                                 >
@@ -1210,11 +1211,15 @@ function GeneralTab({
                                       </div>
                                       <div className="text-xs text-neutral-500 mt-1 break-words">
                                         {isSystemButton
-                                          ? `Системная кнопка${buttonModule ? ` · ${buttonModule.configureLabel}` : ''}`
+                                          ? buttonModule?.isExpandable
+                                            ? (button.content?.parts?.[0]?.text
+                                                ? `${button.content.parts[0].text.slice(0, 60)}${button.content.parts[0].text.length > 60 ? '…' : ''}`
+                                                : 'Нажмите для настройки приветствия')
+                                            : `Системная кнопка${buttonModule ? ` · ${buttonModule.configureLabel}` : ''}`
                                           : buttonSummary(button.content, button.value)}
                                       </div>
                                     </div>
-                                    {!isSystemButton && (
+                                    {canExpand && (
                                       <ChevronDown
                                         className={cn(
                                           'w-4 h-4 mt-0.5 text-neutral-400 transition-transform shrink-0',
@@ -1226,7 +1231,7 @@ function GeneralTab({
                                 </button>
                               </div>
 
-                              {isSystemButton && configureHref ? (
+                              {isSystemButton && !buttonModule?.isExpandable && configureHref ? (
                                 <Link
                                   to={configureHref}
                                   className="mt-1 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-3 text-sm text-amber-900 hover:bg-amber-100 transition-colors"
@@ -1247,19 +1252,28 @@ function GeneralTab({
                               )}
                             </div>
 
-                            {isExpanded && !isSystemButton && (
+                            {isExpanded && canExpand && (
                               <div className="border-t border-surface-border bg-neutral-50/60 px-4 py-4">
                                 <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)] gap-6 xl:gap-8 items-start">
                                   <div className="space-y-3">
-                                    <input
-                                      type="text"
-                                      value={button.label}
-                                      onChange={(e) => updateButton(index, 'label', e.target.value)}
-                                      placeholder="Текст кнопки в меню бота"
-                                      disabled={isSaving}
-                                      className={inputClassName}
-                                      aria-label={`Название кнопки ${index + 1}`}
-                                    />
+                                    {!isSystemButton && (
+                                      <input
+                                        type="text"
+                                        value={button.label}
+                                        onChange={(e) => updateButton(index, 'label', e.target.value)}
+                                        placeholder="Текст кнопки в меню бота"
+                                        disabled={isSaving}
+                                        className={inputClassName}
+                                        aria-label={`Название кнопки ${index + 1}`}
+                                      />
+                                    )}
+                                    {isSystemButton && buttonModule && (
+                                      <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+                                        {buttonModule.managed_by_module === 'menu' && '📋 Категории меню добавятся к сообщению автоматически'}
+                                        {buttonModule.managed_by_module === 'booking' && '📅 Выбор даты и времени добавится автоматически'}
+                                        {buttonModule.managed_by_module === 'feedback' && '💬 Форма обратной связи добавится автоматически'}
+                                      </div>
+                                    )}
                                     <Suspense fallback={<EditorFallback />}>
                                       <MessageContentEditor
                                         value={buttonContent}
