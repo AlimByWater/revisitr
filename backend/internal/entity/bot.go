@@ -41,10 +41,12 @@ func (s BotSettings) Value() (driver.Value, error) {
 }
 
 type BotButton struct {
-	Label   string          `json:"label"`
-	Type    string          `json:"type"`
-	Value   string          `json:"value"`
-	Content *MessageContent `json:"content,omitempty"`
+	Label           string          `json:"label"`
+	Type            string          `json:"type"`
+	Value           string          `json:"value"`
+	Content         *MessageContent `json:"content,omitempty"`
+	ManagedByModule *string         `json:"managed_by_module,omitempty"`
+	IsSystem        bool            `json:"is_system,omitempty"`
 }
 
 type FormField struct {

@@ -47,6 +47,11 @@ func (r *Menus) GetByOrgID(ctx context.Context, orgID int) ([]entity.Menu, error
 		return nil, fmt.Errorf("menus.GetByOrgID: %w", err)
 	}
 	for i := range menus {
+		categories, categoriesErr := r.GetCategories(ctx, menus[i].ID)
+		if categoriesErr != nil {
+			return nil, categoriesErr
+		}
+		menus[i].Categories = categories
 		bindings, bindErr := r.GetMenuPOSBindings(ctx, menus[i].ID)
 		if bindErr != nil {
 			return nil, bindErr

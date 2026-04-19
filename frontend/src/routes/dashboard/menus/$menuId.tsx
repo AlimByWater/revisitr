@@ -9,6 +9,7 @@ import {
   useUpdateItemMutation,
   useUpdateMenuMutation,
 } from '@/features/menus/queries'
+import { menusApi } from '@/features/menus/api'
 import type {
   CreateMenuItemRequest,
   Menu,
@@ -59,6 +60,7 @@ export default function MenuDetailPage() {
   const updateMenu = useUpdateMenuMutation()
   const addCategory = useAddCategoryMutation(id)
   const [draft, setDraft] = useState<Menu | null>(null)
+  const [botPosIds, setBotPosIds] = useState<number[]>([])
 
   const [newCategory, setNewCategory] = useState({
     name: '',
@@ -73,6 +75,28 @@ export default function MenuDetailPage() {
     }
   }, [menu])
 
+  useEffect(() => {
+    if (!botId) {
+      setBotPosIds([])
+      return
+    }
+
+    let mounted = true
+    menusApi.getBotPOSLocations(Number(botId))
+      .then((response) => {
+        if (!mounted) return
+        setBotPosIds(response.pos_ids ?? [])
+      })
+      .catch(() => {
+        if (!mounted) return
+        setBotPosIds([])
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [botId])
+
   const backToModulesHref = botId ? `/dashboard/bots/${botId}?tab=modules` : '/dashboard/menus'
   const backToMenusHref = botId ? `/dashboard/menus?botId=${botId}` : '/dashboard/menus'
 
@@ -86,15 +110,20 @@ export default function MenuDetailPage() {
     }
     return current
   }, [draft?.bindings])
+  const availablePosLocations = useMemo(
+    () => (botId ? posLocations.filter((location) => botPosIds.includes(location.id)) : posLocations),
+    [botId, botPosIds, posLocations],
+  )
 
   const handleSaveMenu = async () => {
     if (!draft) return
+    const allowedPosIds = new Set(availablePosLocations.map((location) => location.id))
     await updateMenu.mutate({
       id,
       data: {
         name: draft.name,
         intro_content: draft.intro_content,
-        bindings: Array.from(bindingsByPosId.values()),
+        bindings: Array.from(bindingsByPosId.values()).filter((binding) => allowedPosIds.has(binding.pos_id)),
       },
     })
     mutate()
@@ -227,63 +256,48 @@ export default function MenuDetailPage() {
             Привязка к точкам продаж
           </div>
           <div className="space-y-2">
-            {posLocations.map((location) => {
+            {availablePosLocations.map((location) => {
               const binding = bindingsByPosId.get(location.id)
-              const isBound = Boolean(binding)
               const isActive = binding?.is_active ?? false
               return (
                 <div key={location.id} className="rounded-lg border border-surface-border bg-white px-3 py-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <label className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={isBound}
-                        onChange={() =>
-                          setDraft((current) => {
-                            if (!current) return current
-                            const nextBindings = [...(current.bindings ?? [])]
-                            const index = nextBindings.findIndex((item) => item.pos_id === location.id)
-                            if (index >= 0) {
-                              nextBindings.splice(index, 1)
-                            } else {
-                              nextBindings.push({
-                                menu_id: current.id,
-                                pos_id: location.id,
-                                pos_name: location.name,
-                                is_active: false,
-                              })
-                            }
-                            return { ...current, bindings: nextBindings }
-                          })
-                        }
-                        className="h-4 w-4 rounded border-neutral-300 text-accent focus:ring-accent/20"
-                      />
-                      <div>
-                        <div className="text-sm font-medium text-neutral-900">{location.name}</div>
-                        <div className="text-xs text-neutral-500">{location.address}</div>
-                      </div>
-                    </label>
+                    <div>
+                      <div className="text-sm font-medium text-neutral-900">{location.name}</div>
+                      <div className="text-xs text-neutral-500">{location.address}</div>
+                    </div>
 
                     <button
                       type="button"
                       role="switch"
                       aria-checked={isActive}
-                      disabled={!isBound}
                       onClick={() =>
                         setDraft((current) => {
                           if (!current) return current
+                          const existingBindings = current.bindings ?? []
+                          const hasBinding = existingBindings.some((item) => item.pos_id === location.id)
                           return {
                             ...current,
-                            bindings: (current.bindings ?? []).map((item) => (
-                              item.pos_id === location.id
-                                ? { ...item, is_active: !item.is_active }
-                                : item
-                            )),
+                            bindings: hasBinding
+                              ? existingBindings.map((item) => (
+                                item.pos_id === location.id
+                                  ? { ...item, is_active: !item.is_active }
+                                  : item
+                              ))
+                              : [
+                                ...existingBindings,
+                                {
+                                  menu_id: current.id,
+                                  pos_id: location.id,
+                                  pos_name: location.name,
+                                  is_active: true,
+                                },
+                              ],
                           }
                         })
                       }
                       className={cn(
-                        'relative h-6 w-10 shrink-0 rounded-full transition-colors disabled:opacity-40',
+                        'relative h-6 w-10 shrink-0 rounded-full transition-colors',
                         isActive ? 'bg-accent' : 'bg-neutral-300',
                       )}
                     >
@@ -298,6 +312,9 @@ export default function MenuDetailPage() {
                 </div>
               )
             })}
+            {availablePosLocations.length === 0 && (
+              <p className="text-sm text-neutral-500">Для этого бота пока не привязаны точки продаж во вкладке «Подключение».</p>
+            )}
           </div>
         </section>
       </div>

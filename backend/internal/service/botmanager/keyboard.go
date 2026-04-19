@@ -20,28 +20,27 @@ const (
 
 func buildMainMenu(settings entity.BotSettings) *telego.ReplyKeyboardMarkup {
 	var rows [][]telego.KeyboardButton
-	var contentButtons []telego.KeyboardButton
+	var currentRow []telego.KeyboardButton
 
-	for _, label := range moduleButtonLabels(settings.Modules) {
-		contentButtons = append(contentButtons, tu.KeyboardButton(label))
-	}
+	for _, button := range orderedMainMenuButtons(settings) {
+		if button.Label == btnHome {
+			if len(currentRow) > 0 {
+				rows = append(rows, currentRow)
+				currentRow = nil
+			}
+			rows = append(rows, []telego.KeyboardButton{tu.KeyboardButton(button.Label)})
+			continue
+		}
 
-	if len(settings.Buttons) > 0 {
-		for _, btn := range settings.Buttons {
-			contentButtons = append(contentButtons, tu.KeyboardButton(btn.Label))
+		currentRow = append(currentRow, tu.KeyboardButton(button.Label))
+		if len(currentRow) == 2 {
+			rows = append(rows, currentRow)
+			currentRow = nil
 		}
 	}
-
-	contentButtons = append(contentButtons, tu.KeyboardButton(btnContacts))
-
-	for len(contentButtons) >= 2 {
-		rows = append(rows, []telego.KeyboardButton{contentButtons[0], contentButtons[1]})
-		contentButtons = contentButtons[2:]
+	if len(currentRow) == 1 {
+		rows = append(rows, currentRow)
 	}
-	if len(contentButtons) == 1 {
-		rows = append(rows, []telego.KeyboardButton{contentButtons[0]})
-	}
-	rows = append(rows, []telego.KeyboardButton{tu.KeyboardButton(btnHome)})
 
 	kb := &telego.ReplyKeyboardMarkup{
 		Keyboard:       rows,
@@ -98,4 +97,74 @@ func moduleButtonLabels(modules []string) []string {
 	}
 
 	return labels
+}
+
+func orderedMainMenuButtons(settings entity.BotSettings) []entity.BotButton {
+	required := map[string]entity.BotButton{}
+
+	addRequired := func(label string, managedByModule *string, isSystem bool) {
+		required[label] = entity.BotButton{
+			Label:           label,
+			Type:            "text",
+			Value:           label,
+			ManagedByModule: managedByModule,
+			IsSystem:        isSystem,
+		}
+	}
+
+	for _, module := range settings.Modules {
+		switch module {
+		case "loyalty":
+			moduleName := "loyalty"
+			addRequired(btnLoyalty, &moduleName, true)
+		case "menu":
+			moduleName := "menu"
+			addRequired(btnMenu, &moduleName, true)
+		case "booking":
+			moduleName := "booking"
+			addRequired(btnBooking, &moduleName, true)
+		case "feedback":
+			moduleName := "feedback"
+			addRequired(btnFeedback, &moduleName, true)
+		}
+	}
+
+	contacts := "contacts"
+	home := "home"
+	addRequired(btnContacts, &contacts, true)
+	addRequired(btnHome, &home, true)
+
+	seen := map[string]struct{}{}
+	var ordered []entity.BotButton
+
+	for _, button := range settings.Buttons {
+		if _, ok := required[button.Label]; button.IsSystem || button.ManagedByModule != nil || ok {
+			if _, exists := required[button.Label]; !exists {
+				continue
+			}
+			ordered = append(ordered, required[button.Label])
+			seen[button.Label] = struct{}{}
+			continue
+		}
+
+		ordered = append(ordered, button)
+		seen[button.Label] = struct{}{}
+	}
+
+	for _, label := range moduleButtonLabels(settings.Modules) {
+		if _, ok := seen[label]; ok {
+			continue
+		}
+		ordered = append(ordered, required[label])
+		seen[label] = struct{}{}
+	}
+	for _, label := range []string{btnContacts, btnHome} {
+		if _, ok := seen[label]; ok {
+			continue
+		}
+		ordered = append(ordered, required[label])
+		seen[label] = struct{}{}
+	}
+
+	return ordered
 }

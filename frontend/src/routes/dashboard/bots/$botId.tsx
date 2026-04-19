@@ -21,6 +21,8 @@ import {
   ChevronDown,
   ChevronRight,
   Link2,
+  Lock,
+  SlidersHorizontal,
 } from 'lucide-react'
 import {
   DndContext,
@@ -52,12 +54,13 @@ import {
   canAddPreset,
   deriveBotRequirements,
   getEditableButtons,
-  getManagedButtonSummary,
+  getSystemButtons,
   MODULE_DEFS,
   normalizeBookingConfig,
   normalizeBotSettings,
   normalizeTimeInput,
   STANDARD_FIELD_PRESETS,
+  syncSystemButtons,
   isStandardField,
   withModuleDefaults,
 } from '@/features/bots/settings'
@@ -921,14 +924,8 @@ function GeneralTab({
     }),
   )
 
-  const editableButtonIndexes = settings.buttons.reduce<number[]>((accumulator, button, index) => {
-    if (!button.is_system && !button.managed_by_module) {
-      accumulator.push(index)
-    }
-    return accumulator
-  }, [])
-  const editableButtons = editableButtonIndexes.map((index) => settings.buttons[index])
-  const managedButtons = getManagedButtonSummary(settings.modules)
+  const editableButtons = getEditableButtons(settings.buttons)
+  const systemButtons = getSystemButtons(settings.modules)
 
   // --- Buttons dnd ---
   const buttonSensors = useSensors(
@@ -936,7 +933,7 @@ function GeneralTab({
     useSensor(KeyboardSensor),
   )
 
-  const buttonIds = editableButtons.map((_, i) => `btn-${i}`)
+  const buttonIds = settings.buttons.map((_, i) => `btn-${i}`)
 
   const handleButtonDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -945,59 +942,48 @@ function GeneralTab({
     const newIndex = buttonIds.indexOf(String(over.id))
     setSettings((current) => {
       if (!current) return current
-      const reorderedEditable = arrayMove(editableButtons, oldIndex, newIndex)
-      let editableIndex = 0
       return {
         ...current,
-        buttons: current.buttons.map((button) => {
-          if (button.is_system || button.managed_by_module) return button
-          const nextButton = reorderedEditable[editableIndex]
-          editableIndex += 1
-          return nextButton
-        }),
+        buttons: arrayMove(current.buttons, oldIndex, newIndex),
       }
     })
   }
 
   const addButton = () => {
     if (editableButtons.length >= 10) return
-    const nextId = `btn-${editableButtons.length}`
     setSettings((s) =>
       s
         ? {
             ...s,
-            buttons: [
+            buttons: syncSystemButtons([
               ...s.buttons,
               { label: '', type: 'text', value: '', content: buttonContentFromValue('') },
-            ],
+            ], s.modules),
           }
         : s,
     )
-    setExpandedButtonId(nextId)
+    setExpandedButtonId(`btn-${settings.buttons.length}`)
   }
 
   const updateButton = (index: number, field: keyof BotButton, value: string) => {
-    const actualIndex = editableButtonIndexes[index]
     setSettings((s) => {
       if (!s) return s
       const updated = s.buttons.map((btn, i) => (
-        i === actualIndex ? { ...btn, [field]: value } : btn
+        i === index ? { ...btn, [field]: value } : btn
       ))
       return { ...s, buttons: updated }
     })
   }
 
   const removeButton = (index: number) => {
-    const actualIndex = editableButtonIndexes[index]
-    setSettings((s) => (s ? { ...s, buttons: s.buttons.filter((_, i) => i !== actualIndex) } : s))
+    setSettings((s) => (s ? { ...s, buttons: s.buttons.filter((_, i) => i !== index) } : s))
   }
 
   const updateButtonContent = (index: number, content: MessageContent) => {
-    const actualIndex = editableButtonIndexes[index]
     setSettings((s) => {
       if (!s) return s
       const updated = s.buttons.map((btn, i) =>
-        i === actualIndex
+        i === index
           ? {
               ...btn,
               content,
@@ -1148,7 +1134,7 @@ function GeneralTab({
         <SectionBlock
           eyebrow="Клавиатура"
           title="Кнопки меню бота"
-          description="Это только пользовательские кнопки. Системные кнопки модулей и фиксированные кнопки «Контакты» и «На главную» управляются автоматически и здесь не редактируются."
+          description="Системные кнопки можно переставлять драгом, но они не редактируются и не удаляются здесь. Их содержимое настраивается в соответствующих разделах."
           actions={(
             <button
               type="button"
@@ -1165,29 +1151,38 @@ function GeneralTab({
             </button>
           )}
         >
-          <div className="mb-4 rounded-xl border border-surface-border bg-neutral-50/70 p-4 text-sm text-neutral-600">
-            <div className="font-medium text-neutral-900">Системные кнопки</div>
-            <div className="mt-1">
-              {managedButtons.join(' · ')}
-            </div>
-          </div>
-
-          {editableButtons.length === 0 ? (
+          {settings.buttons.length === 0 ? (
             <p className="text-sm text-neutral-400 text-center py-6">Кнопки ещё не добавлены. Создайте первую кнопку для меню бота.</p>
           ) : (
             <DndContext sensors={buttonSensors} collisionDetection={closestCenter} onDragEnd={handleButtonDragEnd}>
               <SortableContext items={buttonIds} strategy={verticalListSortingStrategy}>
                 <div className="space-y-3">
-                  {editableButtons.map((button, index) => (
+                  {settings.buttons.map((button, index) => (
                     <SortableItem key={buttonIds[index]} id={buttonIds[index]}>
                       {({ listeners, attributes }) => {
                         const isExpanded = expandedButtonId === buttonIds[index]
                         const buttonContent = button.content && button.content.parts?.length > 0
                           ? button.content
                           : buttonContentFromValue(button.value)
+                        const isSystemButton = Boolean(button.is_system || button.managed_by_module)
+                        const buttonModule = systemButtons.find((item) => item.managed_by_module === button.managed_by_module)
+                        const configureHref = button.managed_by_module === 'menu'
+                          ? `/dashboard/menus?botId=${botId}`
+                          : button.managed_by_module === 'contacts'
+                            ? `/dashboard/bots/${botId}?tab=general`
+                            : button.managed_by_module === 'home'
+                              ? `/dashboard/bots/${botId}?tab=general`
+                              : button.managed_by_module
+                                ? `/dashboard/bots/${botId}?tab=modules`
+                                : null
 
                         return (
-                          <div className="rounded-xl border border-surface-border bg-white overflow-hidden shadow-sm">
+                          <div className={cn(
+                            'rounded-xl border overflow-hidden shadow-sm',
+                            isSystemButton
+                              ? 'border-amber-200 bg-amber-50/60'
+                              : 'border-surface-border bg-white',
+                          )}>
                             <div className="flex items-start gap-3 px-4 py-3">
                               <button
                                 type="button"
@@ -1199,41 +1194,60 @@ function GeneralTab({
                                 <GripVertical className="w-4 h-4" />
                               </button>
 
-                              <button
-                                type="button"
-                                onClick={() => toggleButtonExpanded(buttonIds[index])}
-                                className="flex-1 text-left min-w-0"
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0">
-                                    <div className="text-sm font-semibold text-neutral-900">
-                                      {button.label || `Кнопка ${index + 1}`}
+                              <div className="flex-1 min-w-0">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!isSystemButton) toggleButtonExpanded(buttonIds[index])
+                                  }}
+                                  className="w-full text-left min-w-0"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
+                                        {isSystemButton && <Lock className="h-4 w-4 shrink-0 text-amber-700" />}
+                                        <span>{button.label || `Кнопка ${index + 1}`}</span>
+                                      </div>
+                                      <div className="text-xs text-neutral-500 mt-1 break-words">
+                                        {isSystemButton
+                                          ? `Системная кнопка${buttonModule ? ` · ${buttonModule.configureLabel}` : ''}`
+                                          : buttonSummary(button.content, button.value)}
+                                      </div>
                                     </div>
-                                    <div className="text-xs text-neutral-500 mt-1 break-words">
-                                      {buttonSummary(button.content, button.value)}
-                                    </div>
-                                  </div>
-                                  <ChevronDown
-                                    className={cn(
-                                      'w-4 h-4 mt-0.5 text-neutral-400 transition-transform shrink-0',
-                                      isExpanded && 'rotate-180',
+                                    {!isSystemButton && (
+                                      <ChevronDown
+                                        className={cn(
+                                          'w-4 h-4 mt-0.5 text-neutral-400 transition-transform shrink-0',
+                                          isExpanded && 'rotate-180',
+                                        )}
+                                      />
                                     )}
-                                  />
-                                </div>
-                              </button>
+                                  </div>
+                                </button>
+                              </div>
 
-                              <button
-                                type="button"
-                                onClick={() => removeButton(index)}
-                                disabled={isSaving}
-                                className="mt-1 inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
-                                aria-label={`Удалить кнопку ${index + 1}`}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {isSystemButton && configureHref ? (
+                                <Link
+                                  to={configureHref}
+                                  className="mt-1 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-3 text-sm text-amber-900 hover:bg-amber-100 transition-colors"
+                                >
+                                  <SlidersHorizontal className="h-4 w-4" />
+                                  Настроить
+                                </Link>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => removeButton(index)}
+                                  disabled={isSaving}
+                                  className="mt-1 inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                                  aria-label={`Удалить кнопку ${index + 1}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
 
-                            {isExpanded && (
+                            {isExpanded && !isSystemButton && (
                               <div className="border-t border-surface-border bg-neutral-50/60 px-4 py-4">
                                 <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)] gap-6 xl:gap-8 items-start">
                                   <div className="space-y-3">
@@ -1535,6 +1549,7 @@ function ModulesTab({
         : [...s.modules, moduleKey]
       return {
         ...s,
+        buttons: syncSystemButtons(s.buttons, modules),
         modules,
         module_configs: isEnabled
           ? s.module_configs

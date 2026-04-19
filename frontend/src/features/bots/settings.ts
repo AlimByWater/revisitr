@@ -112,15 +112,79 @@ export function getEditableButtons(buttons: BotButton[]): BotButton[] {
   return buttons.filter((button) => !button.is_system && !button.managed_by_module)
 }
 
-export function getManagedButtonSummary(modules: string[]): string[] {
-  const summaries: string[] = ['Контакты', 'На главную']
+export interface SystemButtonMeta {
+  label: string
+  managed_by_module: string
+  configureLabel: string
+}
 
-  if (modules.includes('loyalty')) summaries.unshift('Лояльность')
-  if (modules.includes('menu')) summaries.push('Меню')
-  if (modules.includes('booking')) summaries.push('Бронирование')
-  if (modules.includes('feedback')) summaries.push('Связаться')
+export function getSystemButtons(modules: string[]): SystemButtonMeta[] {
+  const buttons: SystemButtonMeta[] = [
+    { label: 'Контакты', managed_by_module: 'contacts', configureLabel: 'Контакты' },
+    { label: 'На главную', managed_by_module: 'home', configureLabel: 'Главная' },
+  ]
 
-  return summaries
+  if (modules.includes('loyalty')) {
+    buttons.push({ label: 'Лояльность', managed_by_module: 'loyalty', configureLabel: 'Лояльность' })
+  }
+  if (modules.includes('menu')) {
+    buttons.push({ label: 'Меню', managed_by_module: 'menu', configureLabel: 'Меню' })
+  }
+  if (modules.includes('booking')) {
+    buttons.push({ label: 'Забронировать', managed_by_module: 'booking', configureLabel: 'Бронирование' })
+  }
+  if (modules.includes('feedback')) {
+    buttons.push({ label: 'Связаться', managed_by_module: 'feedback', configureLabel: 'Связаться' })
+  }
+
+  return buttons
+}
+
+export function syncSystemButtons(
+  buttons: BotButton[],
+  modules: string[],
+): BotButton[] {
+  const required = new Map(
+    getSystemButtons(modules).map((button) => [
+      button.managed_by_module,
+      {
+        label: button.label,
+        type: 'text',
+        value: button.label,
+        managed_by_module: button.managed_by_module,
+        is_system: true,
+      } satisfies BotButton,
+    ]),
+  )
+
+  const nextButtons: BotButton[] = []
+  const seenManagedButtons = new Set<string>()
+
+  for (const button of buttons) {
+    if (button.is_system || button.managed_by_module) {
+      const managedKey = button.managed_by_module ?? ''
+      const replacement = required.get(managedKey)
+      if (!managedKey || !replacement || seenManagedButtons.has(managedKey)) {
+        continue
+      }
+      nextButtons.push(replacement)
+      seenManagedButtons.add(managedKey)
+      continue
+    }
+
+    nextButtons.push({
+      ...button,
+      managed_by_module: null,
+      is_system: false,
+    })
+  }
+
+  for (const [managedByModule, button] of required.entries()) {
+    if (seenManagedButtons.has(managedByModule)) continue
+    nextButtons.push(button)
+  }
+
+  return nextButtons
 }
 
 export function normalizeBotSettings(
@@ -128,11 +192,11 @@ export function normalizeBotSettings(
 ): BotSettings {
   return {
     modules: settings?.modules ?? [],
-    buttons: (settings?.buttons ?? []).map((button) => ({
+    buttons: syncSystemButtons((settings?.buttons ?? []).map((button) => ({
       ...button,
       managed_by_module: button.managed_by_module ?? null,
       is_system: button.is_system ?? Boolean(button.managed_by_module),
-    })),
+    })), settings?.modules ?? []),
     registration_form: settings?.registration_form ?? [],
     welcome_message: settings?.welcome_message ?? '',
     welcome_content: settings?.welcome_content,
