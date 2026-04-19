@@ -127,7 +127,7 @@ func (h *handler) resolveSelectedPOS(ctx context.Context, chatID int64, forceCho
 			}
 		}
 	}
-	if len(posIDs) == 1 {
+	if len(posIDs) == 1 || (!forceChooser && !h.info.Settings.PosSelectorEnabled) {
 		if state != nil {
 			state.SelectedPOSID = posIDs[0]
 			_ = h.saveFlowState(ctx, chatID, *state)
