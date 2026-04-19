@@ -1,6 +1,6 @@
 import { type ReactNode, Fragment } from 'react'
 
-const EMOJI_RE = /\{\{emoji:(https?:\/\/[^}]+)\}\}/g
+const EMOJI_RE = /\{\{emoji:([^}]+)\}\}/g
 
 export function renderTextWithEmoji(text: string): ReactNode[] {
   const parts: ReactNode[] = []
