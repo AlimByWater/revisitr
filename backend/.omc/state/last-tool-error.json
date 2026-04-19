@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"go build ./... 2>&1\",\"description\":\"Build backend with emoji sync\"}",
+  "error": "Exit code 1\n# revisitr/internal/service/emojisync\ninternal/service/emojisync/sync.go:38:37: not enough arguments in call to bot.GetStickerSet\n\thave (*telego.GetStickerSetParams)\n\twant (context.Context, *telego.GetStickerSetParams)\ninternal/service/emojisync/sync.go:58:38: invalid composite literal type telegoapi.NamedReader\ninternal/service/emojisync/sync.go:65:34: not enough arguments in call to bot.CreateNewStickerSet\n\thave (*telego.CreateNewStickerSetParams)\n\twant (context.Context, *telego.Cr...",
+  "timestamp": "2026-04-19T21:51:52.090Z",
+  "retry_count": 1
+}

@@ -34,6 +34,7 @@ type emojiPacksRepo interface {
 
 type botsRepo interface {
 	GetByID(ctx context.Context, id int) (*entity.Bot, error)
+	GetByOrgID(ctx context.Context, orgID int) ([]entity.Bot, error)
 }
 
 type Usecase struct {
@@ -153,7 +154,16 @@ func (uc *Usecase) AddItem(ctx context.Context, orgID, packID int, req entity.Cr
 	if err := uc.repo.CreateItem(ctx, item); err != nil {
 		return nil, fmt.Errorf("add emoji item: %w", err)
 	}
-	return item, nil
+
+	// Auto-sync to Telegram
+	uc.autoSync(ctx, orgID, pack)
+
+	// Return updated item with tg fields
+	updated, err := uc.repo.GetItemByID(ctx, item.ID)
+	if err != nil {
+		return item, nil // return original if lookup fails
+	}
+	return updated, nil
 }
 
 func (uc *Usecase) UpdateItem(ctx context.Context, orgID, itemID int, req entity.UpdateEmojiItemRequest) (*entity.EmojiItem, error) {
@@ -277,4 +287,60 @@ func (uc *Usecase) SyncToTelegram(ctx context.Context, orgID, packID, botID int)
 
 	// Return updated pack
 	return uc.repo.GetByID(ctx, packID)
+}
+
+// autoSync finds first active bot for org and syncs pack to Telegram.
+// Runs best-effort — errors logged, not returned.
+func (uc *Usecase) autoSync(ctx context.Context, orgID int, pack *entity.EmojiPack) {
+	if uc.syncSvc == nil || uc.bots == nil || uc.logger == nil {
+		return
+	}
+
+	// Reload pack with all items
+	pack, err := uc.repo.GetByID(ctx, pack.ID)
+	if err != nil {
+		uc.logger.Error("auto-sync: reload pack", "error", err)
+		return
+	}
+
+	// Find first bot for org with owner telegram ID
+	bots, err := uc.bots.GetByOrgID(ctx, orgID)
+	if err != nil {
+		uc.logger.Error("auto-sync: get bots", "error", err)
+		return
+	}
+
+	var bot *entity.Bot
+	for i := range bots {
+		if bots[i].CreatedByTelegramID != nil && bots[i].Status == "active" {
+			bot = &bots[i]
+			break
+		}
+	}
+	if bot == nil {
+		uc.logger.Warn("auto-sync: no active bot with owner for org", "org_id", orgID)
+		return
+	}
+
+	tgBot, err := telego.NewBot(bot.Token)
+	if err != nil {
+		uc.logger.Error("auto-sync: create telego bot", "error", err)
+		return
+	}
+
+	syncedItems, err := uc.syncSvc.SyncPack(ctx, tgBot, bot.Username, *bot.CreatedByTelegramID, pack)
+	if err != nil {
+		uc.logger.Error("auto-sync: sync pack", "error", err, "pack_id", pack.ID)
+		return
+	}
+
+	for _, item := range syncedItems {
+		if item.TgCustomEmojiID != nil && *item.TgCustomEmojiID != "" {
+			if err := uc.repo.UpdateItemTg(ctx, item.ID, *item.TgStickerSet, *item.TgCustomEmojiID); err != nil {
+				uc.logger.Error("auto-sync: persist custom_emoji_id", "error", err, "item_id", item.ID)
+			}
+		}
+	}
+
+	uc.logger.Info("auto-sync: pack synced", "pack_id", pack.ID, "items", len(syncedItems))
 }
