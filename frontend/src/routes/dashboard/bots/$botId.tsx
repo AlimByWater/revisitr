@@ -50,6 +50,7 @@ import type {
 import type { POSLocation } from '@/features/pos/types'
 import { campaignsApi } from '@/features/campaigns/api'
 import type { MessageContent } from '@/features/telegram-preview'
+import { renderTextWithEmoji } from '@/features/telegram-preview/components/renderEmoji'
 import {
   canAddPreset,
   deriveBotRequirements,
@@ -152,9 +153,9 @@ function welcomeMessageFromContent(content?: MessageContent, fallback = ''): str
   return fallback
 }
 
-function buttonSummary(content?: MessageContent, fallback = ''): string {
+function buttonSummary(content?: MessageContent, fallback = ''): React.ReactNode {
   const source = content && content.parts?.length > 0 ? content : buttonContentFromValue(fallback)
-  const text = buttonValueFromContent(source, fallback).replace(/\{\{emoji:[^}]+\}\}/g, '🖼').replace(/\s+/g, ' ').trim()
+  const rawText = buttonValueFromContent(source, fallback).replace(/\s+/g, ' ').trim()
   const mediaCount = source.parts.filter((part) => part.type !== 'text').length
   const inlineButtons = (source.buttons || []).reduce((sum, row) => sum + row.length, 0)
 
@@ -164,9 +165,13 @@ function buttonSummary(content?: MessageContent, fallback = ''): string {
     inlineButtons > 0 ? `${inlineButtons} inline-кнопок` : null,
   ].filter(Boolean)
 
-  if (!text && details.length === 0) return 'Ответ пока не настроен'
-  if (!text) return details.join(' · ')
-  return [text.slice(0, 90) + (text.length > 90 ? '…' : ''), details.join(' · ')].filter(Boolean).join(' · ')
+  const detailStr = details.join(' · ')
+  if (!rawText && !detailStr) return 'Ответ пока не настроен'
+  if (!rawText) return detailStr
+
+  const truncated = rawText.slice(0, 90) + (rawText.length > 90 ? '…' : '')
+  const rendered = renderTextWithEmoji(truncated)
+  return <>{rendered}{detailStr ? <> · {detailStr}</> : null}</>
 }
 
 function SectionBlock({

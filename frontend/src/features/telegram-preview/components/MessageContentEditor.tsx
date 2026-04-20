@@ -576,8 +576,8 @@ function ButtonRowEditor({
     <div className="flex items-start gap-2 mb-2">
       <div className="flex-1 space-y-1">
         {row.map((btn, bi) => (
-          <div key={bi} className="space-y-1">
-            <div className="flex items-center gap-1">
+          <div key={bi} className="rounded border border-neutral-100 bg-neutral-50/50 p-2 space-y-1.5">
+            <div className="flex items-center gap-1.5">
               <EmojiPicker
                 onSelect={(item) => {
                   const newRow = [...row];
@@ -588,7 +588,7 @@ function ButtonRowEditor({
                   };
                   onChange(newRow);
                 }}
-                triggerClassName="w-6 h-6 border-0 bg-transparent hover:bg-neutral-100 shrink-0"
+                triggerClassName="w-7 h-7 border border-neutral-200 bg-white hover:bg-neutral-50 shrink-0 rounded"
               >
                 {btn.icon_image_url ? (
                   <img src={btn.icon_image_url} alt="" className="w-4 h-4 rounded-sm object-cover" />
@@ -611,9 +611,19 @@ function ButtonRowEditor({
                   onChange(newRow);
                 }}
                 placeholder="Текст кнопки"
-                className="flex-1 min-w-0 px-2 py-1.5 border border-neutral-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-accent/30"
+                className="flex-1 min-w-0 px-2 py-1.5 border border-neutral-200 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-accent/30"
               />
-              <Link className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+              <button
+                type="button"
+                onClick={() => onChange(row.filter((_, i) => i !== bi))}
+                className="text-neutral-300 hover:text-red-500 shrink-0 p-1"
+                title="Удалить кнопку"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="flex items-center gap-1.5 pl-[calc(1.75rem+0.375rem+1.25rem+0.375rem)]">
+              <Link className="w-3.5 h-3.5 text-neutral-300 flex-shrink-0" />
               <input
                 type="text"
                 value={btn.url || ""}
@@ -622,18 +632,9 @@ function ButtonRowEditor({
                   newRow[bi] = { ...btn, url: e.target.value };
                   onChange(newRow);
                 }}
-                placeholder="URL"
-                className="flex-1 min-w-0 px-2 py-1.5 border border-neutral-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-accent/30"
+                placeholder="URL ссылки"
+                className="flex-1 min-w-0 px-2 py-1 border border-neutral-200 rounded text-xs bg-white text-neutral-600 focus:outline-none focus:ring-1 focus:ring-accent/30"
               />
-              {row.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => onChange(row.filter((_, i) => i !== bi))}
-                  className="text-neutral-400 hover:text-red-500 shrink-0"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              )}
             </div>
           </div>
         ))}
