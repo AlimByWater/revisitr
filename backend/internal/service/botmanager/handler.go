@@ -407,11 +407,26 @@ func (h *handler) sendWelcomeContent(ctx context.Context, chatID int64) {
 
 	// Priority: new format → legacy → default
 	if h.tgSender != nil && h.hasWelcomeContent() {
-		if updated, changed, err := h.tgSender.SendContentWithCache(ctx, h.bot, chatID, *settings.WelcomeContent); err != nil {
-			h.logger.Error("send welcome content", "error", err, "chat_id", chatID)
-		} else if changed {
-			h.info.Settings.WelcomeContent = &updated
-			h.persistSettingsCache(ctx)
+		content := *settings.WelcomeContent
+		// Check if any part has emoji markers — send those parts manually with entities
+		hasEmoji := false
+		for _, part := range content.Parts {
+			if strings.Contains(part.Text, "{{emoji:") {
+				hasEmoji = true
+				break
+			}
+		}
+
+		if hasEmoji {
+			// Send with custom emoji entities (bypass tgSender which doesn't support entities)
+			h.sendContentMessage(ctx, chatID, content)
+		} else {
+			if updated, changed, err := h.tgSender.SendContentWithCache(ctx, h.bot, chatID, content); err != nil {
+				h.logger.Error("send welcome content", "error", err, "chat_id", chatID)
+			} else if changed {
+				h.info.Settings.WelcomeContent = &updated
+				h.persistSettingsCache(ctx)
+			}
 		}
 		return
 	}
