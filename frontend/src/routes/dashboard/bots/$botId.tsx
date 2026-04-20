@@ -154,7 +154,7 @@ function welcomeMessageFromContent(content?: MessageContent, fallback = ''): str
 
 function buttonSummary(content?: MessageContent, fallback = ''): string {
   const source = content && content.parts?.length > 0 ? content : buttonContentFromValue(fallback)
-  const text = buttonValueFromContent(source, fallback).replace(/\s+/g, ' ').trim()
+  const text = buttonValueFromContent(source, fallback).replace(/\{\{emoji:[^}]+\}\}/g, '🖼').replace(/\s+/g, ' ').trim()
   const mediaCount = source.parts.filter((part) => part.type !== 'text').length
   const inlineButtons = (source.buttons || []).reduce((sum, row) => sum + row.length, 0)
 
@@ -1244,7 +1244,7 @@ function GeneralTab({
                                   type="button"
                                   onClick={() => removeButton(index)}
                                   disabled={isSaving}
-                                  className="mt-1 inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                                  className="mt-1 inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 relative z-10"
                                   aria-label={`Удалить кнопку ${index + 1}`}
                                 >
                                   <Trash2 className="w-4 h-4" />
