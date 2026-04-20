@@ -61,7 +61,7 @@ func main() {
 
 	// Create Telegram sender for rich messages
 	baseURL := cfg.GetBaseURL()
-	tgSender := tgService.NewSender(baseURL, logger)
+	tgSender := tgService.NewSender(baseURL, logger).WithEmojiResolver(emojiPacksRepo)
 
 	// Create and start bot manager
 	var mgrOpts []botmanager.ManagerOption

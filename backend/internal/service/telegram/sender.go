@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -16,15 +17,83 @@ import (
 	tu "github.com/mymmrac/telego/telegoutil"
 )
 
+// EmojiResolver maps image URLs to Telegram custom_emoji_ids.
+type EmojiResolver interface {
+	GetSyncedItemsByOrgID(ctx context.Context, orgID int) ([]entity.EmojiItem, error)
+}
+
 // Sender sends MessageContent through the Telegram Bot API.
 // Used by: campaign sender, welcome message, auto-actions.
 type Sender struct {
-	baseURL string // Base URL for media (e.g., "https://elysium.fm")
-	logger  *slog.Logger
+	baseURL       string
+	logger        *slog.Logger
+	emojiResolver EmojiResolver
 }
 
 func NewSender(baseURL string, logger *slog.Logger) *Sender {
 	return &Sender{baseURL: baseURL, logger: logger}
+}
+
+func (s *Sender) WithEmojiResolver(r EmojiResolver) *Sender {
+	s.emojiResolver = r
+	return s
+}
+
+var emojiMarkerRe = regexp.MustCompile(`\{\{emoji:([^}]+)\}\}`)
+
+// resolveEmoji builds URL→custom_emoji_id map for an org.
+func (s *Sender) resolveEmoji(ctx context.Context, orgID int) map[string]string {
+	if s.emojiResolver == nil {
+		return nil
+	}
+	items, err := s.emojiResolver.GetSyncedItemsByOrgID(ctx, orgID)
+	if err != nil {
+		s.logger.Error("resolve emoji", "error", err)
+		return nil
+	}
+	m := make(map[string]string, len(items))
+	for _, item := range items {
+		if item.TgCustomEmojiID != nil {
+			m[item.ImageURL] = *item.TgCustomEmojiID
+		}
+	}
+	return m
+}
+
+// processEmojiText replaces {{emoji:URL}} markers with ⭐ placeholder and builds entities.
+func processEmojiText(text string, emojiMap map[string]string) (string, []telego.MessageEntity) {
+	if !strings.Contains(text, "{{emoji:") || len(emojiMap) == 0 {
+		// Strip markers if no emoji map
+		cleaned := emojiMarkerRe.ReplaceAllString(text, "")
+		return strings.TrimSpace(cleaned), nil
+	}
+
+	var result strings.Builder
+	var entities []telego.MessageEntity
+	lastIndex := 0
+
+	for _, loc := range emojiMarkerRe.FindAllStringSubmatchIndex(text, -1) {
+		// loc[0:1] = full match, loc[2:3] = capture group
+		result.WriteString(text[lastIndex:loc[0]])
+		imageURL := text[loc[2]:loc[3]]
+
+		customEmojiID, ok := emojiMap[imageURL]
+		if ok {
+			offset := len([]rune(result.String()))
+			result.WriteString("⭐")
+			entities = append(entities, telego.MessageEntity{
+				Type:          "custom_emoji",
+				Offset:        offset,
+				Length:        1,
+				CustomEmojiID: customEmojiID,
+			})
+		}
+		// If not synced, skip (remove marker)
+		lastIndex = loc[1]
+	}
+	result.WriteString(text[lastIndex:])
+
+	return strings.TrimSpace(result.String()), entities
 }
 
 // SendContent sends a composite message (all parts sequentially).
@@ -33,9 +102,19 @@ func (s *Sender) SendContent(ctx context.Context, bot *telego.Bot, chatID int64,
 	return err
 }
 
+// SendContentForOrg sends with emoji resolution for the given org.
+func (s *Sender) SendContentForOrg(ctx context.Context, bot *telego.Bot, chatID int64, content entity.MessageContent, orgID int) (entity.MessageContent, bool, error) {
+	emojiMap := s.resolveEmoji(ctx, orgID)
+	return s.sendContentInternal(ctx, bot, chatID, content, emojiMap)
+}
+
 // SendContentWithCache sends a composite message and returns updated content
 // with resolved Telegram media_id values when they were learned during send.
 func (s *Sender) SendContentWithCache(ctx context.Context, bot *telego.Bot, chatID int64, content entity.MessageContent) (entity.MessageContent, bool, error) {
+	return s.sendContentInternal(ctx, bot, chatID, content, nil)
+}
+
+func (s *Sender) sendContentInternal(ctx context.Context, bot *telego.Bot, chatID int64, content entity.MessageContent, emojiMap map[string]string) (entity.MessageContent, bool, error) {
 	updated := content
 	changed := false
 
@@ -50,7 +129,7 @@ func (s *Sender) SendContentWithCache(ctx context.Context, bot *telego.Bot, chat
 			markup = s.buildInlineKeyboard(updated.Buttons)
 		}
 
-		mediaID, err := s.sendPart(ctx, bot, chatID, part, markup)
+		mediaID, err := s.sendPart(ctx, bot, chatID, part, markup, emojiMap)
 		if err != nil {
 			return updated, changed, fmt.Errorf("send part %d (%s): %w", i, part.Type, err)
 		}
@@ -59,8 +138,6 @@ func (s *Sender) SendContentWithCache(ctx context.Context, bot *telego.Bot, chat
 			changed = true
 		}
 
-		// Rate limiting: pause between parts to avoid Telegram 429 errors.
-		// Telegram allows ~30 msgs/sec per bot; 50ms gap prevents bursts.
 		if i < len(updated.Parts)-1 {
 			time.Sleep(50 * time.Millisecond)
 		}
@@ -74,11 +151,15 @@ func (s *Sender) sendPart(
 	chatID int64,
 	part entity.MessagePart,
 	markup *telego.InlineKeyboardMarkup,
+	emojiMap map[string]string,
 ) (string, error) {
 	switch part.Type {
 	case entity.PartText:
-		msg := tu.Message(tu.ID(chatID), part.Text)
-		if part.ParseMode != "" {
+		cleanText, emojiEntities := processEmojiText(part.Text, emojiMap)
+		msg := tu.Message(tu.ID(chatID), cleanText)
+		if len(emojiEntities) > 0 {
+			msg = msg.WithEntities(emojiEntities...)
+		} else if part.ParseMode != "" {
 			msg = msg.WithParseMode(part.ParseMode)
 		}
 		if markup != nil {
@@ -94,10 +175,13 @@ func (s *Sender) sendPart(
 		}
 		photo := tu.Photo(tu.ID(chatID), media)
 		if part.Text != "" {
-			photo = photo.WithCaption(part.Text)
-		}
-		if part.ParseMode != "" {
-			photo = photo.WithParseMode(part.ParseMode)
+			cleanCaption, captionEntities := processEmojiText(part.Text, emojiMap)
+			photo = photo.WithCaption(cleanCaption)
+			if len(captionEntities) > 0 {
+				photo = photo.WithCaptionEntities(captionEntities...)
+			} else if part.ParseMode != "" {
+				photo = photo.WithParseMode(part.ParseMode)
+			}
 		}
 		if markup != nil {
 			photo = photo.WithReplyMarkup(markup)
@@ -112,10 +196,13 @@ func (s *Sender) sendPart(
 		}
 		video := tu.Video(tu.ID(chatID), media)
 		if part.Text != "" {
-			video = video.WithCaption(part.Text)
-		}
-		if part.ParseMode != "" {
-			video = video.WithParseMode(part.ParseMode)
+			cleanCaption, captionEntities := processEmojiText(part.Text, emojiMap)
+			video = video.WithCaption(cleanCaption)
+			if len(captionEntities) > 0 {
+				video = video.WithCaptionEntities(captionEntities...)
+			} else if part.ParseMode != "" {
+				video = video.WithParseMode(part.ParseMode)
+			}
 		}
 		if markup != nil {
 			video = video.WithReplyMarkup(markup)
@@ -130,7 +217,8 @@ func (s *Sender) sendPart(
 		}
 		doc := tu.Document(tu.ID(chatID), media)
 		if part.Text != "" {
-			doc = doc.WithCaption(part.Text)
+			cleanCaption, _ := processEmojiText(part.Text, emojiMap)
+			doc = doc.WithCaption(cleanCaption)
 		}
 		if markup != nil {
 			doc = doc.WithReplyMarkup(markup)
@@ -154,7 +242,8 @@ func (s *Sender) sendPart(
 		}
 		anim := tu.Animation(tu.ID(chatID), media)
 		if part.Text != "" {
-			anim = anim.WithCaption(part.Text)
+			cleanCaption, _ := processEmojiText(part.Text, emojiMap)
+			anim = anim.WithCaption(cleanCaption)
 		}
 		if markup != nil {
 			anim = anim.WithReplyMarkup(markup)
@@ -169,7 +258,8 @@ func (s *Sender) sendPart(
 		}
 		audio := tu.Audio(tu.ID(chatID), media)
 		if part.Text != "" {
-			audio = audio.WithCaption(part.Text)
+			cleanCaption, _ := processEmojiText(part.Text, emojiMap)
+			audio = audio.WithCaption(cleanCaption)
 		}
 		if markup != nil {
 			audio = audio.WithReplyMarkup(markup)
@@ -184,7 +274,8 @@ func (s *Sender) sendPart(
 		}
 		voice := tu.Voice(tu.ID(chatID), media)
 		if part.Text != "" {
-			voice = voice.WithCaption(part.Text)
+			cleanCaption, _ := processEmojiText(part.Text, emojiMap)
+			voice = voice.WithCaption(cleanCaption)
 		}
 		if markup != nil {
 			voice = voice.WithReplyMarkup(markup)
@@ -197,8 +288,6 @@ func (s *Sender) sendPart(
 	}
 }
 
-// mediaInput selects FileFromID (cached), or downloads bytes from a public URL
-// so uploads don't depend on Telegram fetching external URLs itself.
 func (s *Sender) mediaInput(ctx context.Context, part entity.MessagePart) (telego.InputFile, error) {
 	if part.MediaID != "" {
 		return tu.FileFromID(part.MediaID), nil

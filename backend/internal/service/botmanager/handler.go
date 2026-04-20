@@ -319,7 +319,7 @@ func (h *handler) handleCustomButton(ctx context.Context, msg *telego.Message, t
 		if btn.Label == text {
 			if btn.Content != nil && len(btn.Content.Parts) > 0 {
 				if h.tgSender != nil {
-					if updated, changed, err := h.tgSender.SendContentWithCache(ctx, h.bot, msg.Chat.ID, *btn.Content); err == nil {
+					if updated, changed, err := h.tgSender.SendContentForOrg(ctx, h.bot, msg.Chat.ID, *btn.Content, h.info.OrgID); err == nil {
 						if changed {
 							h.info.Settings.Buttons = h.updateButtonContentCache(idx, updated)
 							h.persistSettingsCache(ctx)
@@ -407,26 +407,11 @@ func (h *handler) sendWelcomeContent(ctx context.Context, chatID int64) {
 
 	// Priority: new format → legacy → default
 	if h.tgSender != nil && h.hasWelcomeContent() {
-		content := *settings.WelcomeContent
-		// Check if any part has emoji markers — send those parts manually with entities
-		hasEmoji := false
-		for _, part := range content.Parts {
-			if strings.Contains(part.Text, "{{emoji:") {
-				hasEmoji = true
-				break
-			}
-		}
-
-		if hasEmoji {
-			// Send with custom emoji entities (bypass tgSender which doesn't support entities)
-			h.sendContentMessage(ctx, chatID, content)
-		} else {
-			if updated, changed, err := h.tgSender.SendContentWithCache(ctx, h.bot, chatID, content); err != nil {
-				h.logger.Error("send welcome content", "error", err, "chat_id", chatID)
-			} else if changed {
-				h.info.Settings.WelcomeContent = &updated
-				h.persistSettingsCache(ctx)
-			}
+		if updated, changed, err := h.tgSender.SendContentForOrg(ctx, h.bot, chatID, *settings.WelcomeContent, h.info.OrgID); err != nil {
+			h.logger.Error("send welcome content", "error", err, "chat_id", chatID)
+		} else if changed {
+			h.info.Settings.WelcomeContent = &updated
+			h.persistSettingsCache(ctx)
 		}
 		return
 	}
