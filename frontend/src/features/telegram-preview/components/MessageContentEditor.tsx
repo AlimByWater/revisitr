@@ -594,6 +594,14 @@ function ButtonRowEditor({
                   <img src={btn.icon_image_url} alt="" className="w-4 h-4 rounded-sm object-cover" />
                 ) : undefined}
               </EmojiPicker>
+              <ButtonStylePicker
+                value={btn.style || ''}
+                onChange={(style) => {
+                  const newRow = [...row];
+                  newRow[bi] = { ...btn, style };
+                  onChange(newRow);
+                }}
+              />
               <input
                 type="text"
                 value={btn.text}
@@ -603,7 +611,7 @@ function ButtonRowEditor({
                   onChange(newRow);
                 }}
                 placeholder="Текст кнопки"
-                className="flex-1 px-2 py-1.5 border border-neutral-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-accent/30"
+                className="flex-1 min-w-0 px-2 py-1.5 border border-neutral-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-accent/30"
               />
               <Link className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
               <input
@@ -615,21 +623,13 @@ function ButtonRowEditor({
                   onChange(newRow);
                 }}
                 placeholder="URL"
-                className="flex-1 px-2 py-1.5 border border-neutral-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-accent/30"
-              />
-              <ButtonStylePicker
-                value={btn.style || ''}
-                onChange={(style) => {
-                  const newRow = [...row];
-                  newRow[bi] = { ...btn, style };
-                  onChange(newRow);
-                }}
+                className="flex-1 min-w-0 px-2 py-1.5 border border-neutral-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-accent/30"
               />
               {row.length > 1 && (
                 <button
                   type="button"
                   onClick={() => onChange(row.filter((_, i) => i !== bi))}
-                  className="text-neutral-400 hover:text-red-500"
+                  className="text-neutral-400 hover:text-red-500 shrink-0"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>

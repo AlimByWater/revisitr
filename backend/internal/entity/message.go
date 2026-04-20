@@ -35,9 +35,10 @@ type MessagePart struct {
 type InlineButton struct {
 	Text              string `json:"text"`
 	URL               string `json:"url,omitempty"`
-	Data              string `json:"data,omitempty"`              // callback_data
-	Style             string `json:"style,omitempty"`             // "danger", "success", "primary"
+	Data              string `json:"data,omitempty"`               // callback_data
+	Style             string `json:"style,omitempty"`              // "danger", "success", "primary"
 	IconCustomEmojiID string `json:"icon_custom_emoji_id,omitempty"`
+	IconImageURL      string `json:"icon_image_url,omitempty"`     // admin preview only
 }
 
 // MessageContent is a full composite message description.
