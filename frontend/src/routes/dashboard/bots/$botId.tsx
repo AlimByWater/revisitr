@@ -1222,22 +1222,6 @@ function GeneralTab({
                                 <GripVertical className="w-4 h-4" />
                               </button>
 
-                              <EmojiPicker
-                                onSelect={(item) => {
-                                  updateButton(index, 'icon_custom_emoji_id', item.tg_custom_emoji_id || '')
-                                  updateButton(index, 'icon_image_url', item.image_url)
-                                }}
-                                triggerClassName="w-8 h-8 mt-0.5 border border-neutral-200 bg-white hover:bg-neutral-50 shrink-0 rounded"
-                              >
-                                {button.icon_image_url ? (
-                                  <img src={button.icon_image_url} alt="" className="w-4 h-4 rounded-sm object-cover" />
-                                ) : undefined}
-                              </EmojiPicker>
-                              <ButtonStylePicker
-                                value={button.style || ''}
-                                onChange={(style) => updateButton(index, 'style', style)}
-                              />
-
                               <div className="flex-1 min-w-0">
                                 <button
                                   type="button"
@@ -1299,17 +1283,36 @@ function GeneralTab({
                               <div className="border-t border-surface-border bg-neutral-50/60 px-4 py-4">
                                 <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)] gap-6 xl:gap-8 items-start">
                                   <div className="space-y-3">
-                                    {!isSystemButton && (
-                                      <input
-                                        type="text"
-                                        value={button.label}
-                                        onChange={(e) => updateButton(index, 'label', e.target.value)}
-                                        placeholder="Текст кнопки в меню бота"
-                                        disabled={isSaving}
-                                        className={inputClassName}
-                                        aria-label={`Название кнопки ${index + 1}`}
+                                    <div className="flex items-center gap-2">
+                                      <EmojiPicker
+                                        onSelect={(item) => {
+                                          updateButton(index, 'icon_custom_emoji_id', item.tg_custom_emoji_id || '')
+                                          updateButton(index, 'icon_image_url', item.image_url)
+                                        }}
+                                        triggerClassName="w-9 h-9 border border-neutral-200 bg-white hover:bg-neutral-50 shrink-0 rounded-lg"
+                                      >
+                                        {button.icon_image_url ? (
+                                          <img src={button.icon_image_url} alt="" className="w-5 h-5 rounded-sm object-cover" />
+                                        ) : undefined}
+                                      </EmojiPicker>
+                                      <ButtonStylePicker
+                                        value={button.style || ''}
+                                        onChange={(style) => updateButton(index, 'style', style)}
                                       />
-                                    )}
+                                      {!isSystemButton ? (
+                                        <input
+                                          type="text"
+                                          value={button.label}
+                                          onChange={(e) => updateButton(index, 'label', e.target.value)}
+                                          placeholder="Текст кнопки в меню бота"
+                                          disabled={isSaving}
+                                          className={cn(inputClassName, 'flex-1')}
+                                          aria-label={`Название кнопки ${index + 1}`}
+                                        />
+                                      ) : (
+                                        <span className="text-sm font-medium text-neutral-700">{button.label}</span>
+                                      )}
+                                    </div>
                                     {isSystemButton && buttonModule && (
                                       <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
                                         {buttonModule.managed_by_module === 'menu' && '📋 Категории меню добавятся к сообщению автоматически'}
