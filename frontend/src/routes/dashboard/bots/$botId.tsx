@@ -169,8 +169,28 @@ function buttonSummary(content?: MessageContent, fallback = ''): React.ReactNode
   if (!rawText && !detailStr) return 'Ответ пока не настроен'
   if (!rawText) return detailStr
 
-  const truncated = rawText.slice(0, 90) + (rawText.length > 90 ? '…' : '')
-  const rendered = renderTextWithEmoji(truncated)
+  // Truncate by visible length (excluding marker syntax), keeping markers intact
+  const EMOJI_RE = /\{\{emoji:[^}]+\}\}/g
+  let visibleLen = 0
+  let cutIndex = rawText.length
+  let lastIndex = 0
+  for (const match of rawText.matchAll(EMOJI_RE)) {
+    const textBefore = rawText.slice(lastIndex, match.index!)
+    if (visibleLen + textBefore.length >= 80) {
+      cutIndex = lastIndex + (80 - visibleLen)
+      break
+    }
+    visibleLen += textBefore.length + 1 // +1 for emoji as single char
+    lastIndex = match.index! + match[0].length
+  }
+  const remaining = rawText.slice(lastIndex)
+  if (visibleLen + remaining.length >= 80 && cutIndex === rawText.length) {
+    cutIndex = lastIndex + (80 - visibleLen)
+  }
+  const truncated = cutIndex < rawText.length ? rawText.slice(0, cutIndex) + '…' : rawText
+  // Ensure we don't break in the middle of a marker — find last complete marker
+  const safeText = truncated.replace(/\{\{emoji:[^}]*$/, '…')
+  const rendered = renderTextWithEmoji(safeText)
   return <>{rendered}{detailStr ? <> · {detailStr}</> : null}</>
 }
 
