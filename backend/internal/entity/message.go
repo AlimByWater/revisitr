@@ -33,9 +33,11 @@ type MessagePart struct {
 
 // InlineButton is a button attached to the last message part.
 type InlineButton struct {
-	Text string `json:"text"`
-	URL  string `json:"url,omitempty"`
-	Data string `json:"data,omitempty"` // callback_data
+	Text              string `json:"text"`
+	URL               string `json:"url,omitempty"`
+	Data              string `json:"data,omitempty"`              // callback_data
+	Style             string `json:"style,omitempty"`             // "danger", "success", "primary"
+	IconCustomEmojiID string `json:"icon_custom_emoji_id,omitempty"`
 }
 
 // MessageContent is a full composite message description.

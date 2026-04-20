@@ -20,6 +20,8 @@ export interface InlineButton {
   text: string
   url?: string
   data?: string
+  style?: 'danger' | 'success' | 'primary' | ''
+  icon_custom_emoji_id?: string
 }
 
 export interface MessageContent {

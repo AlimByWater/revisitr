@@ -382,11 +382,21 @@ func (s *Sender) buildInlineKeyboard(buttons [][]entity.InlineButton) *telego.In
 	for _, row := range buttons {
 		var tgRow []telego.InlineKeyboardButton
 		for _, btn := range row {
+			var tgBtn telego.InlineKeyboardButton
 			if btn.URL != "" {
-				tgRow = append(tgRow, tu.InlineKeyboardButton(btn.Text).WithURL(btn.URL))
+				tgBtn = tu.InlineKeyboardButton(btn.Text).WithURL(btn.URL)
 			} else if btn.Data != "" {
-				tgRow = append(tgRow, tu.InlineKeyboardButton(btn.Text).WithCallbackData(btn.Data))
+				tgBtn = tu.InlineKeyboardButton(btn.Text).WithCallbackData(btn.Data)
+			} else {
+				continue
 			}
+			if btn.Style != "" {
+				tgBtn.Style = btn.Style
+			}
+			if btn.IconCustomEmojiID != "" {
+				tgBtn.IconCustomEmojiID = btn.IconCustomEmojiID
+			}
+			tgRow = append(tgRow, tgBtn)
 		}
 		if len(tgRow) > 0 {
 			rows = append(rows, tgRow)

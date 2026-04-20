@@ -533,6 +533,33 @@ function MediaUploadField({
 
 // ── Button Row Editor ─────────────────────────────────────────────────────────
 
+const BUTTON_STYLES = [
+  { value: '', color: 'bg-neutral-300', label: 'Обычная' },
+  { value: 'primary', color: 'bg-blue-500', label: 'Синяя' },
+  { value: 'success', color: 'bg-green-500', label: 'Зелёная' },
+  { value: 'danger', color: 'bg-red-500', label: 'Красная' },
+] as const
+
+function ButtonStylePicker({ value, onChange }: { value: string; onChange: (style: InlineButton['style']) => void }) {
+  return (
+    <div className="flex items-center gap-0.5 shrink-0">
+      {BUTTON_STYLES.map((s) => (
+        <button
+          key={s.value}
+          type="button"
+          onClick={() => onChange(s.value === value ? '' : s.value as InlineButton['style'])}
+          title={s.label}
+          className={cn(
+            'w-4 h-4 rounded-full border-2 transition-all',
+            s.color,
+            value === s.value ? 'border-neutral-900 scale-110' : 'border-transparent opacity-60 hover:opacity-100',
+          )}
+        />
+      ))}
+    </div>
+  )
+}
+
 function ButtonRowEditor({
   row,
   rowIndex,
@@ -548,39 +575,58 @@ function ButtonRowEditor({
     <div className="flex items-start gap-2 mb-2">
       <div className="flex-1 space-y-1">
         {row.map((btn, bi) => (
-          <div key={bi} className="flex items-center gap-1">
-            <input
-              type="text"
-              value={btn.text}
-              onChange={(e) => {
-                const newRow = [...row];
-                newRow[bi] = { ...btn, text: e.target.value };
-                onChange(newRow);
-              }}
-              placeholder="Текст кнопки"
-              className="flex-1 px-2 py-1.5 border border-neutral-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-accent/30"
-            />
-            <Link className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
-            <input
-              type="text"
-              value={btn.url || ""}
-              onChange={(e) => {
-                const newRow = [...row];
-                newRow[bi] = { ...btn, url: e.target.value };
-                onChange(newRow);
-              }}
-              placeholder="URL"
-              className="flex-1 px-2 py-1.5 border border-neutral-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-accent/30"
-            />
-            {row.length > 1 && (
-              <button
-                type="button"
-                onClick={() => onChange(row.filter((_, i) => i !== bi))}
-                className="text-neutral-400 hover:text-red-500"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            )}
+          <div key={bi} className="space-y-1">
+            <div className="flex items-center gap-1">
+              <EmojiPicker
+                onSelect={(item) => {
+                  if (!item.tg_custom_emoji_id) return;
+                  const newRow = [...row];
+                  newRow[bi] = { ...btn, icon_custom_emoji_id: item.tg_custom_emoji_id };
+                  onChange(newRow);
+                }}
+                triggerClassName="w-6 h-6 border-0 bg-transparent hover:bg-neutral-100 shrink-0"
+              />
+              <input
+                type="text"
+                value={btn.text}
+                onChange={(e) => {
+                  const newRow = [...row];
+                  newRow[bi] = { ...btn, text: e.target.value };
+                  onChange(newRow);
+                }}
+                placeholder="Текст кнопки"
+                className="flex-1 px-2 py-1.5 border border-neutral-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-accent/30"
+              />
+              <Link className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+              <input
+                type="text"
+                value={btn.url || ""}
+                onChange={(e) => {
+                  const newRow = [...row];
+                  newRow[bi] = { ...btn, url: e.target.value };
+                  onChange(newRow);
+                }}
+                placeholder="URL"
+                className="flex-1 px-2 py-1.5 border border-neutral-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-accent/30"
+              />
+              <ButtonStylePicker
+                value={btn.style || ''}
+                onChange={(style) => {
+                  const newRow = [...row];
+                  newRow[bi] = { ...btn, style };
+                  onChange(newRow);
+                }}
+              />
+              {row.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => onChange(row.filter((_, i) => i !== bi))}
+                  className="text-neutral-400 hover:text-red-500"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
           </div>
         ))}
         {row.length < 8 && (
