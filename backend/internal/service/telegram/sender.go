@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf16"
 
 	"revisitr/internal/entity"
 
@@ -79,12 +80,12 @@ func processEmojiText(text string, emojiMap map[string]string) (string, []telego
 
 		customEmojiID, ok := emojiMap[imageURL]
 		if ok {
-			offset := len([]rune(result.String()))
+			offset := utf16Len(result.String())
 			result.WriteString("⭐")
 			entities = append(entities, telego.MessageEntity{
 				Type:          "custom_emoji",
 				Offset:        offset,
-				Length:        1,
+				Length:        utf16Len("⭐"),
 				CustomEmojiID: customEmojiID,
 			})
 		}
@@ -94,6 +95,11 @@ func processEmojiText(text string, emojiMap map[string]string) (string, []telego
 	result.WriteString(text[lastIndex:])
 
 	return strings.TrimSpace(result.String()), entities
+}
+
+// utf16Len returns length of string in UTF-16 code units (Telegram offset unit).
+func utf16Len(s string) int {
+	return len(utf16.Encode([]rune(s)))
 }
 
 // SendContent sends a composite message (all parts sequentially).
