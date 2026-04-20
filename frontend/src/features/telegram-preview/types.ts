@@ -22,6 +22,7 @@ export interface InlineButton {
   data?: string
   style?: 'danger' | 'success' | 'primary' | ''
   icon_custom_emoji_id?: string
+  icon_image_url?: string // admin-only: preview of selected emoji
 }
 
 export interface MessageContent {

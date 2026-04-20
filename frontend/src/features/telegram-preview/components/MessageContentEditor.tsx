@@ -533,30 +533,31 @@ function MediaUploadField({
 
 // ── Button Row Editor ─────────────────────────────────────────────────────────
 
-const BUTTON_STYLES = [
-  { value: '', color: 'bg-neutral-300', label: 'Обычная' },
+const BUTTON_STYLES: { value: InlineButton['style']; color: string; label: string }[] = [
+  { value: '', color: 'bg-neutral-400', label: 'Обычная' },
   { value: 'primary', color: 'bg-blue-500', label: 'Синяя' },
   { value: 'success', color: 'bg-green-500', label: 'Зелёная' },
   { value: 'danger', color: 'bg-red-500', label: 'Красная' },
-] as const
+]
 
 function ButtonStylePicker({ value, onChange }: { value: string; onChange: (style: InlineButton['style']) => void }) {
+  const currentIdx = BUTTON_STYLES.findIndex((s) => s.value === value)
+  const current = BUTTON_STYLES[Math.max(currentIdx, 0)]
+  const next = () => {
+    const nextIdx = (currentIdx + 1) % BUTTON_STYLES.length
+    onChange(BUTTON_STYLES[nextIdx].value)
+  }
+
   return (
-    <div className="flex items-center gap-0.5 shrink-0">
-      {BUTTON_STYLES.map((s) => (
-        <button
-          key={s.value}
-          type="button"
-          onClick={() => onChange(s.value === value ? '' : s.value as InlineButton['style'])}
-          title={s.label}
-          className={cn(
-            'w-4 h-4 rounded-full border-2 transition-all',
-            s.color,
-            value === s.value ? 'border-neutral-900 scale-110' : 'border-transparent opacity-60 hover:opacity-100',
-          )}
-        />
-      ))}
-    </div>
+    <button
+      type="button"
+      onClick={next}
+      title={`Стиль: ${current.label}. Нажмите для смены`}
+      className={cn(
+        'w-5 h-5 rounded-full shrink-0 transition-all border-2 border-white shadow-sm',
+        current.color,
+      )}
+    />
   )
 }
 
@@ -579,13 +580,20 @@ function ButtonRowEditor({
             <div className="flex items-center gap-1">
               <EmojiPicker
                 onSelect={(item) => {
-                  if (!item.tg_custom_emoji_id) return;
                   const newRow = [...row];
-                  newRow[bi] = { ...btn, icon_custom_emoji_id: item.tg_custom_emoji_id };
+                  newRow[bi] = {
+                    ...btn,
+                    icon_custom_emoji_id: item.tg_custom_emoji_id || '',
+                    icon_image_url: item.image_url,
+                  };
                   onChange(newRow);
                 }}
                 triggerClassName="w-6 h-6 border-0 bg-transparent hover:bg-neutral-100 shrink-0"
-              />
+              >
+                {btn.icon_image_url ? (
+                  <img src={btn.icon_image_url} alt="" className="w-4 h-4 rounded-sm object-cover" />
+                ) : undefined}
+              </EmojiPicker>
               <input
                 type="text"
                 value={btn.text}

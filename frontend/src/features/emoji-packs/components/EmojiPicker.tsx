@@ -9,9 +9,10 @@ interface EmojiPickerProps {
   onSelect: (item: EmojiItem) => void
   selected?: string
   triggerClassName?: string
+  children?: React.ReactNode
 }
 
-export function EmojiPicker({ onSelect, selected, triggerClassName }: EmojiPickerProps) {
+export function EmojiPicker({ onSelect, selected, triggerClassName, children }: EmojiPickerProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const { data: packs = [], isLoading } = useEmojiPacksQuery()
@@ -44,7 +45,7 @@ export function EmojiPicker({ onSelect, selected, triggerClassName }: EmojiPicke
         )}
         aria-label="Выбрать эмодзи"
       >
-        <Smile className="w-4 h-4 text-neutral-500" />
+        {children || <Smile className="w-4 h-4 text-neutral-500" />}
       </button>
 
       <div
