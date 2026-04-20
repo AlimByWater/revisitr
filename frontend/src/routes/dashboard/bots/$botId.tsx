@@ -51,6 +51,8 @@ import type { POSLocation } from '@/features/pos/types'
 import { campaignsApi } from '@/features/campaigns/api'
 import type { MessageContent } from '@/features/telegram-preview'
 import { renderTextWithEmoji } from '@/features/telegram-preview/components/renderEmoji'
+import { EmojiPicker } from '@/features/emoji-packs'
+import { ButtonStylePicker } from '@/features/telegram-preview/components/ButtonStylePicker'
 import {
   canAddPreset,
   deriveBotRequirements,
@@ -1219,6 +1221,22 @@ function GeneralTab({
                               >
                                 <GripVertical className="w-4 h-4" />
                               </button>
+
+                              <EmojiPicker
+                                onSelect={(item) => {
+                                  updateButton(index, 'icon_custom_emoji_id', item.tg_custom_emoji_id || '')
+                                  updateButton(index, 'icon_image_url', item.image_url)
+                                }}
+                                triggerClassName="w-8 h-8 mt-0.5 border border-neutral-200 bg-white hover:bg-neutral-50 shrink-0 rounded"
+                              >
+                                {button.icon_image_url ? (
+                                  <img src={button.icon_image_url} alt="" className="w-4 h-4 rounded-sm object-cover" />
+                                ) : undefined}
+                              </EmojiPicker>
+                              <ButtonStylePicker
+                                value={button.style || ''}
+                                onChange={(style) => updateButton(index, 'style', style)}
+                              />
 
                               <div className="flex-1 min-w-0">
                                 <button

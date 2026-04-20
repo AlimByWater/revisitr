@@ -23,16 +23,17 @@ func buildMainMenu(settings entity.BotSettings) *telego.ReplyKeyboardMarkup {
 	var currentRow []telego.KeyboardButton
 
 	for _, button := range orderedMainMenuButtons(settings) {
+		kb := makeKeyboardButton(button)
 		if button.Label == btnHome {
 			if len(currentRow) > 0 {
 				rows = append(rows, currentRow)
 				currentRow = nil
 			}
-			rows = append(rows, []telego.KeyboardButton{tu.KeyboardButton(button.Label)})
+			rows = append(rows, []telego.KeyboardButton{kb})
 			continue
 		}
 
-		currentRow = append(currentRow, tu.KeyboardButton(button.Label))
+		currentRow = append(currentRow, kb)
 		if len(currentRow) == 2 {
 			rows = append(rows, currentRow)
 			currentRow = nil
@@ -169,4 +170,15 @@ func orderedMainMenuButtons(settings entity.BotSettings) []entity.BotButton {
 	}
 
 	return ordered
+}
+
+func makeKeyboardButton(btn entity.BotButton) telego.KeyboardButton {
+	kb := tu.KeyboardButton(btn.Label)
+	if btn.Style != "" {
+		kb.Style = btn.Style
+	}
+	if btn.IconCustomEmojiID != "" {
+		kb.IconCustomEmojiID = btn.IconCustomEmojiID
+	}
+	return kb
 }

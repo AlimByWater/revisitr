@@ -41,12 +41,15 @@ func (s BotSettings) Value() (driver.Value, error) {
 }
 
 type BotButton struct {
-	Label           string          `json:"label"`
-	Type            string          `json:"type"`
-	Value           string          `json:"value"`
-	Content         *MessageContent `json:"content,omitempty"`
-	ManagedByModule *string         `json:"managed_by_module,omitempty"`
-	IsSystem        bool            `json:"is_system,omitempty"`
+	Label             string          `json:"label"`
+	Type              string          `json:"type"`
+	Value             string          `json:"value"`
+	Content           *MessageContent `json:"content,omitempty"`
+	ManagedByModule   *string         `json:"managed_by_module,omitempty"`
+	IsSystem          bool            `json:"is_system,omitempty"`
+	Style             string          `json:"style,omitempty"`
+	IconCustomEmojiID string          `json:"icon_custom_emoji_id,omitempty"`
+	IconImageURL      string          `json:"icon_image_url,omitempty"`
 }
 
 type FormField struct {

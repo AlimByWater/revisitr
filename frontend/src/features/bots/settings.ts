@@ -168,7 +168,13 @@ export function syncSystemButtons(
       if (!managedKey || !replacement || seenManagedButtons.has(managedKey)) {
         continue
       }
-      nextButtons.push({ ...replacement, content: button.content })
+      nextButtons.push({
+        ...replacement,
+        content: button.content,
+        style: button.style,
+        icon_custom_emoji_id: button.icon_custom_emoji_id,
+        icon_image_url: button.icon_image_url,
+      })
       seenManagedButtons.add(managedKey)
       continue
     }
