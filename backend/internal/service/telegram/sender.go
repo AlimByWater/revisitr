@@ -162,6 +162,9 @@ func (s *Sender) sendPart(
 	switch part.Type {
 	case entity.PartText:
 		cleanText, emojiEntities := processEmojiText(part.Text, emojiMap)
+		if cleanText == "" && len(emojiEntities) == 0 {
+			return "", nil // skip empty text part
+		}
 		msg := tu.Message(tu.ID(chatID), cleanText)
 		if len(emojiEntities) > 0 {
 			msg = msg.WithEntities(emojiEntities...)

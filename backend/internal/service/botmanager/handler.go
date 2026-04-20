@@ -507,14 +507,22 @@ func (h *handler) welcomeBonusText(bonus float64, currencyName string) string {
 }
 
 func (h *handler) sendText(chatID int64, text string) {
-	msg := tu.Message(tu.ID(chatID), stripEmojiMarkers(text))
+	clean := stripEmojiMarkers(text)
+	if clean == "" {
+		return
+	}
+	msg := tu.Message(tu.ID(chatID), clean)
 	if _, err := h.bot.SendMessage(context.Background(), msg); err != nil {
 		h.logger.Error("send message", "error", err, "chat_id", chatID)
 	}
 }
 
 func (h *handler) sendWithKeyboard(chatID int64, text string, kb *telego.ReplyKeyboardMarkup) {
-	msg := tu.Message(tu.ID(chatID), stripEmojiMarkers(text)).WithReplyMarkup(kb)
+	clean := stripEmojiMarkers(text)
+	if clean == "" {
+		return
+	}
+	msg := tu.Message(tu.ID(chatID), clean).WithReplyMarkup(kb)
 	if _, err := h.bot.SendMessage(context.Background(), msg); err != nil {
 		h.logger.Error("send message with keyboard", "error", err, "chat_id", chatID)
 	}
