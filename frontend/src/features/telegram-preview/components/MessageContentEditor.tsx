@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useLayoutEffect, forwardRef, type TextareaHTMLAttributes } from "react";
 import { EmojiPicker } from "@/features/emoji-packs";
+import { RichTextEditor, type RichTextEditorHandle } from "./RichTextEditor";
 import {
   DndContext,
   closestCenter,
@@ -360,46 +361,22 @@ function TextPartEditor({
   part: MessagePart;
   onChange: (u: Partial<MessagePart>) => void;
 }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const handleEmojiInsert = (item: { name: string; image_url: string }) => {
-    const marker = `{{emoji:${item.image_url}}}`;
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      onChange({ text: (part.text || "") + marker });
-      return;
-    }
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = part.text || "";
-    const newText = text.slice(0, start) + marker + text.slice(end);
-    onChange({ text: newText });
-    requestAnimationFrame(() => {
-      const pos = start + marker.length;
-      textarea.setSelectionRange(pos, pos);
-      textarea.focus();
-    });
-  };
+  const editorRef = useRef<RichTextEditorHandle>(null);
 
   return (
-    <div className="space-y-2">
-      <div className="relative">
-        <AutoResizeTextarea
-          ref={textareaRef}
-          value={part.text || ""}
-          onChange={(e) => onChange({ text: e.target.value })}
-          placeholder="Текст сообщения..."
-          rows={3}
-          maxLength={4096}
-          className="w-full overflow-hidden px-3 py-2 pr-10 border border-neutral-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+    <div className="relative">
+      <RichTextEditor
+        ref={editorRef}
+        value={part.text || ""}
+        onChange={(text) => onChange({ text })}
+        placeholder="Текст сообщения..."
+        maxLength={4096}
+      />
+      <div className="absolute top-2 right-2 z-10">
+        <EmojiPicker
+          onSelect={(item) => editorRef.current?.insertEmoji(item.image_url)}
+          triggerClassName="w-6 h-6 border-0 bg-transparent hover:bg-neutral-100"
         />
-        <div className="absolute top-2 right-2">
-          <EmojiPicker onSelect={handleEmojiInsert} triggerClassName="w-6 h-6 border-0 bg-transparent hover:bg-neutral-100" />
-        </div>
-      </div>
-      <div className="flex items-center justify-between text-xs text-neutral-400">
-        <span>*жирный*, _курсив_, `код`</span>
-        <span>{(part.text || "").length}/4096</span>
       </div>
     </div>
   );
