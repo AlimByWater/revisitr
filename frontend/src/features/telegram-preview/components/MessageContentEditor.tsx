@@ -238,12 +238,13 @@ export function MessageContentEditor({
             row={row}
             rowIndex={ri}
             onChange={(newRow) => {
+              if (newRow.length === 0) {
+                const buttons = (value.buttons || []).filter((_, i) => i !== ri);
+                updateButtons(buttons);
+                return;
+              }
               const buttons = [...(value.buttons || [])];
               buttons[ri] = newRow;
-              updateButtons(buttons);
-            }}
-            onRemove={() => {
-              const buttons = (value.buttons || []).filter((_, i) => i !== ri);
               updateButtons(buttons);
             }}
           />
@@ -565,12 +566,10 @@ function ButtonRowEditor({
   row,
   rowIndex,
   onChange,
-  onRemove,
 }: {
   row: InlineButton[];
   rowIndex: number;
   onChange: (row: InlineButton[]) => void;
-  onRemove: () => void;
 }) {
   return (
     <div className="flex items-start gap-2 mb-2">
@@ -648,13 +647,6 @@ function ButtonRowEditor({
           </button>
         )}
       </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="text-neutral-400 hover:text-red-500 mt-1.5"
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-      </button>
     </div>
   );
 }
