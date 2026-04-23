@@ -174,7 +174,7 @@ describe('BotDetailPage', () => {
     expect(screen.getByRole('button', { name: 'Выберите ссылку' })).toBeInTheDocument()
   })
 
-  it('hides marketplace and renames feedback module to "Связаться"', async () => {
+  it('shows module cards with configure links and no inline settings', async () => {
     mockGetBotPOSLocations.mockResolvedValue({ pos_ids: [10] })
 
     renderPage('/dashboard/bots/1?tab=modules')
@@ -184,7 +184,51 @@ describe('BotDetailPage', () => {
     })
 
     expect(screen.queryByText('Маркетплейс')).not.toBeInTheDocument()
+    expect(screen.queryByText('Активные модули')).not.toBeInTheDocument()
+    expect(screen.queryByText('Настройка: Связаться')).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Напишите ваш вопрос:')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Настроить Меню' })).toHaveAttribute(
+      'href',
+      '/dashboard/menus?botId=1',
+    )
+    expect(screen.getByRole('link', { name: 'Настроить Бронирование' })).toHaveAttribute(
+      'href',
+      '/dashboard/bots/1?tab=booking-settings',
+    )
+    expect(screen.getByRole('link', { name: 'Настроить Связаться' })).toHaveAttribute(
+      'href',
+      '/dashboard/bots/1?tab=feedback-settings',
+    )
+    expect(screen.getByRole('link', { name: 'Настроить Лояльность' })).toHaveAttribute(
+      'href',
+      '/dashboard/loyalty',
+    )
+  })
+
+  it('opens feedback settings through a hidden URL tab', async () => {
+    mockGetBotPOSLocations.mockResolvedValue({ pos_ids: [10] })
+
+    renderPage('/dashboard/bots/1?tab=feedback-settings')
+
+    expect(await screen.findByText('Настройки модуля')).toBeInTheDocument()
+    expect(screen.getByText('Связаться')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Напишите ваш вопрос:')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Ваше сообщение отправлено.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'К модулям' })).toHaveAttribute(
+      'href',
+      '/dashboard/bots/1?tab=modules',
+    )
+  })
+
+  it('opens booking settings through a hidden URL tab', async () => {
+    mockGetBotPOSLocations.mockResolvedValue({ pos_ids: [10] })
+
+    renderPage('/dashboard/bots/1?tab=booking-settings')
+
+    expect(await screen.findByText('Настройки модуля')).toBeInTheDocument()
+    expect(screen.getByText('Бронирование')).toBeInTheDocument()
+    expect(screen.getByText('Первое сообщение')).toBeInTheDocument()
+    expect(screen.getByText('Слоты времени')).toBeInTheDocument()
   })
 
   it('keeps standard field internal names fixed and blocks duplicate presets', async () => {
