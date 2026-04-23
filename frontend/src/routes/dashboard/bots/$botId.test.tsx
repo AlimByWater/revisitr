@@ -193,42 +193,16 @@ describe('BotDetailPage', () => {
     )
     expect(screen.getByRole('link', { name: 'Настроить Бронирование' })).toHaveAttribute(
       'href',
-      '/dashboard/bots/1?tab=booking-settings',
+      '/dashboard/bots/1/booking',
     )
     expect(screen.getByRole('link', { name: 'Настроить Связаться' })).toHaveAttribute(
       'href',
-      '/dashboard/bots/1?tab=feedback-settings',
+      '/dashboard/bots/1/feedback',
     )
     expect(screen.getByRole('link', { name: 'Настроить Лояльность' })).toHaveAttribute(
       'href',
       '/dashboard/loyalty',
     )
-  })
-
-  it('opens feedback settings through a hidden URL tab', async () => {
-    mockGetBotPOSLocations.mockResolvedValue({ pos_ids: [10] })
-
-    renderPage('/dashboard/bots/1?tab=feedback-settings')
-
-    expect(await screen.findByText('Настройки модуля')).toBeInTheDocument()
-    expect(screen.getByText('Связаться')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Напишите ваш вопрос:')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Ваше сообщение отправлено.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'К модулям' })).toHaveAttribute(
-      'href',
-      '/dashboard/bots/1?tab=modules',
-    )
-  })
-
-  it('opens booking settings through a hidden URL tab', async () => {
-    mockGetBotPOSLocations.mockResolvedValue({ pos_ids: [10] })
-
-    renderPage('/dashboard/bots/1?tab=booking-settings')
-
-    expect(await screen.findByText('Настройки модуля')).toBeInTheDocument()
-    expect(screen.getByText('Бронирование')).toBeInTheDocument()
-    expect(screen.getByText('Первое сообщение')).toBeInTheDocument()
-    expect(screen.getByText('Слоты времени')).toBeInTheDocument()
   })
 
   it('keeps standard field internal names fixed and blocks duplicate presets', async () => {

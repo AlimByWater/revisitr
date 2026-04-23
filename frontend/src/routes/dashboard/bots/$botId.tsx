@@ -40,7 +40,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type {
-  BookingModuleConfig,
   Bot,
   BotSettings,
   BotButton,
@@ -58,9 +57,7 @@ import {
   getEditableButtons,
   getSystemButtons,
   MODULE_DEFS,
-  normalizeBookingConfig,
   normalizeBotSettings,
-  normalizeTimeInput,
   STANDARD_FIELD_PRESETS,
   STANDARD_FIELD_PRESET_LABELS,
   syncSystemButtons,
@@ -90,13 +87,7 @@ const TABS = [
 ] as const;
 
 type VisibleTabId = (typeof TABS)[number]["id"];
-type TabId = VisibleTabId | "booking-settings" | "feedback-settings";
-
-const TAB_IDS = new Set<TabId>([
-  ...TABS.map((tab) => tab.id),
-  "booking-settings",
-  "feedback-settings",
-]);
+type TabId = VisibleTabId;
 
 const statusConfig = {
   active: { label: "Активен", className: "bg-green-500 text-white" },
@@ -473,7 +464,7 @@ export default function BotDetailPage() {
   } = useBotQuery(isNaN(id) || id <= 0 ? 0 : id);
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     const tab = searchParams.get("tab");
-    return TAB_IDS.has(tab as TabId) ? (tab as TabId) : "connection";
+    return TABS.some((item) => item.id === tab) ? (tab as TabId) : "connection";
   });
   const [settings, setSettings] = useState<BotSettings | null>(null);
   const [selectedProgramId, setSelectedProgramId] = useState<
@@ -485,7 +476,7 @@ export default function BotDetailPage() {
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab && TAB_IDS.has(tab as TabId) && tab !== activeTab) {
+    if (tab && TABS.some((item) => item.id === tab) && tab !== activeTab) {
       setActiveTab(tab as TabId);
     }
   }, [activeTab, searchParams]);
@@ -702,22 +693,6 @@ export default function BotDetailPage() {
                 setSettings={setSettings}
                 boundPosIds={boundPosIds}
                 posLocations={posLocations}
-              />
-            )}
-            {activeTab === "booking-settings" && (
-              <BookingSettingsTab
-                botId={id}
-                settings={settings}
-                setSettings={setSettings}
-                boundPosIds={boundPosIds}
-                posLocations={posLocations}
-              />
-            )}
-            {activeTab === "feedback-settings" && (
-              <FeedbackSettingsTab
-                botId={id}
-                settings={settings}
-                setSettings={setSettings}
               />
             )}
           </>
@@ -2010,423 +1985,10 @@ function moduleConfigHref(
       : "/dashboard/loyalty";
   }
   if (moduleKey === "booking") {
-    return `/dashboard/bots/${botId}?tab=booking-settings`;
+    return `/dashboard/bots/${botId}/booking`;
   }
   if (moduleKey === "feedback") {
-    return `/dashboard/bots/${botId}?tab=feedback-settings`;
+    return `/dashboard/bots/${botId}/feedback`;
   }
   return `/dashboard/bots/${botId}?tab=modules`;
-}
-
-function ModuleSettingsHeader({
-  title,
-  description,
-  botId,
-}: {
-  title: string;
-  description: string;
-  botId: number;
-}) {
-  return (
-    <div className="mb-5">
-      <Link
-        to={`/dashboard/bots/${botId}?tab=modules`}
-        className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm text-neutral-500 transition-colors hover:text-neutral-700"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        К модулям
-      </Link>
-      <h2 className="text-lg font-semibold text-neutral-900">
-        <span className="mb-0.5 block font-mono text-[10px] font-normal uppercase tracking-widest text-neutral-400">
-          Настройки модуля
-        </span>
-        {title}
-      </h2>
-      <p className="mt-1 max-w-2xl text-sm text-neutral-500">{description}</p>
-    </div>
-  );
-}
-
-function BookingSettingsTab({
-  botId,
-  settings,
-  setSettings,
-  boundPosIds,
-  posLocations,
-}: {
-  botId: number;
-  settings: BotSettings;
-  setSettings: React.Dispatch<React.SetStateAction<BotSettings | null>>;
-  boundPosIds: number[];
-  posLocations: POSLocation[];
-}) {
-  const { isSaving, saveError, saveSuccess, save } = useSaveAction(botId, () =>
-    botsApi.updateSettings(botId, {
-      module_configs: settings.module_configs,
-    }),
-  );
-
-  const bookingConfig = normalizeBookingConfig(
-    settings.module_configs?.booking,
-    posLocations,
-    boundPosIds,
-  );
-  const messagePlaceholders = buildMessagePlaceholders(
-    settings.registration_form,
-  );
-
-  const updateBookingConfig = (patch: Partial<BookingModuleConfig>) => {
-    setSettings((current) =>
-      current
-        ? {
-            ...current,
-            module_configs: {
-              ...current.module_configs,
-              booking: {
-                ...bookingConfig,
-                ...patch,
-              },
-            },
-          }
-        : current,
-    );
-  };
-
-  return (
-    <div className="rounded-2xl border border-surface-border bg-white p-6 shadow-sm">
-      <ModuleSettingsHeader
-        title="Бронирование"
-        description="Сообщение, доступные даты, слоты времени и точки продаж для бронирования столиков."
-        botId={botId}
-      />
-
-      <div className="space-y-5">
-        <div>
-          <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-neutral-400">
-            Первое сообщение
-          </div>
-          <Suspense fallback={<EditorFallback />}>
-            <MessageContentEditor
-              value={
-                bookingConfig.intro_content ?? {
-                  parts: [{ type: "text", text: "", parse_mode: "Markdown" }],
-                }
-              }
-              onChange={(content) =>
-                updateBookingConfig({ intro_content: content })
-              }
-              onUpload={campaignsApi.uploadFile}
-              maxParts={4}
-              placeholders={messagePlaceholders}
-            />
-          </Suspense>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-neutral-700">
-              Бронь доступна от
-            </span>
-            <input
-              type="number"
-              min={0}
-              max={32}
-              value={bookingConfig.date_from_days ?? 0}
-              onChange={(event) =>
-                updateBookingConfig({
-                  date_from_days: Number(event.target.value),
-                })
-              }
-              className={inputClassName}
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-neutral-700">
-              Бронь доступна до
-            </span>
-            <input
-              type="number"
-              min={0}
-              max={32}
-              value={bookingConfig.date_to_days ?? 7}
-              onChange={(event) =>
-                updateBookingConfig({
-                  date_to_days: Number(event.target.value),
-                })
-              }
-              className={inputClassName}
-            />
-          </label>
-        </div>
-
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <div className="text-sm font-medium text-neutral-700">
-              Слоты времени
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                updateBookingConfig({
-                  time_slots: [
-                    ...(bookingConfig.time_slots ?? []),
-                    { start: "10:00", end: "11:00" },
-                  ],
-                })
-              }
-              className="text-xs font-medium text-accent hover:text-accent/80"
-            >
-              + Добавить слот
-            </button>
-          </div>
-          <div className="space-y-2">
-            {(bookingConfig.time_slots ?? []).map((slot, index) => (
-              <div
-                key={`${slot.start}-${slot.end}-${index}`}
-                className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2"
-              >
-                <input
-                  type="text"
-                  value={slot.start}
-                  onChange={(event) => {
-                    const next = [...(bookingConfig.time_slots ?? [])];
-                    next[index] = {
-                      ...slot,
-                      start: normalizeTimeInput(event.target.value),
-                    };
-                    updateBookingConfig({ time_slots: next });
-                  }}
-                  className={inputClassName}
-                  placeholder="10:00"
-                />
-                <input
-                  type="text"
-                  value={slot.end}
-                  onChange={(event) => {
-                    const next = [...(bookingConfig.time_slots ?? [])];
-                    next[index] = {
-                      ...slot,
-                      end: normalizeTimeInput(event.target.value),
-                    };
-                    updateBookingConfig({ time_slots: next });
-                  }}
-                  className={inputClassName}
-                  placeholder="11:00"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateBookingConfig({
-                      time_slots: (bookingConfig.time_slots ?? []).filter(
-                        (_, slotIndex) => slotIndex !== index,
-                      ),
-                    })
-                  }
-                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-2 text-sm font-medium text-neutral-700">
-            Количество гостей
-          </div>
-          <div className="space-y-2">
-            {(bookingConfig.party_size_options ?? []).map((option, index) => (
-              <div
-                key={`${option}-${index}`}
-                className="grid grid-cols-[minmax(0,1fr)_auto] gap-2"
-              >
-                <input
-                  type="text"
-                  value={option}
-                  onChange={(event) => {
-                    const next = [...(bookingConfig.party_size_options ?? [])];
-                    next[index] = event.target.value;
-                    updateBookingConfig({ party_size_options: next });
-                  }}
-                  className={inputClassName}
-                  placeholder="1, 2, 3-5, 6+"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateBookingConfig({
-                      party_size_options: (
-                        bookingConfig.party_size_options ?? []
-                      ).filter((_, optionIndex) => optionIndex !== index),
-                    })
-                  }
-                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() =>
-                updateBookingConfig({
-                  party_size_options: [
-                    ...(bookingConfig.party_size_options ?? []),
-                    "",
-                  ],
-                })
-              }
-              className="text-xs font-medium text-accent hover:text-accent/80"
-            >
-              + Добавить вариант
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-2 text-sm font-medium text-neutral-700">
-            Точки продаж для бронирования
-          </div>
-          {boundPosIds.length === 0 ? (
-            <p className="text-xs text-neutral-500">
-              Сначала привяжите точки продаж во вкладке «Подключение».
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {posLocations
-                .filter((location) => boundPosIds.includes(location.id))
-                .map((location) => {
-                  const isChecked = (bookingConfig.pos_ids ?? []).includes(
-                    location.id,
-                  );
-                  return (
-                    <label
-                      key={location.id}
-                      className="flex items-center gap-3 rounded-lg border border-surface-border bg-white px-3 py-2.5"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() =>
-                          updateBookingConfig({
-                            pos_ids: isChecked
-                              ? (bookingConfig.pos_ids ?? []).filter(
-                                  (id) => id !== location.id,
-                                )
-                              : [...(bookingConfig.pos_ids ?? []), location.id],
-                          })
-                        }
-                        className="h-4 w-4 rounded border-neutral-300 text-accent focus:ring-accent/20"
-                      />
-                      <span className="text-sm text-neutral-800">
-                        {location.name}
-                      </span>
-                    </label>
-                  );
-                })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <SaveButton
-        isSaving={isSaving}
-        saveError={saveError}
-        saveSuccess={saveSuccess}
-        onSave={save}
-      />
-    </div>
-  );
-}
-
-function FeedbackSettingsTab({
-  botId,
-  settings,
-  setSettings,
-}: {
-  botId: number;
-  settings: BotSettings;
-  setSettings: React.Dispatch<React.SetStateAction<BotSettings | null>>;
-}) {
-  const { isSaving, saveError, saveSuccess, save } = useSaveAction(botId, () =>
-    botsApi.updateSettings(botId, {
-      module_configs: settings.module_configs,
-    }),
-  );
-
-  return (
-    <div className="rounded-2xl border border-surface-border bg-white p-6 shadow-sm">
-      <ModuleSettingsHeader
-        title="Связаться"
-        description="Текст запроса к гостю и сообщение после отправки обратной связи."
-        botId={botId}
-      />
-
-      <div className="space-y-4">
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-neutral-700">
-            Первое сообщение
-          </span>
-          <textarea
-            rows={3}
-            value={settings.module_configs?.feedback?.prompt_message ?? ""}
-            onChange={(event) =>
-              setSettings((current) =>
-                current
-                  ? {
-                      ...current,
-                      module_configs: {
-                        ...current.module_configs,
-                        feedback: {
-                          ...current.module_configs?.feedback,
-                          prompt_message: event.target.value,
-                        },
-                      },
-                    }
-                  : current,
-              )
-            }
-            className={inputClassName}
-            placeholder="Напишите ваш вопрос:"
-          />
-        </label>
-
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-neutral-700">
-            Сообщение после отправки
-          </span>
-          <textarea
-            rows={3}
-            value={settings.module_configs?.feedback?.success_message ?? ""}
-            onChange={(event) =>
-              setSettings((current) =>
-                current
-                  ? {
-                      ...current,
-                      module_configs: {
-                        ...current.module_configs,
-                        feedback: {
-                          ...current.module_configs?.feedback,
-                          success_message: event.target.value,
-                        },
-                      },
-                    }
-                  : current,
-              )
-            }
-            className={inputClassName}
-            placeholder="Ваше сообщение отправлено."
-          />
-        </label>
-      </div>
-
-      <SaveButton
-        isSaving={isSaving}
-        saveError={saveError}
-        saveSuccess={saveSuccess}
-        onSave={save}
-      />
-    </div>
-  );
 }
