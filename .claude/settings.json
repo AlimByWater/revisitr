@@ -1,6 +1,3 @@
 {
-  "enabledPlugins": {
-    "oh-my-claudecode@omc": false,
-    "ui-ux-pro-max@ui-ux-pro-max-skill": true
-  }
+  "enabledPlugins": {}
 }
