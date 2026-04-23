@@ -3,6 +3,7 @@ package botmanager
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -108,7 +109,7 @@ func (h *handler) handleStart(ctx context.Context, msg *telego.Message) {
 	if client != nil {
 		// Already registered — show synced welcome content if configured
 		if h.hasWelcomeContent() {
-			h.sendWelcomeContent(ctx, chatID)
+			h.sendWelcomeContent(ctx, chatID, client, msg.From)
 			h.sendMainMenu(ctx, chatID, h.returningMenuText(client.FirstName))
 			return
 		}
@@ -117,12 +118,12 @@ func (h *handler) handleStart(ctx context.Context, msg *telego.Message) {
 		if welcome == "" {
 			welcome = fmt.Sprintf("С возвращением, %s! 👋", client.FirstName)
 		}
-		h.sendMainMenu(ctx, chatID, welcome)
+		h.sendMainMenu(ctx, chatID, personalizeText(welcome, templateValues(client, msg.From)))
 		return
 	}
 
 	// New user — send welcome content first, then handle registration
-	h.sendWelcomeContent(ctx, chatID)
+	h.sendWelcomeContent(ctx, chatID, nil, msg.From)
 
 	// If registration form requires phone, ask for it
 	needsPhone := false
@@ -402,15 +403,18 @@ func (h *handler) sendMainMenu(_ context.Context, chatID int64, text string) {
 }
 
 // sendWelcomeContent sends the composite welcome message if available.
-func (h *handler) sendWelcomeContent(ctx context.Context, chatID int64) {
+func (h *handler) sendWelcomeContent(ctx context.Context, chatID int64, client *entity.BotClient, user *telego.User) {
 	settings := h.info.Settings
+	values := templateValues(client, user)
 
 	// Priority: new format → legacy → default
 	if h.tgSender != nil && h.hasWelcomeContent() {
-		if updated, changed, err := h.tgSender.SendContentForOrg(ctx, h.bot, chatID, *settings.WelcomeContent, h.info.OrgID); err != nil {
+		content := personalizeMessageContent(*settings.WelcomeContent, values)
+		if updated, changed, err := h.tgSender.SendContentForOrg(ctx, h.bot, chatID, content, h.info.OrgID); err != nil {
 			h.logger.Error("send welcome content", "error", err, "chat_id", chatID)
 		} else if changed {
-			h.info.Settings.WelcomeContent = &updated
+			cacheable := mergeMediaIDs(*settings.WelcomeContent, updated)
+			h.info.Settings.WelcomeContent = &cacheable
 			h.persistSettingsCache(ctx)
 		}
 		return
@@ -425,7 +429,107 @@ func (h *handler) sendWelcomeContent(ctx context.Context, chatID int64) {
 			welcome = fmt.Sprintf("Добро пожаловать в %s! 🎉", h.info.Name)
 		}
 	}
-	h.sendText(chatID, welcome)
+	h.sendText(chatID, personalizeText(welcome, values))
+}
+
+func personalizeMessageContent(content entity.MessageContent, values map[string]string) entity.MessageContent {
+	content.Parts = append([]entity.MessagePart(nil), content.Parts...)
+	for i := range content.Parts {
+		content.Parts[i].Text = personalizeText(content.Parts[i].Text, values)
+	}
+
+	if len(content.Buttons) > 0 {
+		buttons := make([][]entity.InlineButton, len(content.Buttons))
+		for rowIndex, row := range content.Buttons {
+			buttons[rowIndex] = append([]entity.InlineButton(nil), row...)
+			for buttonIndex := range buttons[rowIndex] {
+				buttons[rowIndex][buttonIndex].Text = personalizeText(buttons[rowIndex][buttonIndex].Text, values)
+			}
+		}
+		content.Buttons = buttons
+	}
+
+	return content
+}
+
+func personalizeText(text string, values map[string]string) string {
+	if text == "" || len(values) == 0 {
+		return text
+	}
+
+	for key, value := range values {
+		text = strings.ReplaceAll(text, "{"+key+"}", value)
+	}
+	return text
+}
+
+func templateValues(client *entity.BotClient, user *telego.User) map[string]string {
+	values := make(map[string]string)
+
+	if client != nil {
+		values["first_name"] = client.FirstName
+		values["name"] = client.FirstName
+		values["last_name"] = client.LastName
+		values["username"] = client.Username
+		values["phone"] = client.Phone
+		if client.BirthDate != nil {
+			values["birth_date"] = client.BirthDate.Format("2006-01-02")
+			values["birthday"] = values["birth_date"]
+		}
+		if client.City != nil {
+			values["city"] = *client.City
+		}
+		if len(client.Data) > 0 {
+			var data map[string]any
+			if err := json.Unmarshal(client.Data, &data); err == nil {
+				for key, value := range data {
+					if _, exists := values[key]; exists {
+						continue
+					}
+					switch typed := value.(type) {
+					case string:
+						values[key] = typed
+					case float64, bool:
+						values[key] = fmt.Sprint(typed)
+					}
+				}
+			}
+		}
+	}
+
+	if user != nil {
+		if values["first_name"] == "" {
+			values["first_name"] = user.FirstName
+		}
+		if values["name"] == "" {
+			values["name"] = user.FirstName
+		}
+		if values["last_name"] == "" {
+			values["last_name"] = user.LastName
+		}
+		if values["username"] == "" {
+			values["username"] = user.Username
+		}
+	}
+
+	if values["first_name"] == "" {
+		values["first_name"] = "клиент"
+	}
+	if values["name"] == "" {
+		values["name"] = values["first_name"]
+	}
+
+	return values
+}
+
+func mergeMediaIDs(base entity.MessageContent, sent entity.MessageContent) entity.MessageContent {
+	base.Parts = append([]entity.MessagePart(nil), base.Parts...)
+	for i := range base.Parts {
+		if i < len(sent.Parts) && sent.Parts[i].MediaID != "" {
+			base.Parts[i].MediaID = sent.Parts[i].MediaID
+		}
+	}
+	return base
 }
 
 func (h *handler) hasWelcomeContent() bool {

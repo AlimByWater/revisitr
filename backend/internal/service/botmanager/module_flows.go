@@ -253,7 +253,7 @@ func (h *handler) sendWelcomeAndMenuAfterStart(ctx context.Context, chatID int64
 
 	if client != nil {
 		if h.hasWelcomeContent() {
-			h.sendWelcomeContent(ctx, chatID)
+			h.sendWelcomeContent(ctx, chatID, client, user)
 			h.sendMainMenu(ctx, chatID, h.returningMenuText(client.FirstName))
 			return
 		}
@@ -262,11 +262,11 @@ func (h *handler) sendWelcomeAndMenuAfterStart(ctx context.Context, chatID int64
 		if welcome == "" {
 			welcome = fmt.Sprintf("С возвращением, %s! 👋", client.FirstName)
 		}
-		h.sendMainMenu(ctx, chatID, welcome)
+		h.sendMainMenu(ctx, chatID, personalizeText(welcome, templateValues(client, user)))
 		return
 	}
 
-	h.sendWelcomeContent(ctx, chatID)
+	h.sendWelcomeContent(ctx, chatID, nil, user)
 
 	needsPhone := false
 	for _, field := range h.info.Settings.RegistrationForm {
