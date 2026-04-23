@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -12,6 +12,8 @@ import type { LoyaltyLevel, ProgramConfig } from '@/features/loyalty/types'
 
 export default function ProgramDetailPage() {
   const { programId } = useParams<{ programId: string }>()
+  const [searchParams] = useSearchParams()
+  const botId = searchParams.get('botId')
   const id = Number(programId)
 
   const { data: program, isLoading, mutate: refetch } = useProgramQuery(id)
@@ -89,14 +91,17 @@ export default function ProgramDetailPage() {
     return <div className="text-sm text-neutral-500">Программа не найдена</div>
   }
 
+  const backHref = botId ? `/dashboard/bots/${botId}?tab=modules` : '/dashboard/loyalty'
+  const backLabel = botId ? 'Назад к модулям бота' : 'Назад к программам'
+
   return (
     <div>
       <Link
-        to="/dashboard/loyalty"
+        to={backHref}
         className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 transition-colors mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
-        Назад к программам
+        {backLabel}
       </Link>
 
       <div className="flex items-center gap-3 mb-8">

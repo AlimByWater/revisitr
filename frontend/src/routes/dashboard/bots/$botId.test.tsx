@@ -201,7 +201,7 @@ describe('BotDetailPage', () => {
     )
     expect(screen.getByRole('link', { name: 'Настроить Лояльность' })).toHaveAttribute(
       'href',
-      '/dashboard/loyalty',
+      '/dashboard/loyalty?botId=1',
     )
   })
 

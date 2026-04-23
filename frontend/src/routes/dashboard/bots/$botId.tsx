@@ -1981,8 +1981,8 @@ function moduleConfigHref(
   if (moduleKey === "menu") return `/dashboard/menus?botId=${botId}`;
   if (moduleKey === "loyalty") {
     return selectedProgramId
-      ? `/dashboard/loyalty/${selectedProgramId}`
-      : "/dashboard/loyalty";
+      ? `/dashboard/loyalty/${selectedProgramId}?botId=${botId}`
+      : `/dashboard/loyalty?botId=${botId}`;
   }
   if (moduleKey === "booking") {
     return `/dashboard/bots/${botId}/booking`;

@@ -1,6 +1,6 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useState } from 'react'
-import { Heart, Plus } from 'lucide-react'
+import { ArrowLeft, Heart, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useProgramsQuery, useUpdateProgramMutation } from '@/features/loyalty/queries'
 import { CreateProgramModal } from '@/components/loyalty/CreateProgramModal'
@@ -10,6 +10,8 @@ import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 
 export default function LoyaltyProgramsPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const botId = searchParams.get('botId')
   const { data: programs, isLoading, isError, mutate } = useProgramsQuery()
   const updateMutation = useUpdateProgramMutation()
   const [showCreate, setShowCreate] = useState(false)
@@ -20,6 +22,16 @@ export default function LoyaltyProgramsPage() {
 
   return (
     <div>
+      {botId && (
+        <Link
+          to={`/dashboard/bots/${botId}?tab=modules`}
+          className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm text-neutral-500 transition-colors hover:text-neutral-700"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Назад к модулям бота
+        </Link>
+      )}
+
       <div className="flex items-center justify-between mb-6 animate-in">
         <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Программы лояльности</h1>
         <button
@@ -70,7 +82,7 @@ export default function LoyaltyProgramsPage() {
               key={program.id}
               type="button"
               onClick={() =>
-                navigate(`/dashboard/loyalty/${program.id}`)
+                navigate(`/dashboard/loyalty/${program.id}${botId ? `?botId=${botId}` : ''}`)
               }
               className={cn(
                 'w-full text-left bg-white rounded border border-neutral-900 p-6',
