@@ -16,7 +16,6 @@ import {
   Settings,
   Puzzle,
   Store,
-  Eye,
   GripVertical,
   ChevronDown,
   ChevronRight,
@@ -695,9 +694,6 @@ export default function BotDetailPage() {
                 boundPosIds={boundPosIds}
                 posLocations={posLocations}
               />
-            )}
-            {activeTab === "preview" && (
-              <PreviewTab settings={settings} botName={bot.name} />
             )}
           </>
         )}
@@ -1899,6 +1895,9 @@ function ModulesTab({
     posLocations,
     boundPosIds,
   );
+  const messagePlaceholders = buildMessagePlaceholders(
+    settings.registration_form,
+  );
 
   const updateBookingConfig = (patch: Partial<BookingModuleConfig>) => {
     setSettings((current) =>
@@ -2376,45 +2375,6 @@ function ModulesTab({
         saveSuccess={saveSuccess}
         onSave={save}
       />
-    </div>
-  );
-}
-
-// ===========================================================================
-// Tab: Превью (Preview) — Telegram iOS mockup
-// ===========================================================================
-
-function PreviewTab({
-  settings,
-  botName,
-}: {
-  settings: BotSettings;
-  botName: string;
-}) {
-  // Build MessageContent from settings for preview
-  const content: import("@/features/telegram-preview").MessageContent =
-    settings.welcome_content && settings.welcome_content.parts?.length > 0
-      ? settings.welcome_content
-      : {
-          parts: settings.welcome_message
-            ? [
-                {
-                  type: "text" as const,
-                  text: settings.welcome_message
-                    .replace(/\{first_name\}/g, "Александр")
-                    .replace(/\{bonus_balance\}/g, "1 250")
-                    .replace(/\{loyalty_level\}/g, "Gold"),
-                  parse_mode: "Markdown" as const,
-                },
-              ]
-            : [],
-        };
-
-  return (
-    <div className="flex justify-center">
-      <Suspense fallback={<PreviewFallback />}>
-        <TelegramPreview botName={botName} content={content} showFrame />
-      </Suspense>
     </div>
   );
 }
