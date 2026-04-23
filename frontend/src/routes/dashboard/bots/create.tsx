@@ -17,8 +17,8 @@ const MODULES = [
 ]
 
 const DEFAULT_FORM_FIELDS: FormField[] = [
-  { name: 'first_name', label: 'Имя', type: 'text', required: true },
-  { name: 'phone', label: 'Телефон', type: 'phone', required: true },
+  { name: 'first_name', label: 'Как вас зовут?', type: 'text', required: true },
+  { name: 'phone', label: 'Ваш номер телефона?', type: 'phone', required: true },
 ]
 
 const inputClass = cn(

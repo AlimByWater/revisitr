@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useLayoutEffect, forwardRef, type TextareaHTMLAttributes } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { EmojiPicker } from "@/features/emoji-packs";
 import { RichTextEditor, type RichTextEditorHandle } from "./RichTextEditor";
 import { ButtonStylePicker } from "./ButtonStylePicker";
@@ -364,6 +364,7 @@ function SortablePartEditor({
           part={part}
           onChange={(u) => onUpdate(index, u)}
           onUpload={onUpload}
+          placeholders={placeholders}
         />
       )}
     </div>
@@ -392,18 +393,55 @@ function TextPartEditor({
         placeholder="Текст сообщения..."
         maxLength={4096}
       />
-      <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
-        {placeholders.length > 0 && (
-          <PlaceholderPicker
-            placeholders={placeholders}
-            onSelect={(token) => editorRef.current?.insertText(token)}
-          />
-        )}
-        <EmojiPicker
-          onSelect={(item) => editorRef.current?.insertEmoji(item.image_url)}
-          triggerClassName="w-6 h-6 border-0 bg-transparent hover:bg-neutral-100"
+      <InlineTextInsertTools editorRef={editorRef} placeholders={placeholders} />
+    </div>
+  );
+}
+
+function CaptionEditor({
+  text,
+  onChange,
+  placeholders,
+}: {
+  text: string;
+  onChange: (text: string) => void;
+  placeholders: MessagePlaceholder[];
+}) {
+  const editorRef = useRef<RichTextEditorHandle>(null);
+
+  return (
+    <div className="relative">
+      <RichTextEditor
+        ref={editorRef}
+        value={text}
+        onChange={onChange}
+        placeholder="Подпись (опционально)..."
+        maxLength={1024}
+      />
+      <InlineTextInsertTools editorRef={editorRef} placeholders={placeholders} />
+    </div>
+  );
+}
+
+function InlineTextInsertTools({
+  editorRef,
+  placeholders,
+}: {
+  editorRef: { current: RichTextEditorHandle | null };
+  placeholders: MessagePlaceholder[];
+}) {
+  return (
+    <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+      {placeholders.length > 0 && (
+        <PlaceholderPicker
+          placeholders={placeholders}
+          onSelect={(token) => editorRef.current?.insertText(token)}
         />
-      </div>
+      )}
+      <EmojiPicker
+        onSelect={(item) => editorRef.current?.insertEmoji(item.image_url)}
+        triggerClassName="w-6 h-6 border-0 bg-transparent hover:bg-neutral-100"
+      />
     </div>
   );
 }
@@ -489,10 +527,12 @@ function MediaPartEditor({
   part,
   onChange,
   onUpload,
+  placeholders,
 }: {
   part: MessagePart;
   onChange: (u: Partial<MessagePart>) => void;
   onUpload: (file: File) => Promise<string>;
+  placeholders: MessagePlaceholder[];
 }) {
   const accept =
     part.type === "photo"
@@ -513,35 +553,15 @@ function MediaPartEditor({
         label="Загрузить файл"
       />
       {part.type !== "sticker" && (
-        <AutoResizeTextarea
-          value={part.text || ""}
-          onChange={(e) => onChange({ text: e.target.value })}
-          placeholder="Подпись (опционально)..."
-          rows={2}
-          maxLength={1024}
-          className="w-full overflow-hidden px-3 py-2 border border-neutral-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+        <CaptionEditor
+          text={part.text || ""}
+          onChange={(text) => onChange({ text })}
+          placeholders={placeholders}
         />
       )}
     </div>
   );
 }
-
-const AutoResizeTextarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
-  function AutoResizeTextarea(props, ref) {
-    const internalRef = useRef<HTMLTextAreaElement>(null);
-    const resolvedRef = (ref as React.RefObject<HTMLTextAreaElement>) || internalRef;
-
-    useLayoutEffect(() => {
-      const textarea = resolvedRef.current;
-      if (!textarea) return;
-
-      textarea.style.height = "0px";
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    }, [props.value]);
-
-    return <textarea ref={resolvedRef} {...props} />;
-  },
-);
 
 // ── Media Upload Field ────────────────────────────────────────────────────────
 

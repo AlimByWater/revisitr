@@ -18,19 +18,28 @@ export const MODULE_DEFS = [
 ] as const
 
 export const STANDARD_FIELD_PRESETS: FormField[] = [
-  { name: 'first_name', label: 'Имя', type: 'text', required: true },
-  { name: 'phone', label: 'Телефон', type: 'phone', required: true },
-  { name: 'birthday', label: 'Дата рождения', type: 'date', required: false },
-  { name: 'city', label: 'Город', type: 'text', required: false },
-  { name: 'email', label: 'E-mail', type: 'email', required: false },
+  { name: 'first_name', label: 'Как вас зовут?', type: 'text', required: true },
+  { name: 'phone', label: 'Ваш номер телефона?', type: 'phone', required: true },
+  { name: 'birthday', label: 'Когда у вас день рождения?', type: 'date', required: false },
+  { name: 'city', label: 'В каком городе вы живёте?', type: 'text', required: false },
+  { name: 'email', label: 'Ваш e-mail?', type: 'email', required: false },
   {
     name: 'gender',
-    label: 'Пол',
+    label: 'Ваш пол?',
     type: 'select',
     required: false,
     options: ['Женский', 'Мужской', 'Не хочу отвечать'],
   },
 ] as const
+
+export const STANDARD_FIELD_PRESET_LABELS: Record<string, string> = {
+  first_name: 'Имя',
+  phone: 'Телефон',
+  birthday: 'Дата рождения',
+  city: 'Город',
+  email: 'E-mail',
+  gender: 'Пол',
+}
 
 export const STANDARD_FIELD_NAMES = new Set(
   STANDARD_FIELD_PRESETS.map((field) => field.name),

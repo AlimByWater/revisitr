@@ -62,6 +62,7 @@ import {
   normalizeBotSettings,
   normalizeTimeInput,
   STANDARD_FIELD_PRESETS,
+  STANDARD_FIELD_PRESET_LABELS,
   syncSystemButtons,
   isStandardField,
   withModuleDefaults,
@@ -1661,7 +1662,7 @@ function GeneralTab({
                   "disabled:opacity-50 disabled:cursor-not-allowed",
                 )}
               >
-                + {preset.label}
+                + {STANDARD_FIELD_PRESET_LABELS[preset.name] ?? preset.label}
               </button>
             ))}
           </div>

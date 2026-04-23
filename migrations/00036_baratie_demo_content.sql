@@ -85,9 +85,9 @@ BEGIN
                    )
                ),
                'registration_form', jsonb_build_array(
-                   jsonb_build_object('name', 'first_name', 'label', 'Имя', 'type', 'text', 'required', true),
-                   jsonb_build_object('name', 'phone', 'label', 'Телефон', 'type', 'phone', 'required', true),
-                   jsonb_build_object('name', 'birth_date', 'label', 'Дата рождения', 'type', 'date', 'required', false)
+                   jsonb_build_object('name', 'first_name', 'label', 'Как вас зовут?', 'type', 'text', 'required', true),
+                   jsonb_build_object('name', 'phone', 'label', 'Ваш номер телефона?', 'type', 'phone', 'required', true),
+                   jsonb_build_object('name', 'birthday', 'label', 'Когда у вас день рождения?', 'type', 'date', 'required', false)
                ),
                'welcome_message', E'Добро пожаловать в Baratie! 🏴‍☠️\\n\\nМы рады видеть вас на борту легендарного ресторана на воде.\\n\\nЗдесь вы можете:\\n• копить дублоны за каждый визит\\n• посмотреть авторское меню Sanji\\n• забронировать столик\\n• выбрать фирменный мерч\\n\\nДля начала пройдите короткую регистрацию.'
            )

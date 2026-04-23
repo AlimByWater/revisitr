@@ -208,8 +208,8 @@ describe('BotDetailPage', () => {
         settings: {
           ...botFixture.settings,
           registration_form: [
-            { name: 'first_name', label: 'Имя', type: 'text', required: true },
-            { name: 'birthday', label: 'Дата рождения', type: 'date', required: false },
+            { name: 'first_name', label: 'Как вас зовут?', type: 'text', required: true },
+            { name: 'birthday', label: 'Когда у вас день рождения?', type: 'date', required: false },
             { name: 'favorite_drink', label: 'Любимый напиток', type: 'text', required: false },
           ],
         },

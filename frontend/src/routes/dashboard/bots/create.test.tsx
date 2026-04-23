@@ -152,8 +152,8 @@ describe('CreateBotPage', () => {
         description: 'Лучший бот для гостей',
         welcome_message: 'Добро пожаловать!',
         registration_form: [
-          { name: 'first_name', label: 'Имя', type: 'text', required: true },
-          { name: 'phone', label: 'Телефон', type: 'phone', required: true },
+          { name: 'first_name', label: 'Как вас зовут?', type: 'text', required: true },
+          { name: 'phone', label: 'Ваш номер телефона?', type: 'phone', required: true },
           { name: 'favorite_drink', label: 'Favorite drink', type: 'text', required: false },
         ],
         modules: ['loyalty', 'feedback'],

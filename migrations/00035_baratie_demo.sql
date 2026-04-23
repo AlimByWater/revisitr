@@ -15,9 +15,9 @@ SELECT o.id, 'Baratie', '', 'baratie_demo_bot', 'inactive',
             {"label": "📍 Как добраться", "type": "text", "value": "Ресторан Baratie находится в открытом море East Blue. Координаты: 12°34''N 56°78''E"}
         ],
         "registration_form": [
-            {"name": "first_name", "label": "Имя", "type": "text", "required": true},
-            {"name": "phone", "label": "Телефон", "type": "phone", "required": true},
-            {"name": "birth_date", "label": "Дата рождения", "type": "date", "required": false}
+            {"name": "first_name", "label": "Как вас зовут?", "type": "text", "required": true},
+            {"name": "phone", "label": "Ваш номер телефона?", "type": "phone", "required": true},
+            {"name": "birthday", "label": "Когда у вас день рождения?", "type": "date", "required": false}
         ],
         "welcome_message": "Добро пожаловать в Baratie! 🏴‍☠️\n\nМы рады видеть вас на борту лучшего ресторана East Blue.\n\nЗдесь вы можете:\n• Копить бонусы за каждый визит\n• Просматривать наше меню\n• Бронировать столик\n• Оставлять отзывы\n\nДля начала пройдите короткую регистрацию."
     }'::jsonb,

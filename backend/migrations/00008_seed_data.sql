@@ -19,7 +19,7 @@ SELECT setval('users_id_seq', GREATEST((SELECT MAX(id) FROM users), 1));
 -- Demo bot (fake token — replace with real one to activate)
 INSERT INTO bots (id, org_id, name, token, username, status, settings)
 VALUES (1, 1, 'Demo Кафе Бот', 'REPLACE_WITH_REAL_BOT_TOKEN', 'demo_cafe_bot', 'inactive',
-  '{"modules": ["loyalty", "registration"], "buttons": [{"label": "Мой баланс", "type": "loyalty", "value": "balance"}, {"label": "Акции", "type": "url", "value": "https://example.com"}], "registration_form": [{"name": "phone", "label": "Телефон", "type": "phone", "required": true}, {"name": "birth_date", "label": "Дата рождения", "type": "date", "required": false}], "welcome_message": "Добро пожаловать! Вы подключены к программе лояльности."}'::jsonb)
+  '{"modules": ["loyalty", "registration"], "buttons": [{"label": "Мой баланс", "type": "loyalty", "value": "balance"}, {"label": "Акции", "type": "url", "value": "https://example.com"}], "registration_form": [{"name": "phone", "label": "Ваш номер телефона?", "type": "phone", "required": true}, {"name": "birthday", "label": "Когда у вас день рождения?", "type": "date", "required": false}], "welcome_message": "Добро пожаловать! Вы подключены к программе лояльности."}'::jsonb)
 ON CONFLICT (id) DO NOTHING;
 
 SELECT setval('bots_id_seq', GREATEST((SELECT MAX(id) FROM bots), 1));
