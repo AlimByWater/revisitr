@@ -50,6 +50,7 @@ function serializeNode(node: Record<string, unknown>): string {
 
 export interface RichTextEditorHandle {
   insertEmoji: (src: string) => void
+  insertText: (text: string) => void
 }
 
 interface RichTextEditorProps {
@@ -88,7 +89,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
       },
       editorProps: {
         attributes: {
-          class: 'outline-none min-h-[60px] whitespace-pre-wrap',
+          class: 'outline-none min-h-[60px] whitespace-pre-wrap pr-12',
         },
       },
     })
@@ -110,7 +111,15 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
       [editor],
     )
 
-    useImperativeHandle(ref, () => ({ insertEmoji }), [insertEmoji])
+    const insertText = useCallback(
+      (text: string) => {
+        if (!editor) return
+        editor.chain().focus().insertContent(text).run()
+      },
+      [editor],
+    )
+
+    useImperativeHandle(ref, () => ({ insertEmoji, insertText }), [insertEmoji, insertText])
 
     const charCount = editor?.storage.characterCount?.characters() ?? 0
 

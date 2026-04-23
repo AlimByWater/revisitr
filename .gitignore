@@ -27,9 +27,7 @@ frontend/src/routeTree.gen.ts
 *.swp
 *.swo
 *~
-.omc/sessions
-.omc/state
-.omc/project-memory.json
+*.omc*
 
 # OS
 .DS_Store
@@ -55,4 +53,3 @@ telegram/results/
 telegram/.venv/
 .omx/
 .codex/*
-

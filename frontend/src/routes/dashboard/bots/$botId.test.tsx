@@ -36,10 +36,23 @@ vi.mock('@/features/campaigns/api', () => ({
 
 vi.mock('@/features/telegram-preview', () => ({
   TelegramPreview: () => <div data-testid="telegram-preview" />,
-  MessageContentEditor: ({ value, onChange }: { value: any; onChange: (value: any) => void }) => (
-    <button type="button" onClick={() => onChange(value)}>
-      mock-message-editor
-    </button>
+  MessageContentEditor: ({
+    value,
+    onChange,
+    placeholders = [],
+  }: {
+    value: any
+    onChange: (value: any) => void
+    placeholders?: Array<{ token: string; label: string }>
+  }) => (
+    <div>
+      <button type="button" onClick={() => onChange(value)}>
+        mock-message-editor
+      </button>
+      {placeholders.map((placeholder) => (
+        <span key={placeholder.token}>{placeholder.token}</span>
+      ))}
+    </div>
   ),
 }))
 
@@ -185,5 +198,33 @@ describe('BotDetailPage', () => {
     expect(screen.getByText('phone')).toBeInTheDocument()
     expect(screen.queryByPlaceholderText('Внутреннее имя, например phone')).not.toBeInTheDocument()
     expect(screen.getByPlaceholderText('Внутреннее имя, например favorite_drink')).toBeInTheDocument()
+  })
+
+  it('passes registration field placeholders into message editors', async () => {
+    mockGetBotPOSLocations.mockResolvedValue({ pos_ids: [10] })
+    mockUseBotQuery.mockReturnValue({
+      data: {
+        ...botFixture,
+        settings: {
+          ...botFixture.settings,
+          registration_form: [
+            { name: 'first_name', label: 'Имя', type: 'text', required: true },
+            { name: 'birthday', label: 'Дата рождения', type: 'date', required: false },
+            { name: 'favorite_drink', label: 'Любимый напиток', type: 'text', required: false },
+          ],
+        },
+      },
+      isLoading: false,
+      isError: false,
+      error: undefined,
+      mutate: vi.fn(),
+      isValidating: false,
+    } as unknown as ReturnType<typeof useBotQuery>)
+
+    renderPage('/dashboard/bots/1?tab=general')
+
+    expect((await screen.findAllByText('{first_name}')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('{birth_date}').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('{favorite_drink}').length).toBeGreaterThan(0)
   })
 })

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useLayoutEffect, forwardRef, type TextareaHTMLAttributes } from "react";
+import { useState, useCallback, useEffect, useRef, useLayoutEffect, forwardRef, type TextareaHTMLAttributes } from "react";
 import { EmojiPicker } from "@/features/emoji-packs";
 import { RichTextEditor, type RichTextEditorHandle } from "./RichTextEditor";
 import { ButtonStylePicker } from "./ButtonStylePicker";
@@ -32,6 +32,7 @@ import {
   Link,
   ChevronDown,
   Upload,
+  Braces,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
@@ -46,6 +47,13 @@ interface MessageContentEditorProps {
   onChange: (content: MessageContent) => void;
   onUpload: (file: File) => Promise<string>;
   maxParts?: number;
+  placeholders?: MessagePlaceholder[];
+}
+
+export interface MessagePlaceholder {
+  token: string;
+  label: string;
+  fieldType?: string;
 }
 
 const PART_TYPE_OPTIONS: {
@@ -96,6 +104,7 @@ export function MessageContentEditor({
   onChange,
   onUpload,
   maxParts = 5,
+  placeholders = [],
 }: MessageContentEditorProps) {
   const [showTypeMenu, setShowTypeMenu] = useState(false);
 
@@ -180,6 +189,7 @@ export function MessageContentEditor({
               onRemove={removePart}
               onUpload={onUpload}
               canRemove={value.parts.length > 1}
+              placeholders={placeholders}
             />
           ))}
         </SortableContext>
@@ -265,6 +275,7 @@ function SortablePartEditor({
   onRemove,
   onUpload,
   canRemove,
+  placeholders,
 }: {
   id: string;
   part: MessagePart;
@@ -273,6 +284,7 @@ function SortablePartEditor({
   onRemove: (i: number) => void;
   onUpload: (file: File) => Promise<string>;
   canRemove: boolean;
+  placeholders: MessagePlaceholder[];
 }) {
   const {
     attributes,
@@ -334,7 +346,11 @@ function SortablePartEditor({
       </div>
 
       {part.type === "text" ? (
-        <TextPartEditor part={part} onChange={(u) => onUpdate(index, u)} />
+        <TextPartEditor
+          part={part}
+          onChange={(u) => onUpdate(index, u)}
+          placeholders={placeholders}
+        />
       ) : part.type === "sticker" ? (
         <MediaUploadField
           value={part.media_url || ""}
@@ -359,9 +375,11 @@ function SortablePartEditor({
 function TextPartEditor({
   part,
   onChange,
+  placeholders,
 }: {
   part: MessagePart;
   onChange: (u: Partial<MessagePart>) => void;
+  placeholders: MessagePlaceholder[];
 }) {
   const editorRef = useRef<RichTextEditorHandle>(null);
 
@@ -374,11 +392,92 @@ function TextPartEditor({
         placeholder="Текст сообщения..."
         maxLength={4096}
       />
-      <div className="absolute top-2 right-2 z-10">
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+        {placeholders.length > 0 && (
+          <PlaceholderPicker
+            placeholders={placeholders}
+            onSelect={(token) => editorRef.current?.insertText(token)}
+          />
+        )}
         <EmojiPicker
           onSelect={(item) => editorRef.current?.insertEmoji(item.image_url)}
           triggerClassName="w-6 h-6 border-0 bg-transparent hover:bg-neutral-100"
         />
+      </div>
+    </div>
+  );
+}
+
+function PlaceholderPicker({
+  placeholders,
+  onSelect,
+}: {
+  placeholders: MessagePlaceholder[];
+  onSelect: (token: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex h-6 w-6 items-center justify-center rounded bg-transparent text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+        aria-label="Вставить плейсхолдер"
+        title="Вставить плейсхолдер"
+      >
+        <Braces className="h-3.5 w-3.5" />
+      </button>
+
+      <div
+        role="dialog"
+        aria-label="Выбор плейсхолдера"
+        className={cn(
+          "absolute right-0 top-full z-50 mt-1 w-64 max-h-72 overflow-y-auto rounded-lg border border-neutral-200 bg-white py-1 shadow-lg",
+          "transition-all duration-150 origin-top-right",
+          open
+            ? "opacity-100 scale-y-100 pointer-events-auto"
+            : "opacity-0 scale-y-95 pointer-events-none",
+        )}
+      >
+        {placeholders.map((placeholder) => (
+          <button
+            key={placeholder.token}
+            type="button"
+            onClick={() => {
+              onSelect(placeholder.token);
+              setOpen(false);
+            }}
+            className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-neutral-50"
+            title={placeholder.label}
+          >
+            <span className="min-w-0 truncate text-neutral-700">
+              {placeholder.label}
+            </span>
+            <span className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">
+              {placeholder.token}
+            </span>
+          </button>
+        ))}
       </div>
     </div>
   );
