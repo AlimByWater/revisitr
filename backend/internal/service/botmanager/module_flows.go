@@ -22,6 +22,7 @@ const (
 	callbackMenuRoot         = "menu:root"
 	callbackMenuCategoryPref = "menu:cat:"
 	callbackMenuItemPref     = "menu:item:"
+	callbackMenuCarouselPref = "menu:car:"
 	callbackBookingIntro     = "booking:intro"
 	callbackBookingStart     = "booking:start"
 	callbackBookingDatePage  = "booking:date-page:"
@@ -194,6 +195,9 @@ func (h *handler) handleCallbackQuery(ctx context.Context, query *telego.Callbac
 	case strings.HasPrefix(data, callbackMenuItemPref):
 		h.answerCallback(query.ID, "")
 		h.handleMenuItemCallback(ctx, chatID, strings.TrimPrefix(data, callbackMenuItemPref))
+	case strings.HasPrefix(data, callbackMenuCarouselPref):
+		h.answerCallback(query.ID, "")
+		h.handleMenuCarouselCallback(ctx, chatID, strings.TrimPrefix(data, callbackMenuCarouselPref))
 	case data == callbackBookingIntro:
 		h.answerCallback(query.ID, "")
 		h.renderBookingIntro(ctx, chatID)
@@ -345,7 +349,27 @@ func (h *handler) handleMenu(ctx context.Context, msg *telego.Message) {
 	if h.promptPOSSelection(ctx, msg.Chat.ID) {
 		return
 	}
-	h.renderMenuRoot(ctx, msg.Chat.ID)
+
+	renderMode := h.resolveMenuRenderMode(ctx)
+	switch renderMode {
+	case entity.MenuRenderList:
+		h.renderMenuList(ctx, msg.Chat.ID)
+	case entity.MenuRenderCarousel:
+		h.renderMenuCarousel(ctx, msg.Chat.ID)
+	default:
+		h.renderMenuRoot(ctx, msg.Chat.ID)
+	}
+}
+
+func (h *handler) resolveMenuRenderMode(ctx context.Context) string {
+	if h.mgr.moduleSettingsRepo == nil {
+		return entity.MenuRenderTabs
+	}
+	settings, err := h.mgr.moduleSettingsRepo.Get(ctx, h.info.ID, "menu")
+	if err != nil || settings == nil {
+		return entity.MenuRenderTabs
+	}
+	return settings.PresetKey
 }
 
 func (h *handler) renderMenuRoot(ctx context.Context, chatID int64) {

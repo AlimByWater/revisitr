@@ -1,5 +1,5 @@
 import { useApiQuery, useApiMutation } from '../../lib/swr'
-import { botsApi } from './api'
+import { botsApi, modulePresetsApi } from './api'
 import type { CreateBotRequest, Bot } from './types'
 
 export function useBotsQuery() {
@@ -32,5 +32,38 @@ export function useDeleteBotMutation() {
     'bots/delete',
     (id: number) => botsApi.remove(id),
     ['bots'],
+  )
+}
+
+// Module presets
+
+export function useModulePresetsQuery(moduleKey: string) {
+  return useApiQuery(
+    `module-presets-${moduleKey}`,
+    () => modulePresetsApi.listPresets(moduleKey),
+    { revalidateOnFocus: false },
+  )
+}
+
+export function useBotModuleSettingsQuery(botId: number, moduleKey: string) {
+  return useApiQuery(
+    botId ? `bot-module-settings-${botId}-${moduleKey}` : null,
+    () => modulePresetsApi.getBotModuleSettings(botId, moduleKey),
+  )
+}
+
+export function useSelectPresetMutation(botId: number, moduleKey: string) {
+  return useApiMutation(
+    `select-preset-${botId}-${moduleKey}`,
+    (presetKey: string) => modulePresetsApi.selectPreset(botId, moduleKey, presetKey),
+    [`bot-module-settings-${botId}-${moduleKey}`],
+  )
+}
+
+export function useResetPresetMutation(botId: number, moduleKey: string) {
+  return useApiMutation(
+    `reset-preset-${botId}-${moduleKey}`,
+    () => modulePresetsApi.resetPreset(botId, moduleKey),
+    [`bot-module-settings-${botId}-${moduleKey}`],
   )
 }

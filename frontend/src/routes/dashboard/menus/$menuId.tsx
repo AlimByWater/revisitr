@@ -236,11 +236,11 @@ export default function MenuDetailPage() {
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
             <div>
-              <div className="text-sm font-medium text-blue-900">Приветственное сообщение</div>
+              <div className="text-sm font-medium text-blue-900">Шаблон отображения</div>
               <div className="text-sm text-blue-700 mt-1">
-                Настройте текст и медиа, которые бот отправит при нажатии кнопки «Меню», в{' '}
-                <Link to={`/dashboard/bots/${botId}`} className="underline font-medium hover:text-blue-900">
-                  настройках бота → Основные → кнопка Меню
+                Настройте как меню будет выглядеть в боте (таб-категории, список или карусель) в{' '}
+                <Link to={`/dashboard/bots/${botId}/menu`} className="underline font-medium hover:text-blue-900">
+                  настройках модуля «Меню»
                 </Link>.
               </div>
             </div>

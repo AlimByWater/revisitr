@@ -55,6 +55,7 @@ func main() {
 	posRepo := pgRepo.NewPOS(pg)
 	menusRepo := pgRepo.NewMenus(pg)
 	emojiPacksRepo := pgRepo.NewEmojiPacks(pg)
+	botModuleSettingsRepo := pgRepo.NewBotModuleSettings(pg)
 
 	campaignsRepo := pgRepo.NewCampaigns(pg)
 	scenariosRepo := pgRepo.NewAutoScenarios(pg)
@@ -69,6 +70,7 @@ func main() {
 	mgrOpts = append(mgrOpts, botmanager.WithMenus(menusRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithEmoji(emojiPacksRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithSessionStore(botmanager.NewRedisSessionStore(rds.Client())))
+	mgrOpts = append(mgrOpts, botmanager.WithModuleSettings(botModuleSettingsRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithAdminBotToken(cfg.MasterBot.Token))
 	if cfg.TelegramAPIURL != "" {
 		logger.Info("using custom Telegram API server", "url", cfg.TelegramAPIURL)

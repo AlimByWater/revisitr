@@ -56,6 +56,26 @@ export interface MenuModuleConfig {
   unavailable_message?: string
 }
 
+export interface ModulePreset {
+  id: number
+  module_key: string
+  preset_key: string
+  name: string
+  description: string
+  sort_order: number
+}
+
+export interface BotModuleSettings {
+  bot_id: number
+  module_key: string
+  preset_id: number | null
+  preset_key: string
+  customized: boolean
+  customizations: Record<string, unknown>
+  config: Record<string, unknown>
+  updated_at: string
+}
+
 export interface BookingTimeSlot {
   start: string
   end: string

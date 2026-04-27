@@ -25,6 +25,7 @@ import (
 	masterbotGroup "revisitr/internal/controller/http/group/masterbot"
 	emojipacksGroup "revisitr/internal/controller/http/group/emojipacks"
 	menusGroup "revisitr/internal/controller/http/group/menus"
+	modulepresetsGroup "revisitr/internal/controller/http/group/modulepresets"
 	onboardingGroup "revisitr/internal/controller/http/group/onboarding"
 	posGroup "revisitr/internal/controller/http/group/pos"
 	postsGroup "revisitr/internal/controller/http/group/posts"
@@ -54,6 +55,7 @@ import (
 	marketplaceUC "revisitr/internal/usecase/marketplace"
 	emojipacksUC "revisitr/internal/usecase/emojipacks"
 	menusUC "revisitr/internal/usecase/menus"
+	modulepresetsUC "revisitr/internal/usecase/modulepresets"
 	onboardingUC "revisitr/internal/usecase/onboarding"
 	posUC "revisitr/internal/usecase/pos"
 	promotionsUC "revisitr/internal/usecase/promotions"
@@ -106,6 +108,10 @@ func main() {
 
 	// Emoji packs repo
 	emojiPacksRepo := pgRepo.NewEmojiPacks(pg)
+
+	// Module presets repos
+	modulePresetsRepo := pgRepo.NewModulePresets(pg)
+	botModuleSettingsRepo := pgRepo.NewBotModuleSettings(pg)
 
 	// Phase 3 repos
 	menusRepo := pgRepo.NewMenus(pg)
@@ -162,6 +168,10 @@ func main() {
 		emojipacksUC.WithSync(botsRepo, emojiSyncSvc),
 	)
 
+	// Module presets usecase
+	modulepresetsUsecase := modulepresetsUC.New(modulePresetsRepo, botModuleSettingsRepo, botsRepo)
+	modulepresetsUsecase.SetEventBus(evBus)
+
 	// Phase 3 usecases
 	menusUsecase := menusUC.New(menusRepo)
 	rfmUsecase := rfmUC.New(rfmRepo, segmentsRepo, rfmSvc)
@@ -215,6 +225,7 @@ func main() {
 	posGrp := posGroup.New(posUsecase, jwtSecret)
 
 	filesGrp := filesGroup.New(minioClient, cfg.MinIO.Bucket, jwtSecret)
+	storageServeGrp := filesGroup.NewStorageServe(minioClient, cfg.MinIO.Bucket)
 
 	// Phase 2 groups
 	analyticsGrp := analyticsGroup.New(analyticsUsecase, jwtSecret,
@@ -236,6 +247,9 @@ func main() {
 	// Emoji packs group
 	emojiPacksGrp := emojipacksGroup.New(emojiPacksUsecase, jwtSecret)
 
+	// Module presets group
+	modulepresetsGrp := modulepresetsGroup.New(modulepresetsUsecase, jwtSecret)
+
 	// Phase 3 groups
 	menusGrp := menusGroup.New(menusUsecase, jwtSecret)
 	rfmGrp := rfmGroup.New(rfmUsecase, jwtSecret,
@@ -251,6 +265,8 @@ func main() {
 		menusGrp, rfmGrp, onboardingGrp,
 		billingGrp, masterbotGrp, walletGrp, marketplaceGrp, postsGrp,
 		emojiPacksGrp,
+		modulepresetsGrp,
+		storageServeGrp,
 	)
 
 	// ── Scheduler ─────────────────────────────────────────────────────────────

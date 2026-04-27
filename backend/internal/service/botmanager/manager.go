@@ -40,6 +40,10 @@ type menusRepository interface {
 	GetActiveMenuForPOS(ctx context.Context, orgID, posID int) (*entity.Menu, error)
 }
 
+type moduleSettingsRepository interface {
+	Get(ctx context.Context, botID int, moduleKey string) (*entity.BotModuleSettings, error)
+}
+
 type emojiRepository interface {
 	GetSyncedItemsByOrgID(ctx context.Context, orgID int) ([]entity.EmojiItem, error)
 }
@@ -62,8 +66,9 @@ type Manager struct {
 	loyaltyRepo   loyaltyRepository
 	posRepo       posRepository
 	menusRepo     menusRepository
-	emojiRepo     emojiRepository
-	sessions      sessionStore
+	emojiRepo           emojiRepository
+	moduleSettingsRepo  moduleSettingsRepository
+	sessions            sessionStore
 	tgSender      *tgService.Sender
 	logger        *slog.Logger
 	apiServer     string // custom Telegram Bot API server URL (empty = default)
@@ -94,6 +99,10 @@ func WithEmoji(repo emojiRepository) ManagerOption {
 
 func WithSessionStore(store sessionStore) ManagerOption {
 	return func(m *Manager) { m.sessions = store }
+}
+
+func WithModuleSettings(repo moduleSettingsRepository) ManagerOption {
+	return func(m *Manager) { m.moduleSettingsRepo = repo }
 }
 
 func WithAdminBotToken(token string) ManagerOption {

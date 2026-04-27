@@ -60,3 +60,16 @@ func (c *Client) Delete(ctx context.Context, bucket, key string) error {
 func (c *Client) GetURL(_ context.Context, bucket, key string) (string, error) {
 	return fmt.Sprintf("/revisitr/storage/%s", key), nil
 }
+
+func (c *Client) GetObject(ctx context.Context, bucket, key string) (io.ReadCloser, string, error) {
+	obj, err := c.client.GetObject(ctx, bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, "", fmt.Errorf("minio.GetObject: %w", err)
+	}
+	info, err := obj.Stat()
+	if err != nil {
+		obj.Close()
+		return nil, "", fmt.Errorf("minio.GetObject stat: %w", err)
+	}
+	return obj, info.ContentType, nil
+}

@@ -1354,7 +1354,7 @@ function GeneralTab({
                           (isSystemButton && buttonModule?.isExpandable);
                         const configureHref =
                           button.managed_by_module === "menu"
-                            ? `/dashboard/menus?botId=${botId}`
+                            ? `/dashboard/bots/${botId}/menu`
                             : button.managed_by_module === "contacts"
                               ? `/dashboard/bots/${botId}?tab=general`
                               : button.managed_by_module === "home"
@@ -1978,7 +1978,9 @@ function moduleConfigHref(
   botId: number,
   selectedProgramId?: number,
 ): string {
-  if (moduleKey === "menu") return `/dashboard/menus?botId=${botId}`;
+  if (moduleKey === "menu") {
+    return `/dashboard/bots/${botId}/menu`;
+  }
   if (moduleKey === "loyalty") {
     return selectedProgramId
       ? `/dashboard/loyalty/${selectedProgramId}?botId=${botId}`

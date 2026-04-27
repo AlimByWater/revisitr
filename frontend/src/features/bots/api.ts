@@ -3,6 +3,7 @@ import type {
   Bot, BotSettings, CreateBotRequest,
   CreateManagedBotRequest, CreateManagedBotResponse,
   ActivationLinkResponse, PostCode,
+  ModulePreset, BotModuleSettings,
 } from './types'
 
 export const botsApi = {
@@ -53,6 +54,30 @@ export const botsApi = {
   getBotStatus: async (id: number): Promise<{ status: string }> => {
     const response = await api.get<{ status: string }>(`/bots/${id}/status`)
     return response.data
+  },
+}
+
+export const modulePresetsApi = {
+  listPresets: async (moduleKey: string): Promise<ModulePreset[]> => {
+    const response = await api.get<ModulePreset[]>(`/module-settings/catalog/${moduleKey}`)
+    return response.data
+  },
+
+  getBotModuleSettings: async (botId: number, moduleKey: string): Promise<BotModuleSettings> => {
+    const response = await api.get<BotModuleSettings>(`/module-settings/${botId}/${moduleKey}`)
+    return response.data
+  },
+
+  selectPreset: async (botId: number, moduleKey: string, presetKey: string): Promise<void> => {
+    await api.put(`/module-settings/${botId}/${moduleKey}/preset`, { preset_key: presetKey })
+  },
+
+  updateCustomizations: async (botId: number, moduleKey: string, customizations: Record<string, unknown>): Promise<void> => {
+    await api.patch(`/module-settings/${botId}/${moduleKey}/customizations`, { customizations })
+  },
+
+  resetPreset: async (botId: number, moduleKey: string): Promise<void> => {
+    await api.post(`/module-settings/${botId}/${moduleKey}/reset`)
   },
 }
 

@@ -23,6 +23,8 @@ type FlowState struct {
 	BookingTime      string `json:"booking_time,omitempty"`
 	BookingPartySize string `json:"booking_party_size,omitempty"`
 	AwaitingFeedback bool   `json:"awaiting_feedback,omitempty"`
+	CarouselIndex    int    `json:"carousel_index,omitempty"`
+	CarouselTotal    int    `json:"carousel_total,omitempty"`
 }
 
 func (s FlowState) resetFlow() FlowState {
