@@ -49,13 +49,13 @@ const (
 	testJWTSecret         = "integration-test-secret"
 	testMasterBotUsername = "managedmasterbot"
 	testDBHost            = "localhost"
-	testDBPort            = "5433"
+	testDBPort            = "6281"
 	testDBUser            = "revisitr"
 	testDBPass            = "devpassword"
 	testDBName            = "revisitr"
 	testDBSSL             = "disable"
 	testRedisHost         = "localhost"
-	testRedisPort         = "6380"
+	testRedisPort         = "7392"
 
 	// All test records use this email domain for easy cleanup
 	testEmailDomain = "@test.revisitr.local"

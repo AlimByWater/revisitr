@@ -79,12 +79,29 @@ infra/scripts/deploy.sh backend|bot|frontend|infra               # independent d
 
 | Service    | Local dev | Production (host → container) |
 |------------|-----------|-------------------------------|
-| Backend    | 8080      | 8090 → 8080                   |
-| Frontend   | 5173      | 3340 → 80                     |
-| PostgreSQL | 5433      | 5433 → 5432                   |
-| Redis      | 6380      | 6380 → 6379                   |
+| Backend    | 9721      | 8090 → 8080                   |
+| Frontend   | 5921      | 3340 → 80                     |
+| PostgreSQL | 6281      | 5433 → 5432                   |
+| Redis      | 7392      | 6380 → 6379                   |
 
 Production nginx routes: `/revisitr/api/*` → `:8090`, `/revisitr/*` → `:3340`
+
+## Remote Access (tuna tunnels)
+
+Для удалённого доступа к локальной dev-среде используется [tuna](https://tuna.am/docs/tunnels/http/).
+
+```bash
+# Основной тунель — фронтенд + API (Vite проксирует /api → localhost:8080)
+tuna http 5921 --basic-auth="login:password"
+# Доступ: https://<subdomain>.tuna.am/revisitr/
+
+# Бот (если нужно тестировать Telegram webhook-и)
+tuna http 9722 --basic-auth="login:password"
+```
+
+**Как это работает**: один тунель на Vite dev server (5173) покрывает и фронтенд, и API — Vite proxy серверно перенаправляет `/api` на backend (localhost:8080). Отдельный тунель для backend не нужен.
+
+**Требования**: локально должны быть запущены backend (`go run ./cmd/server`), frontend (`npm run dev`), и инфра (`docker compose up`).
 
 ## Conventions
 

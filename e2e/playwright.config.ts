@@ -1,8 +1,8 @@
 import { defineConfig } from '@playwright/test';
 import path from 'path';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:5173/revisitr/';
-const API_URL = process.env.API_URL || 'http://localhost:8080/api/v1';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:5921/revisitr/';
+const API_URL = process.env.API_URL || 'http://localhost:9721/api/v1';
 
 const AUTH_FILE = path.join(__dirname, '.auth', 'user.json');
 

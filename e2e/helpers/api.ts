@@ -3,7 +3,7 @@
  * Used for seed data creation, state setup, and verification.
  */
 
-const API_BASE = process.env.API_URL || 'http://localhost:8080/api/v1';
+const API_BASE = process.env.API_URL || 'http://localhost:9721/api/v1';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
