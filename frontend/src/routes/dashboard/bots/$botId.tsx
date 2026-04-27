@@ -1395,7 +1395,7 @@ const GeneralTab = memo(function GeneralTab({
                           isContactsButton;
                         const configureHref =
                           button.managed_by_module === "menu"
-                            ? `/dashboard/bots/${botId}/menu`
+                            ? `/dashboard/menus?botId=${botId}`
                             : button.managed_by_module === "contacts"
                               ? `/dashboard/bots/${botId}?tab=general`
                               : button.managed_by_module === "home"
@@ -2153,7 +2153,7 @@ function moduleConfigHref(
   selectedProgramId?: number,
 ): string {
   if (moduleKey === "menu") {
-    return `/dashboard/bots/${botId}/menu`;
+    return `/dashboard/menus?botId=${botId}`;
   }
   if (moduleKey === "loyalty") {
     return selectedProgramId

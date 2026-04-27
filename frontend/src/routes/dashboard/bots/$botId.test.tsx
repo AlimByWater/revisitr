@@ -189,7 +189,7 @@ describe('BotDetailPage', () => {
     expect(screen.queryByPlaceholderText('Напишите ваш вопрос:')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Настроить Меню' })).toHaveAttribute(
       'href',
-      '/dashboard/bots/1/menu',
+      '/dashboard/menus?botId=1',
     )
     expect(screen.getByRole('link', { name: 'Настроить Бронирование' })).toHaveAttribute(
       'href',
