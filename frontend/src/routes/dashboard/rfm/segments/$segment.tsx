@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { Button } from '@/components/common/Button'
 import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronUp, ChevronDown, Download, Send, Sprout, TrendingUp, UserCheck, Crown, Gem, AlertTriangle, UserX, Users } from 'lucide-react'
+import { Pagination } from '@/components/common/Pagination'
 import type { LucideIcon } from 'lucide-react'
 
 const SEGMENT_ICONS: Record<string, LucideIcon> = {
@@ -105,7 +107,7 @@ export default function SegmentDetailPage() {
               return Icon ? <Icon className="w-6 h-6 shrink-0" style={{ color: segmentColors?.color }} /> : null
             })()}
             <div>
-              <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+              <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">
                 {segmentLabel}
               </h1>
               {data && (
@@ -116,35 +118,21 @@ export default function SegmentDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              leftIcon={<Download className="w-4 h-4" />}
               onClick={handleExportCSV}
               disabled={!data?.clients.length}
-              className={cn(
-                'flex items-center gap-2 py-2 px-4 rounded',
-                'border border-neutral-900 text-sm font-medium text-neutral-600',
-                'hover:bg-neutral-50 hover:border-neutral-300',
-                'transition-all duration-150',
-                'disabled:opacity-40 disabled:cursor-not-allowed',
-              )}
             >
-              <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Экспорт CSV</span>
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="primary"
+              leftIcon={<Send className="w-4 h-4" />}
               onClick={() => navigate(`/dashboard/campaigns/create?segment=${segment}`)}
-              className={cn(
-                'flex items-center gap-2 py-2 px-4 rounded',
-                'bg-accent text-white text-sm font-medium',
-                'hover:bg-accent-hover active:bg-accent/80',
-                'transition-all duration-150',
-                'shadow-none',
-              )}
             >
-              <Send className="w-4 h-4" />
               <span className="hidden sm:inline">Запустить сценарий</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -159,10 +147,11 @@ export default function SegmentDetailPage() {
           <div className="w-16 h-16 rounded bg-neutral-100 flex items-center justify-center mb-4">
             <Users className="w-8 h-8 text-neutral-400" />
           </div>
-          <h3 className="font-serif text-xl font-bold text-neutral-800 mb-1.5 tracking-tight">Нет клиентов</h3>
+          <h3 className="font-display text-xl font-bold text-neutral-800 mb-1.5 tracking-tight">Нет клиентов</h3>
           <p className="text-sm text-neutral-400 max-w-xs leading-relaxed">В этом сегменте пока нет клиентов</p>
         </div>
       ) : (
+        <>
         <div className="bg-white rounded border border-neutral-900 overflow-hidden animate-in">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -170,18 +159,18 @@ export default function SegmentDetailPage() {
                 <tr>
                   {[
                     { key: null, label: 'Имя', align: 'left' as const },
-                    { key: 'r_score' as SortCol, label: 'R' },
-                    { key: 'f_score' as SortCol, label: 'F' },
-                    { key: 'm_score' as SortCol, label: 'M' },
-                    { key: 'last_visit_date' as SortCol, label: 'Посл. визит' },
-                    { key: 'monetary_sum' as SortCol, label: 'Выручка' },
-                    { key: 'frequency_count' as SortCol, label: 'Визиты' },
+                    { key: 'r_score' as SortCol, label: 'R', align: 'center' as const },
+                    { key: 'f_score' as SortCol, label: 'F', align: 'center' as const },
+                    { key: 'm_score' as SortCol, label: 'M', align: 'center' as const },
+                    { key: 'last_visit_date' as SortCol, label: 'Посл. визит', align: 'center' as const },
+                    { key: 'monetary_sum' as SortCol, label: 'Выручка', align: 'center' as const },
+                    { key: 'frequency_count' as SortCol, label: 'Визиты', align: 'center' as const },
                   ].map((col) => (
                     <th
                       key={col.label}
                       className={cn(
                         'px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wider whitespace-nowrap',
-                        col.align === 'left' ? 'text-left' : 'text-right',
+                        col.align === 'left' ? 'text-left' : 'text-center',
                         col.key && 'cursor-pointer hover:text-neutral-600 select-none',
                       )}
                       onClick={col.key ? () => handleSort(col.key!) : undefined}
@@ -207,22 +196,22 @@ export default function SegmentDetailPage() {
                     <td className="px-4 py-3 font-medium text-neutral-900 whitespace-nowrap">
                       {client.first_name} {client.last_name?.charAt(0)}.
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-center">
                       <ScoreBadge value={client.r_score} />
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-center">
                       <ScoreBadge value={client.f_score} />
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-center">
                       <ScoreBadge value={client.m_score} />
                     </td>
-                    <td className="px-4 py-3 text-right text-neutral-500 font-mono tabular-nums whitespace-nowrap">
+                    <td className="px-4 py-3 text-center text-neutral-500 font-mono tabular-nums whitespace-nowrap">
                       {formatDate(client.last_visit_date)}
                     </td>
-                    <td className="px-4 py-3 text-right text-neutral-700 font-mono tabular-nums whitespace-nowrap">
+                    <td className="px-4 py-3 text-center text-neutral-700 font-mono tabular-nums whitespace-nowrap">
                       {formatMoney(client.monetary_sum)}
                     </td>
-                    <td className="px-4 py-3 text-right text-neutral-700 font-mono tabular-nums">
+                    <td className="px-4 py-3 text-center text-neutral-700 font-mono tabular-nums">
                       {client.total_visits_lifetime}
                     </td>
                   </tr>
@@ -235,63 +224,17 @@ export default function SegmentDetailPage() {
             </table>
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <>
-            <div className="mx-4 border-t border-neutral-200" />
-            <div className="flex items-center justify-between px-6 py-3">
-              <span className="text-xs text-neutral-400">
-                Стр. {page} из {totalPages}
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setPage(Math.max(1, page - 1))}
-                  disabled={page <= 1}
-                  className="px-3 py-1.5 rounded text-sm border border-neutral-900 disabled:opacity-40 hover:bg-neutral-50 transition-colors"
-                >
-                  ◄
-                </button>
-                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                  let p: number
-                  if (totalPages <= 5) {
-                    p = i + 1
-                  } else if (page <= 3) {
-                    p = i + 1
-                  } else if (page >= totalPages - 2) {
-                    p = totalPages - 4 + i
-                  } else {
-                    p = page - 2 + i
-                  }
-                  return (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setPage(p)}
-                      className={cn(
-                        'w-8 h-8 rounded text-sm font-medium transition-colors',
-                        page === p
-                          ? 'bg-neutral-900 text-white'
-                          : 'text-neutral-600 hover:bg-neutral-100',
-                      )}
-                    >
-                      {p}
-                    </button>
-                  )
-                })}
-                <button
-                  type="button"
-                  onClick={() => setPage(Math.min(totalPages, page + 1))}
-                  disabled={page >= totalPages}
-                  className="px-3 py-1.5 rounded text-sm border border-neutral-900 disabled:opacity-40 hover:bg-neutral-50 transition-colors"
-                >
-                  ►
-                </button>
-              </div>
-            </div>
-            </>
-          )}
         </div>
+        {totalPages > 1 && (
+          <Pagination
+            page={page}
+            pageCount={totalPages}
+            onChange={setPage}
+            total={data.total}
+            itemsLabel={pluralClients(data.total)}
+          />
+        )}
+        </>
       )}
     </div>
   )

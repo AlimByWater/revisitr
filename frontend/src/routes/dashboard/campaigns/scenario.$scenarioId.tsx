@@ -91,7 +91,7 @@ export default function ScenarioDetailPage() {
   if (isError || !scenario) {
     return (
       <div className="max-w-3xl">
-        <div className="bg-white rounded-2xl border border-surface-border p-12 text-center">
+        <div className="bg-white rounded border border-neutral-900 p-12 text-center">
           <p className="text-sm text-red-600">
             Сценарий не найден или произошла ошибка.
           </p>
@@ -103,25 +103,25 @@ export default function ScenarioDetailPage() {
   return (
     <div className="max-w-3xl">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6 animate-in">
         <button
           onClick={() => navigate('/dashboard/campaigns')}
           type="button"
-          className="p-2 rounded-lg hover:bg-neutral-100 transition-colors"
+          className="p-2 rounded hover:bg-neutral-100 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-neutral-500" />
         </button>
         <div className="flex-1">
-          <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="font-display text-2xl font-bold text-neutral-900 tracking-tight">
             {scenario.name}
           </h1>
         </div>
         <span
           className={cn(
-            'text-xs font-medium px-2.5 py-1 rounded-full',
+            'font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded',
             scenario.is_active
-              ? 'bg-green-100 text-green-700'
-              : 'bg-neutral-100 text-neutral-500',
+              ? 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/30'
+              : 'bg-neutral-100 text-neutral-600 border border-neutral-300',
           )}
         >
           {scenario.is_active ? 'Активен' : 'Неактивен'}
@@ -129,7 +129,7 @@ export default function ScenarioDetailPage() {
       </div>
 
       {/* Message Preview */}
-      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 mb-4">
+      <div className="bg-white rounded border border-neutral-900 p-6 mb-4">
         <h2 className="text-sm font-medium text-neutral-400 uppercase tracking-wider mb-4">
           Сообщение
         </h2>
@@ -146,7 +146,7 @@ export default function ScenarioDetailPage() {
       </div>
 
       {/* Trigger info */}
-      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 mb-4">
+      <div className="bg-white rounded border border-neutral-900 p-6 mb-4">
         <h2 className="text-sm font-medium text-neutral-400 uppercase tracking-wider mb-4">
           Триггер
         </h2>
@@ -193,14 +193,14 @@ export default function ScenarioDetailPage() {
 
       {/* Action log */}
       {actionLogs.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 mb-4">
+        <div className="bg-white rounded border border-neutral-900 p-6 mb-4">
           <h2 className="text-sm font-medium text-neutral-400 uppercase tracking-wider mb-4">
             Журнал действий
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-surface-border">
+                <tr className="border-b border-neutral-200">
                   <th className="text-left text-xs font-medium text-neutral-400 uppercase tracking-wider px-3 py-2">
                     Дата
                   </th>
@@ -228,10 +228,10 @@ export default function ScenarioDetailPage() {
                     <td className="px-3 py-2">
                       <span
                         className={cn(
-                          'text-xs font-medium px-2 py-0.5 rounded-full',
-                          log.result === 'success' && 'bg-green-100 text-green-700',
-                          log.result === 'failed' && 'bg-red-100 text-red-700',
-                          log.result === 'skipped' && 'bg-neutral-100 text-neutral-500',
+                          'font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border',
+                          log.result === 'success' && 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
+                          log.result === 'failed' && 'bg-red-500/10 text-red-700 border-red-500/30',
+                          log.result === 'skipped' && 'bg-neutral-100 text-neutral-600 border-neutral-300',
                         )}
                       >
                         {log.result === 'success' ? 'Успех' : log.result === 'failed' ? 'Ошибка' : 'Пропущен'}
@@ -255,7 +255,7 @@ export default function ScenarioDetailPage() {
           disabled={updateMutation.isPending}
           type="button"
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
+            'flex items-center gap-2 px-4 py-2.5 rounded text-sm font-medium',
             scenario.is_active
               ? 'border border-neutral-200 text-neutral-700 hover:bg-neutral-50'
               : 'bg-accent text-white hover:bg-accent/90',
@@ -276,7 +276,7 @@ export default function ScenarioDetailPage() {
             navigate(`/dashboard/campaigns/create?clone=${id}&type=scenario`)
           }
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
+            'flex items-center gap-2 px-4 py-2.5 rounded text-sm font-medium',
             'border border-neutral-200 text-neutral-700',
             'hover:bg-neutral-50 transition-colors',
           )}
@@ -289,7 +289,7 @@ export default function ScenarioDetailPage() {
           disabled={deleteMutation.isPending}
           type="button"
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
+            'flex items-center gap-2 px-4 py-2.5 rounded text-sm font-medium',
             'border border-red-200 text-red-600',
             'hover:bg-red-50 transition-colors',
             'disabled:opacity-50 disabled:cursor-not-allowed',

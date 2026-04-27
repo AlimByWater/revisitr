@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { ChevronDown, Eye, RotateCcw } from 'lucide-react'
 import { DatePicker } from '@/components/common/DatePicker'
+import { CustomSelect } from '@/components/common/CustomSelect'
 import type { SegmentFilter } from '@/features/segments/types'
 
 const RFM_SEGMENT_LABELS: Record<string, string> = {
@@ -17,7 +18,6 @@ const RFM_SEGMENT_LABELS: Record<string, string> = {
 const OS_OPTIONS = [
   { value: 'android', label: 'Android' },
   { value: 'ios', label: 'iOS' },
-  { value: 'web', label: 'Web' },
 ]
 
 const GENDER_OPTIONS = [
@@ -77,7 +77,7 @@ function FilterGroup({ title, activeCount, children, defaultOpen = false }: Filt
   const [open, setOpen] = useState(defaultOpen)
 
   return (
-    <div className="border border-neutral-200 rounded overflow-hidden">
+    <div className="bg-white border border-neutral-200 rounded overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -88,11 +88,9 @@ function FilterGroup({ title, activeCount, children, defaultOpen = false }: Filt
       >
         <span className="flex items-center gap-2">
           {title}
-          {activeCount > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-accent/10 text-accent text-xs font-semibold tabular-nums">
-              {activeCount}
-            </span>
-          )}
+          <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400 tabular-nums">
+            {activeCount > 0 ? `${activeCount}` : 'нет'}
+          </span>
         </span>
         <ChevronDown
           className={cn(
@@ -102,7 +100,7 @@ function FilterGroup({ title, activeCount, children, defaultOpen = false }: Filt
         />
       </button>
       {open && (
-        <div className="px-4 pb-4 pt-1 space-y-3 border-t border-neutral-200/50">
+        <div className="border-t border-neutral-200 bg-neutral-50/70 px-4 py-4 space-y-3">
           {children}
         </div>
       )}
@@ -188,8 +186,8 @@ export function ClientFilterBuilder({
     (!isHidden('bot_id') ? countActiveFilters(value, botKeys) : 0)
 
   return (
-    <div className={cn('bg-white rounded border border-neutral-200', className)}>
-      <div className="p-4 space-y-2">
+    <div className={cn('space-y-4', className)}>
+      <div className="rounded border border-neutral-300 bg-neutral-100 p-4 space-y-2">
         {/* Демография */}
         <FilterGroup
           title="Демография"
@@ -213,18 +211,12 @@ export function ClientFilterBuilder({
           {!isHidden('gender') && (
             <div>
               <label className="block text-xs font-medium text-neutral-500 mb-1">Пол</label>
-              <select
+              <CustomSelect
                 value={value.gender ?? ''}
-                onChange={(e) => updateString('gender', e.target.value)}
-                className={inputClassName}
-              >
-                <option value="">Любой</option>
-                {GENDER_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => updateString('gender', v)}
+                options={[{ value: '', label: 'Любой' }, ...GENDER_OPTIONS]}
+                light
+              />
             </div>
           )}
           {(!isHidden('age_from') || !isHidden('age_to')) && (
@@ -452,18 +444,15 @@ export function ClientFilterBuilder({
               <label className="block text-xs font-medium text-neutral-500 mb-1">
                 RFM-сегмент
               </label>
-              <select
+              <CustomSelect
                 value={value.rfm_category ?? ''}
-                onChange={(e) => updateString('rfm_category', e.target.value)}
-                className={inputClassName}
-              >
-                <option value="">Любой</option>
-                {Object.entries(RFM_SEGMENT_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => updateString('rfm_category', v)}
+                options={[
+                  { value: '', label: 'Любой' },
+                  ...Object.entries(RFM_SEGMENT_LABELS).map(([key, label]) => ({ value: key, label })),
+                ]}
+                light
+              />
             </div>
           )}
           {!isHidden('tags') && (
@@ -498,18 +487,12 @@ export function ClientFilterBuilder({
           {!isHidden('os') && (
             <div>
               <label className="block text-xs font-medium text-neutral-500 mb-1">Устройство</label>
-              <select
+              <CustomSelect
                 value={value.os ?? ''}
-                onChange={(e) => updateString('os', e.target.value)}
-                className={inputClassName}
-              >
-                <option value="">Любое</option>
-                {OS_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => updateString('os', v)}
+                options={[{ value: '', label: 'Любое' }, ...OS_OPTIONS]}
+                light
+              />
             </div>
           )}
         </FilterGroup>
@@ -535,8 +518,8 @@ export function ClientFilterBuilder({
         )}
       </div>
 
-      {/* Footer */}
-      <div className="px-4 py-3 border-t border-neutral-200 flex items-center justify-between gap-3">
+      {/* Action row */}
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           {onPreview && (
             <button
@@ -544,7 +527,7 @@ export function ClientFilterBuilder({
               onClick={onPreview}
               disabled={isPreviewing}
               className={cn(
-                'flex items-center gap-1.5 py-2 px-3 rounded text-sm font-medium',
+                'flex items-center gap-1.5 py-2 px-3 rounded text-sm font-medium cursor-pointer',
                 'border border-neutral-200 text-neutral-700',
                 'hover:bg-neutral-50 transition-colors',
                 'disabled:opacity-50',
@@ -566,7 +549,7 @@ export function ClientFilterBuilder({
           onClick={handleReset}
           disabled={totalActive === 0}
           className={cn(
-            'flex items-center gap-1.5 py-2 px-3 rounded text-sm font-medium',
+            'flex items-center gap-1.5 py-2 px-3 rounded text-sm font-medium cursor-pointer',
             'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50 transition-colors',
             'disabled:opacity-30 disabled:cursor-not-allowed',
           )}

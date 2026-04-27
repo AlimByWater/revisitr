@@ -8,6 +8,7 @@ import { CustomSelect } from '@/components/common/CustomSelect'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorState } from '@/components/common/ErrorState'
 import { TableSkeleton, MetricSkeleton } from '@/components/common/LoadingSkeleton'
+import { Pagination } from '@/components/common/Pagination'
 import type { ClientProfile, ClientFilter } from '@/features/clients/types'
 import {
   Users,
@@ -15,10 +16,6 @@ import {
   Wallet,
   UserPlus,
   Activity,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -63,7 +60,7 @@ const columns: Column[] = [
     header: 'Уровень',
     render: (row) =>
       row.loyalty_level ? (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
+        <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border bg-neutral-100 text-neutral-600 border-neutral-300">
           {row.loyalty_level}
         </span>
       ) : (
@@ -96,7 +93,7 @@ const columns: Column[] = [
       return (
         <span
           className={cn(
-            'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+            'font-mono text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded',
             color?.bg ?? 'bg-neutral-100',
             color?.text ?? 'text-neutral-700',
           )}
@@ -125,14 +122,12 @@ function StatCard({
   icon: React.ComponentType<{ className?: string }>
 }) {
   return (
-    <div className="bg-white rounded border border-neutral-900 p-6">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded bg-neutral-100 flex items-center justify-center">
-          <Icon className="w-5 h-5 text-neutral-500" />
-        </div>
-        <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{label}</span>
+    <div className="bg-white rounded border border-neutral-900 p-5">
+      <div className="flex items-center gap-2 text-neutral-400 mb-3">
+        <Icon className="w-4 h-4" />
+        <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
       </div>
-      <p className="text-2xl font-bold font-mono text-neutral-900 tracking-tight tabular-nums">{value}</p>
+      <p className="text-3xl font-bold font-mono text-neutral-900 tracking-tight tabular-nums">{value}</p>
     </div>
   )
 }
@@ -175,8 +170,6 @@ export default function ClientsPage() {
   const { data, isLoading, isError, mutate } = useClientsQuery(filter)
 
   const pageCount = data ? Math.ceil(data.total / pageSize) : 0
-  const canPreviousPage = pageIndex > 0
-  const canNextPage = pageIndex < pageCount - 1
 
   function handleSort(columnId: string) {
     if (sortBy === columnId) {
@@ -201,11 +194,11 @@ export default function ClientsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 animate-in">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Клиенты</h1>
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">Клиенты</h1>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 animate-in animate-in-delay-1">
         <StatCard
           label="Всего клиентов"
           value={stats ? formatBalance(stats.total_clients) : '—'}
@@ -229,7 +222,7 @@ export default function ClientsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 animate-in animate-in-delay-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
           <input
@@ -241,7 +234,7 @@ export default function ClientsPage() {
             }}
             placeholder="Поиск по имени или телефону..."
             className={cn(
-              'w-full pl-9 pr-4 py-2.5 rounded border border-neutral-200',
+              'w-full pl-9 pr-4 py-2.5 rounded border border-neutral-200 bg-white',
               'text-sm placeholder:text-neutral-400',
               'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
               'transition-colors',
@@ -282,8 +275,8 @@ export default function ClientsPage() {
       </div>
 
       {/* Table */}
-      {isLoading ? (
-        <div className="animate-in animate-in-delay-1">
+      {!data && isLoading ? (
+        <div className="animate-in animate-in-delay-3">
           <TableSkeleton />
         </div>
       ) : isError ? (
@@ -308,7 +301,7 @@ export default function ClientsPage() {
                   {columns.map((col) => (
                     <th
                       key={col.id}
-                      className="text-left text-xs font-medium text-neutral-500 uppercase tracking-wider px-4 py-3"
+                      className="text-left text-[11px] font-medium text-neutral-400 uppercase tracking-wider px-6 py-4 font-mono"
                     >
                       <button
                         type="button"
@@ -333,7 +326,7 @@ export default function ClientsPage() {
                     onClick={() => navigate(`/dashboard/clients/${row.id}`)}
                   >
                     {columns.map((col) => (
-                      <td key={col.id} className="px-4 py-3 text-sm">
+                      <td key={col.id} className="px-6 py-4 text-sm">
                         {col.render(row)}
                       </td>
                     ))}
@@ -343,65 +336,13 @@ export default function ClientsPage() {
             </table>
           </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-neutral-500">
-              Всего {formatBalance(data.total)} клиентов
-            </p>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setPageIndex(0)}
-                disabled={!canPreviousPage}
-                aria-label="Первая страница"
-                className={cn(
-                  'p-2 rounded text-neutral-500 hover:bg-neutral-100 transition-colors',
-                  'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
-                )}
-              >
-                <ChevronsLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setPageIndex((p) => p - 1)}
-                disabled={!canPreviousPage}
-                aria-label="Предыдущая страница"
-                className={cn(
-                  'p-2 rounded text-neutral-500 hover:bg-neutral-100 transition-colors',
-                  'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
-                )}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="px-3 py-2 text-sm text-neutral-700">
-                {pageIndex + 1} / {pageCount || 1}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPageIndex((p) => p + 1)}
-                disabled={!canNextPage}
-                aria-label="Следующая страница"
-                className={cn(
-                  'p-2 rounded text-neutral-500 hover:bg-neutral-100 transition-colors',
-                  'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
-                )}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setPageIndex(pageCount - 1)}
-                disabled={!canNextPage}
-                aria-label="Последняя страница"
-                className={cn(
-                  'p-2 rounded text-neutral-500 hover:bg-neutral-100 transition-colors',
-                  'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
-                )}
-              >
-                <ChevronsRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+          <Pagination
+            page={pageIndex + 1}
+            pageCount={pageCount || 1}
+            onChange={(p) => setPageIndex(p - 1)}
+            total={data.total}
+            itemsLabel="клиентов"
+          />
         </>
       )}
     </div>

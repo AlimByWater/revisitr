@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { Plug, Plus, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/common/Button'
 import { useIntegrationsQuery } from '@/features/integrations/queries'
 import { CreateIntegrationModal } from '@/components/integrations/CreateIntegrationModal'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -15,10 +16,10 @@ const TYPE_LABELS: Record<string, string> = {
   mock: 'Mock',
 }
 
-const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  active: { bg: 'bg-green-50', text: 'text-green-700', label: 'Активна' },
-  inactive: { bg: 'bg-neutral-100', text: 'text-neutral-500', label: 'Неактивна' },
-  error: { bg: 'bg-red-50', text: 'text-red-700', label: 'Ошибка' },
+const STATUS_STYLES: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  active: { bg: 'bg-emerald-500/10', text: 'text-emerald-700', border: 'border-emerald-500/30', label: 'Активна' },
+  inactive: { bg: 'bg-neutral-100', text: 'text-neutral-600', border: 'border-neutral-300', label: 'Неактивна' },
+  error: { bg: 'bg-red-500/10', text: 'text-red-700', border: 'border-red-500/30', label: 'Ошибка' },
 }
 
 function formatDate(dateStr?: string) {
@@ -40,24 +41,16 @@ export default function IntegrationsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 animate-in">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">
           Интеграции
         </h1>
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          leftIcon={<Plus className="w-4 h-4" />}
           onClick={() => setShowCreate(true)}
-          className={cn(
-            'flex items-center gap-2 py-2.5 px-4 rounded',
-            'bg-accent text-white text-sm font-medium',
-            'hover:bg-accent-hover active:bg-accent/80',
-            'transition-all duration-150',
-            'focus:outline-none focus:ring-2 focus:ring-accent/20',
-            '',
-          )}
         >
-          <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">Добавить</span>
-        </button>
+        </Button>
       </div>
 
       {isLoading ? (
@@ -94,9 +87,8 @@ export default function IntegrationsPage() {
                 onClick={() => navigate(`/dashboard/integrations/${intg.id}`)}
                 className={cn(
                   'w-full text-left bg-white rounded border border-neutral-900 p-6',
-                  'hover:border-neutral-300 hover:shadow-md',
-                  'transition-all duration-200 group',
-                  'animate-in',
+                  'cursor-pointer hover:scale-[1.02] transition-transform duration-150',
+                  'group animate-in',
                   `animate-in-delay-${Math.min(i + 1, 5)}`,
                 )}
               >
@@ -113,7 +105,7 @@ export default function IntegrationsPage() {
                       )}
                     </div>
                     {intg.config.api_url && (
-                      <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1 truncate max-w-md">
+                      <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1 truncate max-w-md">
                         {intg.config.api_url}
                       </p>
                     )}
@@ -126,9 +118,10 @@ export default function IntegrationsPage() {
                   </div>
                   <span
                     className={cn(
-                      'text-xs font-medium px-2 py-0.5 rounded-full',
+                      'font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border',
                       status.bg,
                       status.text,
+                      status.border,
                     )}
                   >
                     {status.label}

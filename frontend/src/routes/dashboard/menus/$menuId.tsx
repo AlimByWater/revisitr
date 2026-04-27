@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import {
@@ -17,6 +17,7 @@ import type {
   MenuItem,
   MenuPOSBindingRequest,
 } from '@/features/menus/types'
+import type { MessageContent } from '@/features/telegram-preview'
 import { usePOSQuery } from '@/features/pos/queries'
 import { EmojiPickerField } from '@/features/emoji-packs'
 import { ErrorState } from '@/components/common/ErrorState'
@@ -32,9 +33,18 @@ import {
   Package,
   Plus,
   Save,
-  Trash2,
   X,
 } from 'lucide-react'
+
+const MessageContentEditor = lazy(() =>
+  import('@/features/telegram-preview/components/MessageContentEditor').then((mod) => ({
+    default: mod.MessageContentEditor,
+  })),
+)
+
+function EditorFallback() {
+  return <div className="h-32 rounded border border-neutral-200 bg-neutral-50/60 animate-pulse" />
+}
 
 const inputClassName = cn(
   'w-full px-3 py-2 rounded border border-neutral-200 text-sm',
@@ -172,9 +182,13 @@ export default function MenuDetailPage() {
 
   const categories = menu.categories ?? []
 
+  const introContent: MessageContent = draft.intro_content ?? {
+    parts: [{ type: 'text', text: '', parse_mode: 'Markdown' }],
+  }
+
   return (
     <div className="max-w-4xl space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 animate-in">
         <Link
           to={backToModulesHref}
           className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
@@ -193,44 +207,45 @@ export default function MenuDetailPage() {
         )}
       </div>
 
-      <div className="bg-white rounded border border-neutral-900 p-6 animate-in">
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
-          <div className="min-w-0">
-            <input
-              type="text"
-              value={draft.name}
-              onChange={(event) =>
-                setDraft((current) => (current ? { ...current, name: event.target.value } : current))
-              }
-              className={cn(inputClassName, 'text-2xl font-serif font-bold border-none px-0 py-0 focus:ring-0')}
-            />
-            <p className="text-xs text-neutral-400 mt-1">
-              {draft.source === 'pos_import' ? 'Импорт из POS' : 'Ручное создание'}
-              {draft.last_synced_at && ` · Синхронизировано: ${new Date(draft.last_synced_at).toLocaleDateString('ru-RU')}`}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setShowAddCategory(true)}
-              className={cn(
-                'flex items-center gap-1.5 py-2 px-3 rounded text-sm font-medium',
-                'bg-accent text-white hover:bg-accent-hover transition-all',
-              )}
-            >
-              <Plus className="w-4 h-4" />
-              Категория
-            </button>
-            <button
-              type="button"
-              onClick={handleSaveMenu}
-              className="inline-flex items-center gap-1.5 rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
-            >
-              <Save className="h-4 w-4" />
-              Сохранить
-            </button>
-          </div>
+      {/* Heading extracted outside the white card */}
+      <div className="flex flex-wrap items-end justify-between gap-4 animate-in animate-in-delay-1">
+        <div className="min-w-0 flex-1">
+          <input
+            type="text"
+            value={draft.name}
+            onChange={(event) =>
+              setDraft((current) => (current ? { ...current, name: event.target.value } : current))
+            }
+            className="w-full text-3xl font-display font-bold text-neutral-900 tracking-tight bg-transparent border-none px-0 py-0 focus:outline-none focus:ring-0 placeholder:text-neutral-300"
+            placeholder="Название меню"
+          />
+          <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
+            {draft.source === 'pos_import' ? 'Импорт из POS' : 'Ручное создание'}
+            {draft.last_synced_at && ` · Синхронизировано: ${new Date(draft.last_synced_at).toLocaleDateString('ru-RU')}`}
+          </p>
         </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAddCategory(true)}
+            className={cn(
+              'inline-flex items-center gap-1.5 py-2 px-3 rounded text-sm font-medium',
+              'bg-accent text-white hover:bg-accent-hover transition-all',
+            )}
+          >
+            <Plus className="w-4 h-4" />
+            Категория
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveMenu}
+            className="inline-flex items-center gap-1.5 rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
+          >
+            <Save className="h-4 w-4" />
+            Сохранить
+          </button>
+        </div>
+      </div>
 
         <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 mb-6">
           <div className="flex items-start gap-3">
@@ -256,7 +271,7 @@ export default function MenuDetailPage() {
               const binding = bindingsByPosId.get(location.id)
               const isActive = binding?.is_active ?? false
               return (
-                <div key={location.id} className="rounded-lg border border-surface-border bg-white px-3 py-3">
+                <div key={location.id} className="rounded border border-neutral-200 bg-white px-3 py-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="text-sm font-medium text-neutral-900">{location.name}</div>
@@ -315,21 +330,45 @@ export default function MenuDetailPage() {
         </section>
       </div>
 
+      <section className="bg-white rounded border border-neutral-900 p-6 animate-in animate-in-delay-3">
+        <div className="mb-5">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-neutral-300 mb-1">
+            Старт
+          </p>
+          <h2 className="text-sm font-semibold text-neutral-700">Приветственное сообщение</h2>
+          <p className="text-xs text-neutral-500 mt-1.5 leading-relaxed">
+            Текст и медиа, которые бот отправит, когда гость нажмёт кнопку «Меню».
+          </p>
+        </div>
+        <div className="rounded border border-neutral-200 bg-neutral-50/70 p-4">
+          <Suspense fallback={<EditorFallback />}>
+            <MessageContentEditor
+              value={introContent}
+              onChange={(content) =>
+                setDraft((current) => (current ? { ...current, intro_content: content } : current))
+              }
+              onUpload={campaignsApi.uploadFile}
+              maxParts={5}
+            />
+          </Suspense>
+        </div>
+      </section>
+
       {showAddCategory && (
         <div className="bg-white rounded border border-neutral-900 p-5 animate-in">
           <h3 className="text-sm font-semibold text-neutral-900 mb-3">Новая категория</h3>
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <EmojiPickerField
+              value={newCategory.icon_image_url || undefined}
+              onChange={(imageUrl) => setNewCategory((current) => ({ ...current, icon_image_url: imageUrl, icon_emoji: '' }))}
+              onClear={() => setNewCategory((current) => ({ ...current, icon_image_url: '', icon_emoji: '' }))}
+            />
             <input
               type="text"
               value={newCategory.name}
               onChange={(event) => setNewCategory((current) => ({ ...current, name: event.target.value }))}
               placeholder="Название категории"
-              className={inputClassName}
-            />
-            <EmojiPickerField
-              value={newCategory.icon_image_url || undefined}
-              onChange={(imageUrl) => setNewCategory((current) => ({ ...current, icon_image_url: imageUrl, icon_emoji: '' }))}
-              onClear={() => setNewCategory((current) => ({ ...current, icon_image_url: '', icon_emoji: '' }))}
+              className={cn(inputClassName, 'flex-1 min-w-[240px]')}
             />
           </div>
           <div className="mt-4 flex gap-3">
@@ -462,37 +501,41 @@ function CategorySection({
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between px-6 py-4 hover:bg-neutral-50 transition-colors"
       >
-        <div className="flex items-center gap-2">
-          {draftCategory.icon_image_url ? (
-            <img src={draftCategory.icon_image_url} alt="" className="w-5 h-5 object-cover rounded shrink-0" />
-          ) : draftCategory.icon_emoji ? (
-            <span className="text-base leading-none shrink-0">{draftCategory.icon_emoji}</span>
-          ) : null}
-          <h3 className="text-base font-semibold text-neutral-900">{category.name}</h3>
-          <span className="text-xs text-neutral-400">{items.length} позиций</span>
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="flex w-8 h-8 shrink-0 items-center justify-center rounded border border-neutral-200 bg-neutral-50 overflow-hidden">
+            {draftCategory.icon_image_url ? (
+              <img src={draftCategory.icon_image_url} alt="" className="w-full h-full object-cover" />
+            ) : draftCategory.icon_emoji ? (
+              <span className="text-base leading-none">{draftCategory.icon_emoji}</span>
+            ) : (
+              <Package className="w-4 h-4 text-neutral-300" />
+            )}
+          </span>
+          <h3 className="text-base font-semibold text-neutral-900 truncate">{category.name}</h3>
+          <span className="text-xs text-neutral-400 shrink-0">{items.length} позиций</span>
         </div>
-        <ChevronDown className={cn('w-4 h-4 text-neutral-400 transition-transform', expanded && 'rotate-180')} />
+        <ChevronDown className={cn('w-4 h-4 text-neutral-400 transition-transform shrink-0', expanded && 'rotate-180')} />
       </button>
 
       {expanded && (
         <div className="border-t border-neutral-200 space-y-4 p-6">
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_120px_auto]">
-            <input
-              type="text"
-              value={draftCategory.name}
-              onChange={(event) => setDraftCategory((current) => ({ ...current, name: event.target.value }))}
-              placeholder="Название категории"
-              className={inputClassName}
-            />
+          <div className="flex flex-wrap items-center gap-3">
             <EmojiPickerField
               value={draftCategory.icon_image_url || undefined}
               onChange={(imageUrl) => setDraftCategory((current) => ({ ...current, icon_image_url: imageUrl, icon_emoji: '' }))}
               onClear={() => setDraftCategory((current) => ({ ...current, icon_image_url: '', icon_emoji: '' }))}
             />
+            <input
+              type="text"
+              value={draftCategory.name}
+              onChange={(event) => setDraftCategory((current) => ({ ...current, name: event.target.value }))}
+              placeholder="Название категории"
+              className={cn(inputClassName, 'flex-1 min-w-[200px]')}
+            />
             <button
               type="button"
               onClick={handleSaveCategory}
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-700"
+              className="inline-flex min-h-11 items-center justify-center rounded bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-700"
             >
               Сохранить
             </button>
@@ -541,7 +584,7 @@ function CategorySection({
                     className={inputClassName}
                   />
                 </div>
-                <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-dashed border-surface-border px-3 text-sm text-neutral-600 hover:border-accent hover:text-accent">
+                <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded border border-dashed border-neutral-200 px-3 text-sm text-neutral-600 hover:border-accent hover:text-accent">
                   Загрузить фотографию
                   <input
                     type="file"
@@ -650,7 +693,7 @@ function MenuItemRow({ item, onUpdate }: { item: MenuItem; onUpdate: () => void 
   }
 
   return (
-    <div className="rounded-xl border border-surface-border bg-neutral-50/60 p-4">
+    <div className="rounded border border-neutral-200 bg-neutral-50/60 p-4">
       {editing ? (
         <div className="space-y-3">
           <div className="grid gap-3 md:grid-cols-2">
@@ -683,7 +726,7 @@ function MenuItemRow({ item, onUpdate }: { item: MenuItem; onUpdate: () => void 
               placeholder="URL картинки"
             />
           </div>
-          <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-dashed border-surface-border px-3 text-sm text-neutral-600 hover:border-accent hover:text-accent">
+          <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded border border-dashed border-neutral-200 px-3 text-sm text-neutral-600 hover:border-accent hover:text-accent">
             Загрузить фотографию
             <input
               type="file"
@@ -746,7 +789,7 @@ function MenuItemRow({ item, onUpdate }: { item: MenuItem; onUpdate: () => void 
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-400 hover:bg-white hover:text-neutral-700"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-neutral-400 hover:bg-white hover:text-neutral-700"
           >
             <Edit3 className="h-4 w-4" />
           </button>

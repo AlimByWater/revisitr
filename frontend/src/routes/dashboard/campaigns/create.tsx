@@ -18,6 +18,7 @@ import { ArrowLeft, Send, Zap, Save, Trash2 } from 'lucide-react'
 import type { SegmentFilter } from '@/features/segments/types'
 import type { AudienceFilter, Campaign } from '@/features/campaigns/types'
 import { ClientFilterBuilder } from '@/components/filters/ClientFilterBuilder'
+import { CustomSelect } from '@/components/common/CustomSelect'
 import { MessageContentEditor, TelegramPreview } from '@/features/telegram-preview'
 import type { MessageContent } from '@/features/telegram-preview'
 
@@ -45,10 +46,15 @@ const TRIGGER_OPTIONS: { value: TriggerType; label: string }[] = [
 ]
 
 const inputClass = cn(
-  'w-full max-w-sm px-3 py-2.5 rounded-lg border border-neutral-200',
+  'w-full max-w-sm px-3 py-2.5 rounded border border-neutral-200',
   'text-sm text-neutral-900 placeholder:text-neutral-400 bg-white',
   'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
 )
+
+const FORMAT_OPTIONS = [
+  { value: 'manual', label: 'Ручная рассылка' },
+  { value: 'auto', label: 'Авто-сценарий' },
+]
 
 const labelClass = 'block text-sm font-medium text-neutral-700 mb-1.5'
 
@@ -68,14 +74,19 @@ export default function CreateCampaignPage() {
   const createScenarioMutation = useCreateScenarioMutation()
   const previewMutation = usePreviewAudienceMutation()
 
-  const emptyContent: MessageContent = { parts: [{ type: 'text', text: '' }] }
+  const emptyContent: MessageContent = {
+    parts: [{ type: 'text', text: 'Привет, {first_name}!' }],
+  }
 
   const [activeTab, setActiveTab] = useState<TabType>('create')
   const [format, setFormat] = useState<Format>('manual')
   const [name, setName] = useState('')
   const [botId, setBotId] = useState<number | ''>('')
   const [content, setContent] = useState<MessageContent>(emptyContent)
-  const [audienceFilter, setAudienceFilter] = useState<SegmentFilter>({})
+  const initialSegment = searchParams.get('segment')
+  const [audienceFilter, setAudienceFilter] = useState<SegmentFilter>(
+    initialSegment ? { rfm_category: initialSegment } : {},
+  )
 
   // Auto-scenario state
   const [triggerType, setTriggerType] = useState<TriggerType>('inactive_days')
@@ -391,28 +402,30 @@ export default function CreateCampaignPage() {
   return (
     <div className="max-w-4xl">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="animate-in mb-6">
         <button
           onClick={() => navigate('/dashboard/campaigns')}
           type="button"
-          className="p-2 rounded-lg hover:bg-neutral-100 transition-colors"
+          className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded text-sm text-neutral-500 transition-colors hover:text-neutral-700"
         >
-          <ArrowLeft className="w-5 h-5 text-neutral-500" />
+          <ArrowLeft className="h-4 w-4" />
+          К рассылкам
         </button>
-        <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">
           Создать рассылку
         </h1>
+        <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">Параметры и аудитория</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-neutral-100 rounded-lg w-fit mb-6 animate-in">
+      <div className="flex gap-1 p-1 bg-neutral-100 rounded w-fit mb-6 animate-in">
         <button
           type="button"
           onClick={() => setActiveTab('create')}
           className={cn(
-            'px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
+            'px-4 py-2 rounded text-sm font-medium transition-all duration-150',
             activeTab === 'create'
-              ? 'bg-white text-neutral-900 shadow-sm'
+              ? 'bg-white text-neutral-900 '
               : 'text-neutral-500 hover:text-neutral-700',
           )}
         >
@@ -422,9 +435,9 @@ export default function CreateCampaignPage() {
           type="button"
           onClick={() => setActiveTab('drafts')}
           className={cn(
-            'px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
+            'px-4 py-2 rounded text-sm font-medium transition-all duration-150',
             activeTab === 'drafts'
-              ? 'bg-white text-neutral-900 shadow-sm'
+              ? 'bg-white text-neutral-900 '
               : 'text-neutral-500 hover:text-neutral-700',
           )}
         >
@@ -436,7 +449,7 @@ export default function CreateCampaignPage() {
         /* ── Drafts Tab ──────────────────────────────────────────── */
         <div className="space-y-3">
           {drafts.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-12 text-center">
+            <div className="bg-white rounded  border border-neutral-900 p-12 text-center">
               <p className="text-sm text-neutral-400">Нет сохранённых черновиков</p>
             </div>
           ) : (
@@ -444,7 +457,7 @@ export default function CreateCampaignPage() {
               <div
                 key={draft.id}
                 className={cn(
-                  'bg-white rounded-2xl shadow-sm border border-surface-border p-4',
+                  'bg-white rounded  border border-neutral-900 p-4',
                   'flex items-center gap-4 hover:bg-neutral-50 transition-colors',
                 )}
               >
@@ -466,7 +479,7 @@ export default function CreateCampaignPage() {
                   type="button"
                   onClick={() => handleDeleteDraft(draft.id)}
                   disabled={deleteCampaignMutation.isPending}
-                  className="p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                  className="p-2 rounded text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -479,14 +492,14 @@ export default function CreateCampaignPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Editing draft indicator */}
           {editingDraftId && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-              <span className="text-xs text-amber-700">
+            <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 border border-accent/30 rounded">
+              <span className="text-xs text-orange-900">
                 Редактирование черновика #{editingDraftId}
               </span>
               <button
                 type="button"
                 onClick={resetForm}
-                className="ml-auto text-xs text-amber-600 hover:text-amber-800 underline"
+                className="ml-auto text-xs text-orange-900 underline decoration-accent/40 hover:decoration-accent"
               >
                 Новая рассылка
               </button>
@@ -494,7 +507,7 @@ export default function CreateCampaignPage() {
           )}
 
           {/* ── Block 1: Создать ─────────────────────────────────── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 space-y-5">
+          <div className="bg-white rounded  border border-neutral-900 p-6 space-y-5">
             <p className={blockHeaderClass}>Создать</p>
 
             {/* Campaign name */}
@@ -521,210 +534,197 @@ export default function CreateCampaignPage() {
               <label htmlFor="format" className={labelClass}>
                 Формат
               </label>
-              <select
-                id="format"
-                value={format}
-                onChange={(e) => {
-                  setFormat(e.target.value as Format)
-                  // Clear server draft when switching to auto (no drafts for scenarios)
-                  if (e.target.value === 'auto' && editingDraftId) {
-                    setEditingDraftId(null)
-                  }
-                }}
-                className={inputClass}
-              >
-                <option value="manual">Ручная рассылка</option>
-                <option value="auto">Авто-сценарий</option>
-              </select>
+              <div className="max-w-sm">
+                <CustomSelect
+                  value={format}
+                  onChange={(v) => {
+                    setFormat(v as Format)
+                    if (v === 'auto' && editingDraftId) setEditingDraftId(null)
+                  }}
+                  options={FORMAT_OPTIONS}
+                  light
+                />
+              </div>
             </div>
           </div>
 
-          {/* ── Block 2: Настройки ───────────────────────────────── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 space-y-5">
-            <p className={blockHeaderClass}>Настройки</p>
-
-            {/* Bot selector */}
+          {/* ── Block 2: Бот ─────────────────────────────────────── */}
+          <div className="bg-white rounded  border border-neutral-900 p-6 space-y-5">
+            <p className={blockHeaderClass}>Бот</p>
             <div>
               <label htmlFor="bot" className={labelClass}>
-                Бот
+                Выберите бота
               </label>
-              <select
-                id="bot"
-                value={botId}
-                onChange={(e) => handleBotChange(e.target.value)}
-                className={inputClass}
-              >
-                <option value="">Выберите бота</option>
-                {bots?.map((bot) => (
-                  <option key={bot.id} value={bot.id}>
-                    {bot.name} (@{bot.username})
-                  </option>
-                ))}
-              </select>
+              <div className="max-w-sm">
+                <CustomSelect
+                  value={String(botId)}
+                  onChange={(v) => handleBotChange(v)}
+                  options={[
+                    { value: '', label: 'Выберите бота' },
+                    ...(bots ?? []).map((bot) => ({
+                      value: String(bot.id),
+                      label: `${bot.name} (@${bot.username})`,
+                    })),
+                  ]}
+                  light
+                />
+              </div>
             </div>
+          </div>
 
-            {/* Audience filter */}
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-2">
-                Аудитория
-              </p>
-              <ClientFilterBuilder
-                value={audienceFilter}
-                onChange={(f) =>
-                  setAudienceFilter(
-                    botId ? { ...f, bot_id: botId as number } : f,
-                  )
-                }
-                hiddenFields={['bot_id']}
-                previewCount={
-                  previewMutation.isSuccess ? previewMutation.data : null
-                }
-                onPreview={botId ? handlePreview : undefined}
-                isPreviewing={previewMutation.isPending}
-              />
-            </div>
-
-            {/* Auto-scenario specific fields */}
-            {!isManual && (
-              <>
-                {/* Trigger type */}
-                <div>
-                  <label htmlFor="trigger-type" className={labelClass}>
-                    Триггер
-                  </label>
-                  <select
-                    id="trigger-type"
+          {/* ── Block 2.5: Триггер (только для авто-сценария) ──── */}
+          {!isManual && (
+            <div className="bg-white rounded border border-neutral-900 p-6 space-y-5">
+              <p className={blockHeaderClass}>Триггер</p>
+              <div>
+                <label htmlFor="trigger-type" className={labelClass}>
+                  Когда срабатывает
+                </label>
+                <div className="max-w-sm">
+                  <CustomSelect
                     value={triggerType}
-                    onChange={(e) => setTriggerType(e.target.value as TriggerType)}
-                    className={inputClass}
-                  >
-                    {TRIGGER_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => setTriggerType(v as TriggerType)}
+                    options={TRIGGER_OPTIONS}
+                    light
+                  />
                 </div>
+              </div>
 
-                {/* Trigger config fields */}
-                {triggerType === 'inactive_days' && (
-                  <div>
-                    <label htmlFor="trigger-days" className={labelClass}>
-                      Количество дней
-                    </label>
-                    <input
-                      id="trigger-days"
-                      type="number"
-                      min={1}
-                      value={triggerDays}
-                      onChange={(e) =>
-                        setTriggerDays(e.target.value ? Number(e.target.value) : '')
-                      }
-                      placeholder="7"
-                      className={inputClass}
-                    />
-                  </div>
-                )}
-
-                {triggerType === 'visit_count' && (
-                  <div>
-                    <label htmlFor="trigger-count" className={labelClass}>
-                      Номер визита
-                    </label>
-                    <input
-                      id="trigger-count"
-                      type="number"
-                      min={1}
-                      value={triggerCount}
-                      onChange={(e) =>
-                        setTriggerCount(e.target.value ? Number(e.target.value) : '')
-                      }
-                      placeholder="5"
-                      className={inputClass}
-                    />
-                  </div>
-                )}
-
-                {triggerType === 'bonus_threshold' && (
-                  <div>
-                    <label htmlFor="trigger-threshold" className={labelClass}>
-                      Порог бонусов
-                    </label>
-                    <input
-                      id="trigger-threshold"
-                      type="number"
-                      min={1}
-                      value={triggerThreshold}
-                      onChange={(e) =>
-                        setTriggerThreshold(e.target.value ? Number(e.target.value) : '')
-                      }
-                      placeholder="1000"
-                      className={inputClass}
-                    />
-                  </div>
-                )}
-
-                {triggerType === 'date' && (
-                  <div>
-                    <label htmlFor="trigger-date" className={labelClass}>
-                      Выберите дату
-                    </label>
-                    <input
-                      id="trigger-date"
-                      type="date"
-                      value={triggerDate}
-                      onChange={(e) => setTriggerDate(e.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
-                )}
-
-                {/* Timing */}
+              {triggerType === 'inactive_days' && (
                 <div>
-                  <p className="text-sm font-medium text-neutral-700 mb-3">
-                    Время отправки (опционально)
-                  </p>
-                  <div className="flex gap-4">
-                    <div className="flex-1 max-w-[180px]">
-                      <label htmlFor="days-before" className="block text-xs text-neutral-500 mb-1">
-                        Дней до
-                      </label>
-                      <input
-                        id="days-before"
-                        type="number"
-                        min={0}
-                        value={daysBefore}
-                        onChange={(e) =>
-                          setDaysBefore(e.target.value ? Number(e.target.value) : '')
-                        }
-                        placeholder="0"
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="flex-1 max-w-[180px]">
-                      <label htmlFor="days-after" className="block text-xs text-neutral-500 mb-1">
-                        Дней после
-                      </label>
-                      <input
-                        id="days-after"
-                        type="number"
-                        min={0}
-                        value={daysAfter}
-                        onChange={(e) =>
-                          setDaysAfter(e.target.value ? Number(e.target.value) : '')
-                        }
-                        placeholder="0"
-                        className={inputClass}
-                      />
-                    </div>
+                  <label htmlFor="trigger-days" className={labelClass}>
+                    Количество дней
+                  </label>
+                  <input
+                    id="trigger-days"
+                    type="number"
+                    min={1}
+                    value={triggerDays}
+                    onChange={(e) =>
+                      setTriggerDays(e.target.value ? Number(e.target.value) : '')
+                    }
+                    placeholder="7"
+                    className={inputClass}
+                  />
+                </div>
+              )}
+
+              {triggerType === 'visit_count' && (
+                <div>
+                  <label htmlFor="trigger-count" className={labelClass}>
+                    Номер визита
+                  </label>
+                  <input
+                    id="trigger-count"
+                    type="number"
+                    min={1}
+                    value={triggerCount}
+                    onChange={(e) =>
+                      setTriggerCount(e.target.value ? Number(e.target.value) : '')
+                    }
+                    placeholder="5"
+                    className={inputClass}
+                  />
+                </div>
+              )}
+
+              {triggerType === 'bonus_threshold' && (
+                <div>
+                  <label htmlFor="trigger-threshold" className={labelClass}>
+                    Порог бонусов
+                  </label>
+                  <input
+                    id="trigger-threshold"
+                    type="number"
+                    min={1}
+                    value={triggerThreshold}
+                    onChange={(e) =>
+                      setTriggerThreshold(e.target.value ? Number(e.target.value) : '')
+                    }
+                    placeholder="1000"
+                    className={inputClass}
+                  />
+                </div>
+              )}
+
+              {triggerType === 'date' && (
+                <div>
+                  <label htmlFor="trigger-date" className={labelClass}>
+                    Выберите дату
+                  </label>
+                  <input
+                    id="trigger-date"
+                    type="date"
+                    value={triggerDate}
+                    onChange={(e) => setTriggerDate(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+              )}
+
+              <div>
+                <p className="text-sm font-medium text-neutral-700 mb-3">
+                  Время отправки (опционально)
+                </p>
+                <div className="flex gap-4">
+                  <div className="flex-1 max-w-[180px]">
+                    <label htmlFor="days-before" className="block text-xs text-neutral-500 mb-1">
+                      Дней до
+                    </label>
+                    <input
+                      id="days-before"
+                      type="number"
+                      min={0}
+                      value={daysBefore}
+                      onChange={(e) =>
+                        setDaysBefore(e.target.value ? Number(e.target.value) : '')
+                      }
+                      placeholder="0"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="flex-1 max-w-[180px]">
+                    <label htmlFor="days-after" className="block text-xs text-neutral-500 mb-1">
+                      Дней после
+                    </label>
+                    <input
+                      id="days-after"
+                      type="number"
+                      min={0}
+                      value={daysAfter}
+                      onChange={(e) =>
+                        setDaysAfter(e.target.value ? Number(e.target.value) : '')
+                      }
+                      placeholder="0"
+                      className={inputClass}
+                    />
                   </div>
                 </div>
-              </>
-            )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Block 3: Аудитория ──────────────────────────────── */}
+          <div className="bg-white rounded  border border-neutral-900 p-6 space-y-5">
+            <p className={blockHeaderClass}>Аудитория</p>
+            <ClientFilterBuilder
+              value={audienceFilter}
+              onChange={(f) =>
+                setAudienceFilter(
+                  botId ? { ...f, bot_id: botId as number } : f,
+                )
+              }
+              hiddenFields={['bot_id']}
+              previewCount={
+                previewMutation.isSuccess ? previewMutation.data : null
+              }
+              onPreview={botId ? handlePreview : undefined}
+              isPreviewing={previewMutation.isPending}
+            />
           </div>
 
           {/* ── Block 3: Редактировать сообщение ─────────────────── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 space-y-5">
+          <div className="bg-white rounded  border border-neutral-900 p-6 space-y-5">
             <p className={blockHeaderClass}>Редактировать сообщение</p>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -754,7 +754,7 @@ export default function CreateCampaignPage() {
                 onClick={handleSaveDraft}
                 disabled={!name.trim() || botId === '' || isSaving}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
+                  'flex items-center gap-2 px-4 py-2.5 rounded text-sm font-medium',
                   'border border-neutral-200 text-neutral-700',
                   'hover:bg-neutral-50 transition-colors',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -768,7 +768,7 @@ export default function CreateCampaignPage() {
               type="button"
               onClick={() => navigate('/dashboard/campaigns')}
               className={cn(
-                'px-4 py-2.5 rounded-lg text-sm font-medium',
+                'px-4 py-2.5 rounded text-sm font-medium',
                 'border border-neutral-200 text-neutral-700',
                 'hover:bg-neutral-50 transition-colors',
               )}
@@ -779,7 +779,7 @@ export default function CreateCampaignPage() {
               type="submit"
               disabled={!isValid || isSaving}
               className={cn(
-                'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
+                'flex items-center gap-2 px-4 py-2.5 rounded text-sm font-medium',
                 'bg-accent text-white',
                 'hover:bg-accent/90 active:bg-accent/80',
                 'transition-colors',

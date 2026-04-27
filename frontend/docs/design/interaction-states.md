@@ -44,6 +44,8 @@
 | Группировка | Разделители `border-t border-neutral-200 my-1 mx-3` |
 | ChevronDown | `rotate-180` при открытии, `transition-transform duration-200` |
 | Закрытие | По клику вне (mousedown на document) |
+| Вариант `light` | `border-neutral-200` — для селектов внутри белых контейнеров с чёрной обводкой |
+| Вариант `ghost` | Прозрачный по умолчанию, белая карточка при hover/open — для селектов внутри `bg-neutral-50` блоков |
 
 **Запрещено**: нативные `<select>`, портал/createPortal, position:fixed.
 
@@ -70,7 +72,7 @@
 
 | Элемент | Стиль |
 |---------|-------|
-| Заголовок (h1) | `font-serif text-3xl font-bold text-neutral-900 tracking-tight` |
+| Заголовок (h1) | `font-display text-3xl font-bold text-neutral-900 tracking-tight` |
 | Подзаголовок (p) | `font-mono text-xs text-neutral-300 uppercase tracking-wider mt-1` |
 
 **Запрещено**: `text-neutral-500`, `text-neutral-600`, `text-muted-foreground` для подзаголовков.
@@ -85,6 +87,10 @@
 | Чёрные кнопки | `hover:bg-neutral-700` (чуть светлее) |
 | Дропдауны | `hover:bg-neutral-50` |
 | Метрики/виджеты | Без hover (не кликабельные) |
+| Кликабельные карточки-плитки | `hover:scale-[1.02] transition-transform duration-150` |
+| Аватар/icon-placeholder | Без ховер-эффекта — нейтральный серый `bg-neutral-100` фиксирован |
+
+**Исключение (аватар-плейсхолдер)**: кнопка-иконка бота (`bots/index.tsx`, `w-10 h-10 rounded bg-neutral-100`) — это аватарный placeholder, не обычная иконка. Серый фон фиксирован, НЕ применять `group-hover:bg-accent/10` и т.п.
 
 ## Серые оттенки (палитра)
 
@@ -144,15 +150,20 @@
 
 `contentStyle={{ borderRadius: 4, border: '1px solid #e5e5e5', fontSize: 13 }}`
 
-## Шрифты
+## § Шрифты
 
-| Контекст | Шрифт |
-|----------|-------|
-| Body (default theme) | `Outfit` — будет заменён позже |
-| Body (Aurora theme) | `Inter` |
-| Mono | `JetBrains Mono` |
+| Контекст | Класс / Переменная |
+|----------|-------------------|
+| Заголовки (h1, h2 и крупные акцентные тексты) | `font-display` → CSS var `--font-display` (сейчас Inter) |
+| Числа, метрики, mono-подписи | `font-mono` (JetBrains Mono) |
+| Body / всё остальное | Inter (default sans, задан в `index.css` через `font-family`) |
 
-**Примечание**: Шрифты будут унифицированы в отдельном проходе.
+**Правила**:
+- `font-display` — для всех заголовков страниц вместо устаревшего `font-serif`.
+- `font-mono` — для числовых значений, tabular-nums, подписей меток (eyebrow).
+- Смена шрифта в будущем делается одним изменением `--font-display` без правки кода.
+
+**Запрещено**: `font-serif` — устарел и заменён на `font-display` глобально.
 
 ## Общие правила
 
@@ -199,3 +210,217 @@
 - Фильтры по периоду и боту реально фильтруют данные
 - Числа консистентны: сегодня < неделя < месяц
 - Включается через `VITE_MOCK_API=true` в `.env`, отключается удалением переменной
+
+---
+
+## § Уведомления (Notice)
+
+Все notice-баннеры используют оранжевое семейство. Исключение — только success (зелёный).
+
+### Классы по интенту
+
+| Интент | Обёртка | Иконка | Заголовок | Текст |
+|--------|---------|--------|-----------|-------|
+| info | `bg-orange-50 border border-accent/30 rounded p-4` | `Info` `text-accent` | `text-orange-900 font-semibold` | `text-orange-800/90` |
+| important | `bg-orange-50 border border-accent/60 rounded p-4` | `AlertTriangle` `text-accent` | `text-orange-900 font-semibold` | `text-orange-800/90` |
+| action | `bg-orange-50 border border-accent/30 rounded p-4` | `AlertCircle` `text-accent` | `text-orange-900 font-semibold` | `text-orange-800/90` |
+| tip | `bg-orange-50 border border-accent/30 rounded p-4` | `Lightbulb` `text-accent` | `text-orange-900 font-semibold` | `text-orange-800/90` |
+| success | `bg-emerald-50 border border-emerald-500/25 rounded p-4` | `CheckCircle2` `text-emerald-600` | `text-emerald-900 font-semibold` | `text-emerald-800/90` |
+
+**Запрещено**: `bg-amber-50`, `bg-blue-50`, `bg-yellow-50` — использовать только оранжевое семейство (кроме success).
+
+Иконка располагается слева `shrink-0 mt-0.5`, текстовый блок — справа с `min-w-0`.
+
+---
+
+## § Теги и статусы
+
+Два стандарта в зависимости от назначения.
+
+### V1 — Статусные теги (outline mono)
+
+Используется для: active/inactive/pending/error/vip статусов сущностей.
+
+```
+font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border
+```
+
+| Тон | Классы |
+|-----|--------|
+| emerald (active) | `bg-emerald-500/10 text-emerald-700 border-emerald-500/30` |
+| neutral (inactive) | `bg-neutral-100 text-neutral-600 border-neutral-300` |
+| amber (pending) | `bg-amber-500/10 text-amber-700 border-amber-500/30` |
+| red (error) | `bg-red-500/10 text-red-700 border-red-500/30` |
+| accent (vip/featured) | `bg-accent/10 text-accent border-accent/30` |
+
+### V2 — Категориальные теги (solid filled)
+
+Используется для: RFM-сегментов, категорий, типов.
+
+```
+font-mono text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded
+```
+
+Заливка с белым текстом или тематическими цветами. Для RFM используется `RFM_SEGMENT_COLORS`.
+
+**Запрещено**: `rounded-full` на статусных тегах — только `rounded`.
+
+---
+
+## § Кнопки
+
+Компонент `Button` из `@/components/common/Button`.
+
+| Вариант | Стиль |
+|---------|-------|
+| `primary` | `bg-accent text-white hover:bg-accent-hover` — основные CTA |
+| `secondary` | `bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50` — отмена, CSV, назад |
+| `dark` | `bg-neutral-900 text-white hover:bg-neutral-700` — сохранить черновик, публикация, удалить |
+
+| Размер | Padding |
+|--------|---------|
+| `sm` | `py-1.5 px-3 text-xs` |
+| `md` (default) | `px-4 py-2.5 text-sm` |
+
+Props: `variant`, `size`, `leftIcon`, `asChild`. Базовые классы: `inline-flex items-center justify-center gap-2 rounded text-sm font-medium transition-colors`.
+
+**Запрещено**: инлайн-стили `bg-accent text-white` на `<button>` — использовать `<Button variant="primary">`.
+
+---
+
+## § Таблицы
+
+| Правило | Значение |
+|---------|----------|
+| Выравнивание колонок | `text-center` на всех `<th>` и `<td>` кроме первой колонки с названием (`text-left`) |
+| Padding ячеек | `px-4 py-3` |
+| Заголовки | `font-mono text-[11px] uppercase tracking-wider text-neutral-400` |
+| Строки-разделители | `divide-y divide-neutral-200` на `<tbody>` или inline `<div className="mx-4 border-t border-neutral-200" />` |
+| Пагинация | ChevronsLeft / ChevronLeft / page numbers / ChevronRight / ChevronsRight — паттерн из `clients/index.tsx` и `rfm/segments/$segment.tsx` |
+| Hover строки | `hover:bg-neutral-50 transition-colors` |
+| Строки-ссылки | `cursor-pointer` + `onClick={() => navigate(...)}` |
+
+Референс: `clients/index.tsx`, `rfm/segments/$segment.tsx`.
+
+---
+
+## § Виджеты (StatCard)
+
+Иконки — инлайн `text-neutral-400 w-4 h-4`, **без бокса** (исключение — bot avatar placeholder).
+
+```tsx
+<div className="border border-neutral-900 rounded bg-white p-5">
+  <div className="flex items-center gap-2 text-neutral-400 mb-3">
+    <Icon className="w-4 h-4" />
+    <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
+  </div>
+  <p className="font-mono text-3xl font-bold text-neutral-900 tracking-tight tabular-nums">{value}</p>
+</div>
+```
+
+**Запрещено**: `bg-amber-50`, `bg-green-50`, `bg-blue-50` вокруг иконок в виджетах.
+
+---
+
+## § Цифровые бейджи
+
+| Контекст | Стиль |
+|----------|-------|
+| Большие (таблицы, детали) | V1 outline mono: `font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border` |
+| Маленькие (sidebar счётчики) | `bg-neutral-100 text-neutral-600 border border-neutral-300 rounded-sm text-[10px] font-mono px-1.5 py-0.5` |
+
+**Запрещено**: `rounded-full` на статусных тегах — только `rounded`.
+
+---
+
+## § Empty states
+
+Иконка inline `text-neutral-400 w-8 h-8`, **без бокса**:
+
+```tsx
+<Icon className="w-8 h-8 text-neutral-400 mb-4" />
+```
+
+**Исключение**: bot avatar placeholder (`bots/index.tsx`) — `w-10 h-10 rounded bg-neutral-100` остаётся с боксом.
+
+---
+
+## § Spacing
+
+| Правило | Значение |
+|---------|----------|
+| Между top-level секциями страницы | `space-y-6` |
+| Внутри блоков (карточки, формы) | `space-y-4` или `space-y-3` |
+
+**Запрещено**: `space-y-8` между верхнеуровневыми секциями страницы.
+
+---
+
+## § Карточки-плитки (list card pattern)
+
+Стандарт для кликабельных карточек в сетке (боты, POS, лояльность и т.д.).
+
+| Элемент | Стиль |
+|---------|-------|
+| Внешняя обёртка | `bg-white rounded border border-neutral-900 p-5` или `p-6` |
+| Ховер (если Link/кликабельная) | `hover:scale-[1.02] transition-transform duration-150` |
+| Аватар-слот (если есть) | `w-10 h-10 rounded bg-neutral-100` с иконкой `text-neutral-500` — **без ховер-реколора** |
+| Статусный тег | V1 outline mono, в правом верхнем углу |
+| Footer-строка (опционально) | `mt-4 pt-4 border-t border-neutral-200` с mono micro-stats |
+| Максимум в строке | 2 карточки на `md+` (если нет явной причины больше) |
+
+**Запрещено**: `shadow-sm`, `rounded-lg`, `rounded-xl` на карточках. Ховер-эффекты на аватарах.
+
+---
+
+## § Подблоки (sub-section внутри карточки)
+
+Светло-серая «вкладка» внутри основного белого блока — для группировок: настроек, привязок, форм.
+
+| Элемент | Стиль |
+|---------|-------|
+| Обёртка | `rounded border border-neutral-200 bg-neutral-50/70 p-3` или `p-4` |
+| Заголовок (mono eyebrow) | `text-xs font-medium uppercase tracking-[0.18em] text-neutral-400 mb-2` |
+| Внутренние ряды (item) | `bg-white px-3 py-2.5 rounded` (или то же `border-neutral-200`, если нужно подчеркнуть) |
+
+**Используется в**: меню > привязка к точкам продаж, меню-категории > редактирование, бот-настройки > программа лояльности.
+
+**Запрещено**: пустые белые подблоки внутри белой карточки без эйбрового заголовка (нет иерархии). Серая обводка — обязательна для всех «вложенных групп».
+
+---
+
+## § Пагинация (унифицированная)
+
+Все таблицы используют общий компонент `@/components/common/Pagination`.
+
+| Элемент | Стиль |
+|---------|-------|
+| Левая часть | `text-sm text-neutral-500` — «Всего N записей» (если задан `total` + `itemsLabel`), иначе «Стр. P из N» |
+| Правая часть | 5 кнопок: `‹‹` (первая), `‹` (предыдущая), `P / N` лейбл, `›` (следующая), `››` (последняя) |
+| Кнопка | `p-2 rounded text-neutral-500 hover:bg-neutral-100`, disabled = `opacity-40 cursor-not-allowed` |
+| Лейбл «P / N» | `px-3 py-2 text-sm text-neutral-700 tabular-nums` |
+
+**Запрещено**: дублировать инлайн-пагинацию (нумерованные кнопки 1/2/3/4/5) — использовать только общий компонент. Несогласованная пагинация запрещена.
+
+---
+
+## § Тосты / алерты (inline notifications)
+
+Цветные блоки уведомлений строятся из палитры. См. демо: `/dashboard/_design`.
+
+| Вариант | bg | border | icon |
+|---------|----|--------|------|
+| success | `bg-emerald-50` | `border-emerald-500/25` | `text-emerald-600` |
+| error | `bg-red-50` | `border-red-500/25` | `text-red-600` |
+| warning | `bg-orange-50` | `border-orange-400/50` | `text-orange-500` |
+| info | `bg-orange-50` | `border-accent/30` | `text-accent` |
+| neutral | `bg-neutral-50/70` | `border-neutral-200` | `text-neutral-500` |
+
+Текст для цветных вариантов: title `text-{color}-900 font-semibold`, body `text-{color}-800/90`.
+Для `neutral`: title `text-neutral-900 font-semibold`, body `text-neutral-600`.
+
+**Используется в**:
+- success / error / warning / info — `WarningBanner` (бот-страница), inline-уведомления о сохранении, ошибках валидации.
+- neutral — пояснительные подблоки (привязка POS на странице меню, контекстные подсказки внутри белых карточек) и места, где цветной тост был бы перегрузом.
+
+**Запрещено**: «уведомления» с белым фоном и `border-neutral-900` (это стиль карточек, не алертов). Все inline-блоки строятся из этих 5 вариантов — не выдумывать новые палитры.

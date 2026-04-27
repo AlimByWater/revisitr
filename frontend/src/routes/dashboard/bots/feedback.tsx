@@ -10,7 +10,7 @@ import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 import { ErrorState } from '@/components/common/ErrorState'
 
 const inputClassName = cn(
-  'w-full px-4 py-2.5 rounded-lg border border-surface-border',
+  'w-full px-4 py-2.5 rounded border border-neutral-200',
   'text-sm placeholder:text-neutral-400 bg-white',
   'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
   'transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
@@ -61,7 +61,7 @@ function SaveFooter({
   onSave: () => void
 }) {
   return (
-    <div className="mt-6 flex flex-col gap-3 border-t border-surface-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-6 flex flex-col gap-3 border-t border-neutral-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-h-5 text-sm">
         {saveError && <span className="text-red-600">{saveError}</span>}
         {saveSuccess && <span className="text-green-600">Сохранено</span>}
@@ -71,7 +71,7 @@ function SaveFooter({
         onClick={onSave}
         disabled={isSaving}
         className={cn(
-          'inline-flex min-h-11 items-center justify-center rounded-lg px-5 text-sm font-medium',
+          'inline-flex min-h-11 items-center justify-center rounded px-5 text-sm font-medium',
           'bg-accent text-white hover:bg-accent/90 transition-colors',
           'disabled:cursor-not-allowed disabled:opacity-50',
         )}
@@ -141,49 +141,47 @@ export default function BotFeedbackSettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl rounded-2xl border border-surface-border bg-white p-6 shadow-sm">
-      <div className="mb-5">
+    <div className="max-w-4xl">
+      <div className="animate-in mb-6">
         <Link
           to={`/dashboard/bots/${id}?tab=modules`}
-          className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm text-neutral-500 transition-colors hover:text-neutral-700"
+          className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded text-sm text-neutral-500 transition-colors hover:text-neutral-700"
         >
           <ArrowLeft className="h-4 w-4" />
           К модулям
         </Link>
-        <h1 className="text-lg font-semibold text-neutral-900">
-          <span className="mb-0.5 block font-mono text-[10px] font-normal uppercase tracking-widest text-neutral-400">
-            Настройки модуля
-          </span>
-          Связаться
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-neutral-500">
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">Связаться</h1>
+        <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">Настройки модуля</p>
+        <p className="mt-2 max-w-2xl text-sm text-neutral-500">
           Текст запроса к гостю и сообщение после отправки обратной связи.
         </p>
       </div>
 
-      <div className="space-y-4">
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-neutral-700">Первое сообщение</span>
-          <textarea
-            rows={3}
-            value={draft.prompt_message}
-            onChange={(event) => setDraft((current) => (current ? { ...current, prompt_message: event.target.value } : current))}
-            className={inputClassName}
-            placeholder="Напишите ваш вопрос:"
-          />
-        </label>
+      <section className="rounded border border-neutral-900 bg-white p-4 sm:p-5 md:p-6">
+        <div className="space-y-4">
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-neutral-700">Первое сообщение</span>
+            <textarea
+              rows={3}
+              value={draft.prompt_message}
+              onChange={(event) => setDraft((current) => (current ? { ...current, prompt_message: event.target.value } : current))}
+              className={inputClassName}
+              placeholder="Напишите ваш вопрос:"
+            />
+          </label>
 
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-neutral-700">Сообщение после отправки</span>
-          <textarea
-            rows={3}
-            value={draft.success_message}
-            onChange={(event) => setDraft((current) => (current ? { ...current, success_message: event.target.value } : current))}
-            className={inputClassName}
-            placeholder="Ваше сообщение отправлено."
-          />
-        </label>
-      </div>
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-neutral-700">Сообщение после отправки</span>
+            <textarea
+              rows={3}
+              value={draft.success_message}
+              onChange={(event) => setDraft((current) => (current ? { ...current, success_message: event.target.value } : current))}
+              className={inputClassName}
+              placeholder="Ваше сообщение отправлено."
+            />
+          </label>
+        </div>
+      </section>
 
       <SaveFooter isSaving={isSaving} saveError={saveError} saveSuccess={saveSuccess} onSave={save} />
     </div>

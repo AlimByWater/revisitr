@@ -10,10 +10,12 @@
 
 :root {
   /* Default theme (warm minimalism) */
-  --color-accent: #EF3219;
-  --color-accent-hover: #D42D16;
+  --color-accent-rgb: 239 50 25;
+  --color-accent-hover-rgb: 212 45 22;
+  --color-accent: rgb(var(--color-accent-rgb));
+  --color-accent-hover: rgb(var(--color-accent-hover-rgb));
   --color-accent-light: #FFF0ED;
-  --color-accent-glow: rgba(239, 50, 25, 0.55);
+  --color-accent-glow: rgb(var(--color-accent-rgb) / 0.55);
 
   --color-surface: #FAFAFA;
   --color-surface-card: #FFFFFF;
@@ -42,7 +44,8 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
   --shadow-card-hover: 0 6px 16px rgba(0, 0, 0, 0.07);
 
-  --font-display: 'Playfair Display', Georgia, serif;
+  /* font-display = заголовки (h1/h2/...). Сейчас Inter; меняй здесь, чтобы вернуть Playfair или другой шрифт для всех заголовков. */
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
   --noise-opacity: 0.03;
   --sidebar-noise-opacity: 0.04;
@@ -53,10 +56,12 @@
    ═══════════════════════════════════════ */
 
 [data-theme="aurora"] {
-  --color-accent: #8B5CF6;
-  --color-accent-hover: #7C3AED;
-  --color-accent-light: rgba(139, 92, 246, 0.08);
-  --color-accent-glow: rgba(139, 92, 246, 0.4);
+  --color-accent-rgb: 139 92 246;
+  --color-accent-hover-rgb: 124 58 237;
+  --color-accent: rgb(var(--color-accent-rgb));
+  --color-accent-hover: rgb(var(--color-accent-hover-rgb));
+  --color-accent-light: rgb(var(--color-accent-rgb) / 0.08);
+  --color-accent-glow: rgb(var(--color-accent-rgb) / 0.4);
 
   --color-surface: #0F0B1A;
   --color-surface-card: rgba(255, 255, 255, 0.04);
@@ -96,14 +101,69 @@
     border-color: var(--color-surface-border);
   }
 
-  input[type="checkbox"] {
-    accent-color: #171717;
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--color-accent);
+  }
+
+  /* Suppress default browser blue focus ring everywhere — our utilities apply the accent ring. */
+  input,
+  textarea,
+  select,
+  button,
+  [role="button"],
+  [contenteditable="true"] {
+    outline: none;
+  }
+  input:focus,
+  textarea:focus,
+  select:focus,
+  button:focus,
+  [role="button"]:focus,
+  [contenteditable="true"]:focus,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  [contenteditable="true"]:focus-visible {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Force every interactive element's Tailwind ring colour to the accent palette,
+     so legacy `focus:ring-2` (no colour modifier) and any spot still defaulting to
+     Tailwind's blue ring become accent-tinted. */
+  *,
+  *::before,
+  *::after {
+    --tw-ring-color: rgb(var(--color-accent-rgb) / 0.2);
+  }
+
+  /* Default accent focus ring for inputs/textareas/selects that don't carry their
+     own focus utilities — kills the browser's blue ring without breaking custom rings.
+     DISABLED per user request — re-enable by uncommenting if needed. */
+  /*
+  input:not([class*="focus:ring"]):focus,
+  textarea:not([class*="focus:ring"]):focus,
+  select:not([class*="focus:ring"]):focus {
+    box-shadow: 0 0 0 3px rgb(var(--color-accent-rgb) / 0.18);
+    border-color: var(--color-accent);
+  }
+  */
+  /* Webkit autofill — kill the yellow background and blue focus halo */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--color-text-primary);
+    -webkit-box-shadow: 0 0 0 1000px var(--color-surface-card) inset !important;
+    box-shadow: 0 0 0 1000px var(--color-surface-card) inset !important;
+    transition: background-color 5000s ease-in-out 0s;
   }
 
   body {
     background-color: var(--color-surface);
     color: var(--color-text-primary);
-    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transition: background-color 0.5s ease, color 0.3s ease;
@@ -345,9 +405,11 @@
 }
 
 @layer utilities {
-  /* Staggered page entrance */
+  /* Staggered page entrance.
+     fill-mode: backwards holds initial state during delay but releases the element
+     after the animation, so descendant hover transforms (scale, translate) work. */
   .animate-in {
-    animation: fadeSlideIn 0.4s ease-out both;
+    animation: fadeSlideIn 0.4s ease-out backwards;
   }
 
   .animate-in-delay-1 { animation-delay: 0.05s; }
@@ -403,6 +465,18 @@
   @keyframes shimmer {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
+  }
+
+  /* Rotating conic-gradient border (used for accent hover) */
+  @property --angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  @keyframes conicSpin {
+    0% { --angle: 0deg; }
+    100% { --angle: 360deg; }
   }
 
   /* Mobile drawer */

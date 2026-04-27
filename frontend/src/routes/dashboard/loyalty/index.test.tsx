@@ -63,7 +63,6 @@ describe('LoyaltyProgramsPage', () => {
   })
 
   it('keeps bot context when opening a loyalty program', async () => {
-    const user = userEvent.setup()
     renderPage('/dashboard/loyalty?botId=1')
 
     expect(screen.getByRole('link', { name: 'Назад к модулям бота' })).toHaveAttribute(
@@ -71,8 +70,8 @@ describe('LoyaltyProgramsPage', () => {
       '/dashboard/bots/1?tab=modules',
     )
 
-    await user.click(screen.getByRole('button', { name: /Baratie Rewards/ }))
-
-    expect(mockNavigate).toHaveBeenCalledWith('/dashboard/loyalty/3?botId=1')
+    // Program card is a <Link> — verify the href preserves botId context
+    const programLink = screen.getByRole('link', { name: /Baratie Rewards/ })
+    expect(programLink).toHaveAttribute('href', '/dashboard/loyalty/3?botId=1')
   })
 })

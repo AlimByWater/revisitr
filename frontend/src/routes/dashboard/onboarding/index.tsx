@@ -119,7 +119,7 @@ export default function OnboardingPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="text-center mb-8 animate-in">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">
           Добро пожаловать в Revisitr
         </h1>
         <p className="text-sm text-neutral-500 mt-2">
@@ -307,24 +307,33 @@ function StepContent({
 
   const action = stepActions[step.key]
 
+  const stepIcon = (
+    <div
+      className={cn(
+        'w-14 h-14 rounded flex items-center justify-center mx-auto mb-5',
+        isCompleted ? 'bg-emerald-500/10' : 'bg-accent/10',
+      )}
+    >
+      {isCompleted ? (
+        <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+      ) : (
+        <Icon className="w-7 h-7 text-accent" />
+      )}
+    </div>
+  )
+
+  const completedBadge = isCompleted && (
+    <p className="mt-5 font-mono text-[10px] uppercase tracking-wider text-emerald-700">
+      Выполнено
+    </p>
+  )
+
   // Rich content for info step
   if (step.key === 'info') {
     return (
       <div className="text-center">
-        <div
-          className={cn(
-            'w-16 h-16 rounded flex items-center justify-center mx-auto mb-5',
-            isCompleted ? 'bg-green-50' : 'bg-accent/10',
-          )}
-        >
-          {isCompleted ? (
-            <CheckCircle2 className="w-8 h-8 text-green-500" />
-          ) : (
-            <Icon className="w-8 h-8 text-accent" />
-          )}
-        </div>
-
-        <h2 className="text-xl font-bold text-neutral-900 mb-2">{step.title}</h2>
+        {stepIcon}
+        <h2 className="font-display text-xl font-bold text-neutral-900 mb-2 tracking-tight">{step.title}</h2>
         <p className="text-sm text-neutral-500 leading-relaxed max-w-md mx-auto mb-6">
           Revisitr — платформа лояльности для HoReCa на базе Telegram.
           Управляйте бонусами, запускайте рассылки и следите за метриками в одном окне.
@@ -336,7 +345,7 @@ function StepContent({
             return (
               <div
                 key={feature.title}
-                className="bg-neutral-50 border border-neutral-100 rounded p-4 text-left"
+                className="bg-white border border-neutral-200 rounded p-4 text-center flex flex-col items-center"
               >
                 <FeatureIcon className="w-5 h-5 text-accent mb-2" />
                 <p className="text-sm font-semibold text-neutral-900 mb-1">{feature.title}</p>
@@ -346,9 +355,7 @@ function StepContent({
           })}
         </div>
 
-        {isCompleted && (
-          <p className="mt-5 text-sm text-green-600 font-medium">Выполнено</p>
-        )}
+        {completedBadge}
       </div>
     )
   }
@@ -357,20 +364,8 @@ function StepContent({
   if (step.key === 'next_steps') {
     return (
       <div className="text-center">
-        <div
-          className={cn(
-            'w-16 h-16 rounded flex items-center justify-center mx-auto mb-5',
-            isCompleted ? 'bg-green-50' : 'bg-accent/10',
-          )}
-        >
-          {isCompleted ? (
-            <CheckCircle2 className="w-8 h-8 text-green-500" />
-          ) : (
-            <Icon className="w-8 h-8 text-accent" />
-          )}
-        </div>
-
-        <h2 className="text-xl font-bold text-neutral-900 mb-2">{step.title}</h2>
+        {stepIcon}
+        <h2 className="font-display text-xl font-bold text-neutral-900 mb-2 tracking-tight">{step.title}</h2>
         <p className="text-sm text-neutral-500 leading-relaxed max-w-md mx-auto mb-6">
           Настройка завершена. Выберите, с чего начать работу.
         </p>
@@ -383,12 +378,12 @@ function StepContent({
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  'group flex items-start gap-3 bg-neutral-50 border border-neutral-100',
-                  'rounded p-4 text-left transition-all',
-                  'hover:border-accent/30 hover:bg-accent/5 ',
+                  'group flex items-start gap-3 bg-white border border-neutral-200',
+                  'rounded p-4 text-left transition-all cursor-pointer',
+                  'hover:border-accent/30 hover:bg-accent/5',
                 )}
               >
-                <div className="w-9 h-9 rounded bg-white border border-neutral-100 flex items-center justify-center shrink-0 group-hover:border-accent/20">
+                <div className="w-9 h-9 rounded bg-neutral-50 border border-neutral-200 flex items-center justify-center shrink-0 group-hover:border-accent/30">
                   <ActionIcon className="w-4 h-4 text-neutral-600 group-hover:text-accent transition-colors" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -401,9 +396,7 @@ function StepContent({
           })}
         </div>
 
-        {isCompleted && (
-          <p className="mt-5 text-sm text-green-600 font-medium">Выполнено</p>
-        )}
+        {completedBadge}
       </div>
     )
   }
@@ -411,20 +404,8 @@ function StepContent({
   // Default step content
   return (
     <div className="text-center">
-      <div
-        className={cn(
-          'w-16 h-16 rounded flex items-center justify-center mx-auto mb-5',
-          isCompleted ? 'bg-green-50' : 'bg-accent/10',
-        )}
-      >
-        {isCompleted ? (
-          <CheckCircle2 className="w-8 h-8 text-green-500" />
-        ) : (
-          <Icon className="w-8 h-8 text-accent" />
-        )}
-      </div>
-
-      <h2 className="text-xl font-bold text-neutral-900 mb-2">{step.title}</h2>
+      {stepIcon}
+      <h2 className="font-display text-xl font-bold text-neutral-900 mb-2 tracking-tight">{step.title}</h2>
       <p className="text-sm text-neutral-500 leading-relaxed max-w-md mx-auto">
         {step.description}
       </p>
@@ -434,9 +415,9 @@ function StepContent({
           type="button"
           onClick={() => navigate(action.href)}
           className={cn(
-            'inline-flex items-center gap-1.5 mt-5 py-2 px-4 rounded text-sm font-medium',
-            'border border-neutral-900 text-neutral-700',
-            'hover:bg-neutral-50 transition-colors',
+            'inline-flex items-center gap-1.5 mt-5 py-2 px-4 rounded text-sm font-medium cursor-pointer',
+            'text-accent border border-accent/30 bg-accent/5',
+            'hover:bg-accent/10 transition-colors',
           )}
         >
           {action.label}
@@ -444,9 +425,7 @@ function StepContent({
         </button>
       )}
 
-      {isCompleted && (
-        <p className="mt-4 text-sm text-green-600 font-medium">Выполнено</p>
-      )}
+      {completedBadge}
     </div>
   )
 }

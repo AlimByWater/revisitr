@@ -16,27 +16,27 @@ const statusConfig: Record<
 > = {
   draft: {
     label: 'Черновик',
-    className: 'bg-neutral-100 text-neutral-500',
+    className: 'bg-neutral-100 text-neutral-600 border border-neutral-300',
   },
   scheduled: {
     label: 'Запланировано',
-    className: 'bg-blue-100 text-blue-700',
+    className: 'bg-amber-500/10 text-amber-700 border border-amber-500/30',
   },
   sending: {
     label: 'Отправляется',
-    className: 'bg-yellow-100 text-yellow-700',
+    className: 'bg-amber-500/10 text-amber-700 border border-amber-500/30',
   },
   sent: {
     label: 'Отправлено',
-    className: 'bg-green-100 text-green-700',
+    className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/30',
   },
   completed: {
     label: 'Завершено',
-    className: 'bg-emerald-100 text-emerald-700',
+    className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/30',
   },
   failed: {
     label: 'Ошибка',
-    className: 'bg-red-100 text-red-700',
+    className: 'bg-red-500/10 text-red-700 border border-red-500/30',
   },
 }
 
@@ -84,7 +84,7 @@ export default function CampaignDetailPage() {
   if (isError || !campaign) {
     return (
       <div className="max-w-3xl">
-        <div className="bg-white rounded-2xl border border-surface-border p-12 text-center">
+        <div className="bg-white rounded border border-neutral-900 p-12 text-center">
           <p className="text-sm text-red-600">
             Рассылка не найдена или произошла ошибка.
           </p>
@@ -99,22 +99,22 @@ export default function CampaignDetailPage() {
 
   return (
     <div className="max-w-3xl">
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6 animate-in">
         <button
           onClick={() => navigate('/dashboard/campaigns')}
           type="button"
-          className="p-2 rounded-lg hover:bg-neutral-100 transition-colors"
+          className="p-2 rounded hover:bg-neutral-100 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-neutral-500" />
         </button>
         <div className="flex-1">
-          <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="font-display text-2xl font-bold text-neutral-900 tracking-tight">
             {campaign.name}
           </h1>
         </div>
         <span
           className={cn(
-            'text-xs font-medium px-2.5 py-1 rounded-full',
+            'font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded',
             status.className,
           )}
         >
@@ -123,7 +123,7 @@ export default function CampaignDetailPage() {
       </div>
 
       {/* Campaign info */}
-      <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-6 mb-4">
+      <div className="bg-white rounded border border-neutral-900 p-6 mb-4">
         <h2 className="text-sm font-medium text-neutral-400 uppercase tracking-wider mb-4">
           Детали рассылки
         </h2>
@@ -166,7 +166,7 @@ export default function CampaignDetailPage() {
       {/* Stats cards (if terminal: sent/completed/failed) */}
       {isTerminal && (
         <div className="grid grid-cols-3 gap-4 mb-4">
-          <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-5">
+          <div className="bg-white rounded border border-neutral-900 p-5">
             <div className="flex items-center gap-2 mb-2">
               <Users className="w-4 h-4 text-neutral-400" />
               <span className="text-xs text-neutral-400">Всего</span>
@@ -175,7 +175,7 @@ export default function CampaignDetailPage() {
               {campaign.stats.total}
             </p>
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-5">
+          <div className="bg-white rounded border border-neutral-900 p-5">
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle className="w-4 h-4 text-green-500" />
               <span className="text-xs text-neutral-400">Доставлено</span>
@@ -184,7 +184,7 @@ export default function CampaignDetailPage() {
               {campaign.stats.sent}
             </p>
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-surface-border p-5">
+          <div className="bg-white rounded border border-neutral-900 p-5">
             <div className="flex items-center gap-2 mb-2">
               <XCircle className="w-4 h-4 text-red-500" />
               <span className="text-xs text-neutral-400">Ошибки</span>
@@ -205,7 +205,7 @@ export default function CampaignDetailPage() {
               disabled={sendMutation.isPending}
               type="button"
               className={cn(
-                'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
+                'flex items-center gap-2 px-4 py-2.5 rounded text-sm font-medium',
                 'bg-accent text-white',
                 'hover:bg-accent/90 active:bg-accent/80',
                 'transition-colors',
@@ -221,7 +221,7 @@ export default function CampaignDetailPage() {
               disabled={deleteMutation.isPending}
               type="button"
               className={cn(
-                'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
+                'flex items-center gap-2 px-4 py-2.5 rounded text-sm font-medium',
                 'border border-red-200 text-red-600',
                 'hover:bg-red-50 transition-colors',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -237,7 +237,7 @@ export default function CampaignDetailPage() {
             type="button"
             onClick={() => navigate(`/dashboard/campaigns/create?clone=${id}&type=campaign`)}
             className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium',
+              'flex items-center gap-2 px-4 py-2.5 rounded text-sm font-medium',
               'border border-neutral-200 text-neutral-700',
               'hover:bg-neutral-50 transition-colors',
             )}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { cn, getApiErrorMessage } from '@/lib/utils'
 import {
   usePromoCodesQuery,
@@ -17,15 +17,15 @@ import { TableSkeleton } from '@/components/common/LoadingSkeleton'
 
 function getCodeStatus(code: PromoCode): { label: string; className: string } {
   if (!code.active) {
-    return { label: 'Деактивирован', className: 'bg-neutral-100 text-neutral-500' }
+    return { label: 'Деактивирован', className: 'bg-neutral-100 text-neutral-600 border border-neutral-300' }
   }
   if (code.usage_limit && code.usage_count >= code.usage_limit) {
-    return { label: 'Исчерпан', className: 'bg-amber-100 text-amber-700' }
+    return { label: 'Исчерпан', className: 'bg-amber-500/10 text-amber-700 border border-amber-500/30' }
   }
   if (code.ends_at && new Date(code.ends_at) < new Date()) {
-    return { label: 'Истёк', className: 'bg-red-100 text-red-700' }
+    return { label: 'Истёк', className: 'bg-red-500/10 text-red-700 border border-red-500/30' }
   }
-  return { label: 'Активен', className: 'bg-green-100 text-green-700' }
+  return { label: 'Активен', className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/30' }
 }
 
 function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
@@ -87,9 +87,26 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
     'disabled:opacity-50 disabled:cursor-not-allowed',
   )
 
+  useEffect(() => {
+    const html = document.documentElement
+    const body = document.body
+    const prevHtml = html.style.overflow
+    const prevBody = body.style.overflow
+    const prevPaddingRight = body.style.paddingRight
+    const scrollbarWidth = window.innerWidth - html.clientWidth
+    html.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
+    if (scrollbarWidth > 0) body.style.paddingRight = `${scrollbarWidth}px`
+    return () => {
+      html.style.overflow = prevHtml
+      body.style.overflow = prevBody
+      body.style.paddingRight = prevPaddingRight
+    }
+  }, [])
+
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-neutral-900/95 backdrop-blur-md flex items-center justify-center z-[60]"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
@@ -97,7 +114,7 @@ function CreatePromoCodeModal({ onClose }: { onClose: () => void }) {
       aria-modal="true"
       aria-labelledby="create-code-title"
     >
-      <div className="bg-white rounded border border-neutral-900 p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto shadow-lg">
+      <div className="bg-white rounded border border-neutral-900 p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto overscroll-contain shadow-lg">
         <div className="flex items-center justify-between mb-6">
           <h2
             id="create-code-title"
@@ -444,10 +461,10 @@ export default function PromoCodesPage() {
     <div>
       <div className="flex items-center justify-between mb-6 animate-in">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">
             Промокоды
           </h1>
-          <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
+          <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
             Создание и управление промокодами
           </p>
         </div>
@@ -568,7 +585,7 @@ export default function PromoCodesPage() {
                       <td className="px-6 py-4">
                         <span
                           className={cn(
-                            'text-xs font-medium px-2 py-1 rounded-full',
+                            'font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded',
                             status.className,
                           )}
                         >

@@ -91,10 +91,10 @@ export default function SegmentsPage() {
   return (
     <div>
       <div className="animate-in mb-4">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">
           RFM
         </h1>
-        <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
+        <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
           Анализ клиентской базы по Recency, Frequency, Monetary
         </p>
       </div>
@@ -115,7 +115,7 @@ export default function SegmentsPage() {
           <div className="w-16 h-16 rounded bg-neutral-100 flex items-center justify-center mb-4">
             <Users className="w-8 h-8 text-neutral-400" />
           </div>
-          <h3 className="font-serif text-xl font-bold text-neutral-800 mb-1.5">
+          <h3 className="font-display text-xl font-bold text-neutral-800 mb-1.5">
             Нет данных
           </h3>
           <p className="text-sm text-neutral-400 max-w-xs leading-relaxed">
@@ -130,12 +130,13 @@ export default function SegmentsPage() {
               const color = SEGMENT_HEX_COLORS[seg.segment]
               const label = RFM_SEGMENT_LABELS[seg.segment] ?? seg.segment
               const Icon = SEGMENT_ICONS[seg.segment]
+              const pct = Math.max(0, Math.min(100, seg.percentage))
               return (
                 <button
                   key={seg.segment}
                   type="button"
                   onClick={() => handleSegmentClick(seg.segment)}
-                  className="bg-white rounded border border-neutral-900 p-4 text-left hover:bg-neutral-50 transition-colors group"
+                  className="bg-white rounded border border-neutral-900 p-4 text-left hover:bg-neutral-50 hover:scale-[1.02] transition-all duration-150 group"
                 >
                   <div className="flex items-center gap-2 mb-3">
                     {Icon && <Icon className="w-4 h-4 shrink-0" style={{ color }} />}
@@ -144,8 +145,14 @@ export default function SegmentsPage() {
                   <p className="text-2xl font-bold font-mono text-neutral-900 tabular-nums tracking-tight">
                     {seg.client_count}
                   </p>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-xs text-neutral-400">{Math.round(seg.percentage)}%</span>
+                  <div className="mt-2 h-1.5 w-full rounded bg-neutral-100 overflow-hidden">
+                    <div
+                      className="h-full rounded transition-all duration-300"
+                      style={{ width: `${pct}%`, backgroundColor: color }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-xs font-mono text-neutral-500 tabular-nums">{Math.round(seg.percentage)}%</span>
                     <span className="text-xs font-mono text-neutral-400 tabular-nums">
                       {formatMoney(seg.avg_check)} ср.
                     </span>

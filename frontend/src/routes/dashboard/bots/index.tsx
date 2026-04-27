@@ -10,19 +10,19 @@ import type { Bot } from '@/features/bots/types'
 const statusConfig: Record<Bot['status'], { label: string; className: string }> = {
   active: {
     label: 'Активен',
-    className: 'bg-green-500 text-white',
+    className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20',
   },
   inactive: {
     label: 'Неактивен',
-    className: 'bg-neutral-200 text-neutral-500',
+    className: 'bg-neutral-100 text-neutral-500 border border-neutral-200',
   },
   pending: {
     label: 'Ожидает',
-    className: 'bg-amber-400 text-white',
+    className: 'bg-amber-500/10 text-amber-700 border border-amber-500/20',
   },
   error: {
     label: 'Ошибка',
-    className: 'bg-red-500 text-white',
+    className: 'bg-red-500/10 text-red-700 border border-red-500/20',
   },
 }
 
@@ -40,23 +40,26 @@ export default function BotsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6 animate-in">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Боты</h1>
+      <div className="flex items-start justify-between gap-4 mb-6 animate-in">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">Мои боты</h1>
+          <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">Список ботов</p>
+        </div>
         <Link
           to="/dashboard/bots/create"
           className={cn(
-            'flex items-center gap-2 py-2.5 px-4 rounded',
+            'inline-flex items-center gap-2 py-2.5 px-4 rounded shrink-0',
             'bg-accent text-white text-sm font-medium',
             'hover:bg-accent-hover active:bg-accent/80',
             'transition-all duration-150',
             'focus:outline-none focus:ring-2 focus:ring-accent/20',
-            '',
           )}
         >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">Создать бота</span>
           <span className="sm:hidden">Создать</span>
         </Link>
+
       </div>
 
       {isLoading ? (
@@ -83,7 +86,7 @@ export default function BotsPage() {
           variant="bots"
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in animate-in-delay-2">
           {bots.map((bot, i) => {
             const status = statusConfig[bot.status]
             return (
@@ -92,8 +95,8 @@ export default function BotsPage() {
                 to={`/dashboard/bots/${bot.id}`}
                 className={cn(
                   'bg-white rounded border border-neutral-900 p-6',
-                  'hover:border-neutral-300 hover:shadow-md',
-                  'transition-all duration-200 group',
+                  'cursor-pointer hover:scale-[1.02] transition-transform duration-150',
+                  'group',
                   'animate-in',
                   `animate-in-delay-${Math.min(i + 1, 5)}`,
                 )}
@@ -110,7 +113,7 @@ export default function BotsPage() {
                   </div>
                   <span
                     className={cn(
-                      'font-mono text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider',
+                      'font-mono text-[10px] px-2 py-0.5 rounded uppercase tracking-wider',
                       status.className,
                     )}
                   >

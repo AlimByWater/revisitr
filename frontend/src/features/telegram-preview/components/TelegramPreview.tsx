@@ -135,7 +135,7 @@ export function TelegramPreview({
   return (
     <div
       className={cn(
-        'w-full max-w-[360px] rounded-xl overflow-hidden border border-gray-200',
+        'w-full max-w-[360px] rounded overflow-hidden border border-gray-200',
         className
       )}
     >

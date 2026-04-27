@@ -80,7 +80,7 @@ export default function RFMOnboardingPage() {
     <div className="max-w-2xl mx-auto py-4">
       {/* Header */}
       <div className="mb-8 animate-in">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight mb-2">
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight mb-2">
           Настройка RFM-сегментации
         </h1>
         <p className="text-neutral-500 text-sm">
@@ -150,7 +150,7 @@ export default function RFMOnboardingPage() {
             <div className="w-14 h-14 rounded bg-accent/10 flex items-center justify-center mx-auto mb-4">
               <Sparkles className="w-7 h-7 text-accent" />
             </div>
-            <h2 className="font-serif text-xl font-bold text-neutral-900 mb-1">
+            <h2 className="font-display text-xl font-bold text-neutral-900 mb-1">
               Рекомендуем: {recommendation.recommended.name}
             </h2>
             <p className="text-sm text-neutral-500 mb-6 max-w-md mx-auto">
@@ -223,7 +223,7 @@ export default function RFMOnboardingPage() {
       {step === 3 && showAllTemplates && allTemplates && (
         <div className="animate-in space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-serif text-xl font-bold text-neutral-900">Выберите шаблон</h2>
+            <h2 className="font-display text-xl font-bold text-neutral-900">Выберите шаблон</h2>
             <button
               type="button"
               onClick={() => setShowAllTemplates(false)}
@@ -283,7 +283,7 @@ function QuestionStep({
 }) {
   return (
     <div className="animate-in">
-      <h2 className="font-serif text-xl font-bold text-neutral-900 mb-5 tracking-tight">
+      <h2 className="font-display text-xl font-bold text-neutral-900 mb-5 tracking-tight">
         {question.text}
       </h2>
 

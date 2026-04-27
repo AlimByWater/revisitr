@@ -214,10 +214,10 @@ function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<st
         <span className="flex-1 text-left">{item.label}</span>
         {badge !== undefined && badge > 0 && (
           <span className={cn(
-            'text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md min-w-[20px] text-center',
+            'text-[10px] font-medium tabular-nums px-1.5 py-0.5 rounded-sm min-w-[18px] text-center',
             isAurora
               ? 'bg-violet-500/20 text-violet-300'
-              : 'bg-accent/15 text-accent',
+              : 'bg-neutral-100 text-neutral-600 border border-neutral-300',
           )}>
             {badge}
           </span>

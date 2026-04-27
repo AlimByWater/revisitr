@@ -169,7 +169,7 @@ describe('MenuDetailPage', () => {
       'href',
       '/dashboard/bots/12?tab=modules',
     )
-    expect(screen.getByText('Первое сообщение')).toBeInTheDocument()
+    expect(screen.getByText('Приветственное сообщение')).toBeInTheDocument()
     expect(screen.getByText('Привязка к точкам продаж')).toBeInTheDocument()
     expect(screen.getByDisplayValue('☕')).toBeInTheDocument()
     expect(screen.getByDisplayValue('https://cdn.test/icon.png')).toBeInTheDocument()

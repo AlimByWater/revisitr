@@ -131,7 +131,7 @@ export interface SystemButtonMeta {
 export function getSystemButtons(modules: string[]): SystemButtonMeta[] {
   const buttons: SystemButtonMeta[] = [
     { label: 'Контакты', managed_by_module: 'contacts', configureLabel: 'Контакты', isExpandable: false },
-    { label: 'На главную', managed_by_module: 'home', configureLabel: 'Главная', isExpandable: false },
+    { label: 'Главная страница', managed_by_module: 'home', configureLabel: 'Главная', isExpandable: false },
   ]
 
   if (modules.includes('loyalty')) {

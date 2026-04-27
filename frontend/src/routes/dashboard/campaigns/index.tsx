@@ -14,27 +14,27 @@ const statusConfig: Record<
 > = {
   draft: {
     label: 'Черновик',
-    className: 'bg-neutral-100 text-neutral-500',
+    className: 'bg-neutral-100 text-neutral-600 border border-neutral-300',
   },
   scheduled: {
     label: 'Запланировано',
-    className: 'bg-blue-100 text-blue-700',
+    className: 'bg-amber-500/10 text-amber-700 border border-amber-500/30',
   },
   sending: {
     label: 'Отправляется',
-    className: 'bg-yellow-100 text-yellow-700',
+    className: 'bg-amber-500/10 text-amber-700 border border-amber-500/30',
   },
   sent: {
     label: 'Отправлено',
-    className: 'bg-green-100 text-green-700',
+    className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/30',
   },
   completed: {
     label: 'Завершено',
-    className: 'bg-emerald-100 text-emerald-700',
+    className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/30',
   },
   failed: {
     label: 'Ошибка',
-    className: 'bg-red-100 text-red-700',
+    className: 'bg-red-500/10 text-red-700 border border-red-500/30',
   },
 }
 
@@ -127,19 +127,18 @@ export default function CampaignsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 animate-in">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">
           Все рассылки
         </h1>
         <button
           onClick={() => navigate('/dashboard/campaigns/create')}
           type="button"
           className={cn(
-            'flex items-center gap-2 py-2.5 px-4 rounded',
+            'inline-flex items-center gap-2 py-2.5 px-4 rounded',
             'bg-accent text-white text-sm font-medium',
             'hover:bg-accent-hover active:bg-accent/80',
             'transition-all duration-150',
             'focus:outline-none focus:ring-2 focus:ring-accent/20',
-            '',
           )}
         >
           <Plus className="w-4 h-4" />
@@ -154,7 +153,7 @@ export default function CampaignsPage() {
           type="button"
           onClick={() => setTab('active')}
           className={cn(
-            'px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
+            'px-4 py-2 rounded text-sm font-medium transition-all duration-150',
             tab === 'active'
               ? 'bg-white text-neutral-900 '
               : 'text-neutral-500 hover:text-neutral-700',
@@ -166,7 +165,7 @@ export default function CampaignsPage() {
           type="button"
           onClick={() => setTab('archive')}
           className={cn(
-            'px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
+            'px-4 py-2 rounded text-sm font-medium transition-all duration-150',
             tab === 'archive'
               ? 'bg-white text-neutral-900 '
               : 'text-neutral-500 hover:text-neutral-700',
@@ -232,14 +231,14 @@ export default function CampaignsPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 hidden sm:table-cell">
-                          <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
+                          <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border bg-neutral-100 text-neutral-600 border-neutral-300">
                             Ручная
                           </span>
                         </td>
                         <td className="px-6 py-4">
                           <span
                             className={cn(
-                              'text-xs font-medium px-2 py-1 rounded-full',
+                              'font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded',
                               status.className,
                             )}
                           >
@@ -272,7 +271,7 @@ export default function CampaignsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700">
+                        <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
                           Активен
                         </span>
                         <span className="ml-2 text-xs text-neutral-400">
@@ -345,14 +344,14 @@ export default function CampaignsPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 hidden sm:table-cell">
-                            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
+                            <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border bg-neutral-100 text-neutral-600 border-neutral-300">
                               Ручная
                             </span>
                           </td>
                           <td className="px-6 py-4">
                             <span
                               className={cn(
-                                'text-xs font-medium px-2 py-1 rounded-full',
+                                'font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded',
                                 status.className,
                               )}
                             >
@@ -409,13 +408,13 @@ export default function CampaignsPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 hidden sm:table-cell">
-                          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">
+                          <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border bg-accent/10 text-accent border-accent/30">
                             <Zap className="w-3 h-3" />
                             Авто
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-xs font-medium px-2 py-1 rounded-full bg-neutral-100 text-neutral-500">
+                          <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border bg-neutral-100 text-neutral-600 border-neutral-300">
                             Неактивен
                           </span>
                           <span className="ml-2 text-xs text-neutral-400">

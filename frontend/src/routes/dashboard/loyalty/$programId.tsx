@@ -104,14 +104,14 @@ export default function ProgramDetailPage() {
         {backLabel}
       </Link>
 
-      <div className="flex items-center gap-3 mb-8">
-        <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight">{program.name}</h1>
+      <div className="flex items-center gap-3 mb-8 animate-in">
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">{program.name}</h1>
         <span
           className={cn(
-            'font-mono text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider',
+            'font-mono text-[10px] font-semibold px-2 py-0.5 rounded uppercase tracking-wider',
             program.type === 'bonus'
-              ? 'bg-blue-100 text-blue-700'
-              : 'bg-purple-100 text-purple-700',
+              ? 'bg-accent/10 text-accent'
+              : 'bg-neutral-100 text-neutral-600',
           )}
         >
           {program.type === 'bonus' ? 'Бонусная' : 'Скидочная'}
@@ -203,25 +203,22 @@ export default function ProgramDetailPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-neutral-200 text-left">
-                  <th className="pb-2 font-medium text-neutral-500">
+                  <th className="pb-3 font-mono text-[11px] font-medium text-neutral-400 uppercase tracking-wider">
                     Название
                   </th>
-                  <th className="pb-2 font-medium text-neutral-500">Порог</th>
-                  <th className="pb-2 font-medium text-neutral-500">
-                    Вознаграждение %
+                  <th className="pb-3 font-mono text-[11px] font-medium text-neutral-400 uppercase tracking-wider">Порог, ₽</th>
+                  <th className="pb-3 font-mono text-[11px] font-medium text-neutral-400 uppercase tracking-wider">
+                    Вознаграждение, %
                   </th>
-                  <th className="pb-2 font-medium text-neutral-500">
+                  <th className="pb-3 font-mono text-[11px] font-medium text-neutral-400 uppercase tracking-wider">
                     Порядок
                   </th>
-                  <th className="pb-2 w-10" />
+                  <th className="pb-3 w-10" />
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-neutral-200">
                 {levels.map((level, index) => (
-                  <tr
-                    key={level.id || `new-${index}`}
-                   
-                  >
+                  <tr key={level.id || `new-${index}`}>
                     <td className="py-2 pr-2">
                       <input
                         type="text"
@@ -232,49 +229,55 @@ export default function ProgramDetailPage() {
                         placeholder="Название уровня"
                         aria-label="Название уровня"
                         className={cn(
-                          'w-full px-3 py-1.5 rounded border border-neutral-200',
+                          'w-full px-3 py-2 rounded border border-neutral-200 bg-white',
                           'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                         )}
                       />
                     </td>
                     <td className="py-2 pr-2">
-                      <input
-                        type="number"
-                        min={0}
-                        value={level.threshold}
-                        onChange={(e) =>
-                          updateLevel(
-                            index,
-                            'threshold',
-                            Number(e.target.value),
-                          )
-                        }
-                        aria-label="Порог"
-                        className={cn(
-                          'w-24 px-3 py-1.5 rounded border border-neutral-200',
-                          'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
-                        )}
-                      />
+                      <div className="relative w-32">
+                        <input
+                          type="number"
+                          min={0}
+                          value={level.threshold}
+                          onChange={(e) =>
+                            updateLevel(
+                              index,
+                              'threshold',
+                              Number(e.target.value),
+                            )
+                          }
+                          aria-label="Порог в рублях"
+                          className={cn(
+                            'w-full pl-3 pr-7 py-2 rounded border border-neutral-200 bg-white font-mono tabular-nums',
+                            'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
+                          )}
+                        />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-400 pointer-events-none">₽</span>
+                      </div>
                     </td>
                     <td className="py-2 pr-2">
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={level.reward_percent}
-                        onChange={(e) =>
-                          updateLevel(
-                            index,
-                            'reward_percent',
-                            Number(e.target.value),
-                          )
-                        }
-                        aria-label="Вознаграждение в процентах"
-                        className={cn(
-                          'w-24 px-3 py-1.5 rounded border border-neutral-200',
-                          'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
-                        )}
-                      />
+                      <div className="relative w-28">
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={level.reward_percent}
+                          onChange={(e) =>
+                            updateLevel(
+                              index,
+                              'reward_percent',
+                              Number(e.target.value),
+                            )
+                          }
+                          aria-label="Вознаграждение в процентах"
+                          className={cn(
+                            'w-full pl-3 pr-7 py-2 rounded border border-neutral-200 bg-white font-mono tabular-nums',
+                            'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
+                          )}
+                        />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-400 pointer-events-none">%</span>
+                      </div>
                     </td>
                     <td className="py-2 pr-2">
                       <input
@@ -290,7 +293,7 @@ export default function ProgramDetailPage() {
                         }
                         aria-label="Порядок сортировки"
                         className={cn(
-                          'w-20 px-3 py-1.5 rounded border border-neutral-200',
+                          'w-20 px-3 py-2 rounded border border-neutral-200 bg-white font-mono tabular-nums',
                           'text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
                         )}
                       />

@@ -7,9 +7,14 @@ export function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
           <div>
-            <span className="text-xl font-bold tracking-tight">rev/sitr</span>
-            <p className="text-sm text-neutral-400 mt-2 leading-relaxed">
-              SaaS-платформа лояльности<br />для HoReCa на базе Telegram
+            <img
+              src="/revisitr/logo.png"
+              alt="Revisitr"
+              decoding="async"
+              className="h-7 w-auto invert"
+            />
+            <p className="text-sm text-neutral-400 mt-3 leading-relaxed">
+              Программа лояльности для баров и ресторанов. Подключается за 30 минут. Работает «из коробки».
             </p>
           </div>
 
@@ -45,9 +50,13 @@ export function Footer() {
         </div>
 
         {/* Bottom line */}
-        <div className="mt-10 pt-6 border-t border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="mt-10 pt-6 border-t border-neutral-800 grid grid-cols-1 sm:grid-cols-3 items-center gap-3 text-center sm:text-left">
           <p className="text-xs text-neutral-500">&copy; 2026 Revisitr. Все права защищены.</p>
-          <p className="text-xs text-neutral-500">Сделано в России</p>
+          <p className="text-xs font-medium text-center tracking-wide">
+            <span className="text-white">Не ищи.</span>{' '}
+            <span className="text-accent">Не теряй.</span>
+          </p>
+          <p className="text-xs text-neutral-500 sm:text-right">Сделано в России</p>
         </div>
       </div>
     </footer>

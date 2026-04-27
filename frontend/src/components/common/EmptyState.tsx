@@ -26,11 +26,9 @@ export function EmptyState({
         className,
       )}
     >
-      <div className="w-16 h-16 rounded bg-neutral-100 flex items-center justify-center mb-4">
-        <Icon className="w-8 h-8 text-neutral-400" />
-      </div>
+      <Icon className="w-8 h-8 text-neutral-400 mb-4" />
 
-      <h3 className="font-serif text-xl font-bold text-neutral-800 mb-1.5 tracking-tight">
+      <h3 className="font-display text-xl font-bold text-neutral-800 mb-1.5 tracking-tight">
         {title}
       </h3>
       <p className="text-sm text-neutral-400 max-w-xs leading-relaxed mb-4">
@@ -53,6 +51,7 @@ export function EmptyState({
           {actionLabel}
         </button>
       )}
+
     </div>
   )
 }

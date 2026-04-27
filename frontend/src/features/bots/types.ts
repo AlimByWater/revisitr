@@ -33,6 +33,7 @@ export interface BotButton {
   content?: import('@/features/telegram-preview').MessageContent
   managed_by_module?: string | null
   is_system?: boolean
+  is_enabled?: boolean
   style?: 'danger' | 'success' | 'primary' | ''
   icon_custom_emoji_id?: string
   icon_image_url?: string

@@ -108,8 +108,8 @@ export default function MenusPage() {
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Меню</h1>
-          <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">Управление меню заведений</p>
+          <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">Меню</h1>
+          <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">Управление меню заведений</p>
         </div>
         <button
           type="button"
@@ -126,7 +126,7 @@ export default function MenusPage() {
       </div>
 
       {conflicts.length > 0 && (
-        <div className="mb-6 space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <div className="mb-6 space-y-3 rounded border border-amber-200 bg-amber-50 p-4">
           {conflicts.map((conflict) => (
             <div key={conflict.posId} className="flex gap-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
@@ -189,13 +189,13 @@ export default function MenusPage() {
           <div className="w-16 h-16 rounded bg-neutral-100 flex items-center justify-center mb-4">
             <UtensilsCrossed className="w-8 h-8 text-neutral-400" />
           </div>
-          <h3 className="font-serif text-xl font-bold text-neutral-800 mb-1.5">Нет меню</h3>
+          <h3 className="font-display text-xl font-bold text-neutral-800 mb-1.5">Нет меню</h3>
           <p className="text-sm text-neutral-400 max-w-xs leading-relaxed">
             Создайте меню вручную или импортируйте из POS-системы через интеграцию
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {menus.map((menu) => {
             const bindings = menu.bindings ?? []
 
@@ -224,7 +224,7 @@ export default function MenusPage() {
                   </button>
                 </div>
 
-                <div className="rounded-xl border border-surface-border bg-neutral-50/70 p-3 mb-4">
+                <div className="rounded border border-neutral-200 bg-neutral-50/70 p-3 mb-4">
                   <div className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400 mb-2">
                     Активность по точкам продаж
                   </div>
@@ -233,7 +233,7 @@ export default function MenusPage() {
                   ) : (
                     <div className="space-y-2">
                       {bindings.map((binding) => (
-                        <div key={`${menu.id}-${binding.pos_id}`} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2.5">
+                        <div key={`${menu.id}-${binding.pos_id}`} className="flex items-center justify-between gap-3 rounded bg-white px-3 py-2.5">
                           <div className="min-w-0">
                             <div className="text-sm font-medium text-neutral-900">
                               {resolveBindingPosName(binding.pos_id, binding.pos_name)}

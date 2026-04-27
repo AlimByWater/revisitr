@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/common/Button'
 import { cn } from '@/lib/utils'
-import { RefreshCw, Settings, ArrowRight, Sprout, TrendingUp, UserCheck, Crown, Gem, AlertTriangle, UserX } from 'lucide-react'
+import { RefreshCw, Settings, ArrowRight, Sprout, TrendingUp, UserCheck, Crown, Gem, AlertTriangle, UserX, Lightbulb, X } from 'lucide-react'
 import { useRFMDashboardQuery, useRFMActiveTemplateQuery, useRFMRecalculateMutation } from '@/features/rfm/queries'
 import { RFM_SEGMENT_LABELS, RFM_SEGMENT_COLORS, RFM_SEGMENTS } from '@/features/rfm/types'
 import type { LucideIcon } from 'lucide-react'
@@ -25,12 +26,18 @@ export default function RFMDashboardPage() {
   const { data: activeTemplate, isLoading: loadingTemplate } = useRFMActiveTemplateQuery()
   const recalcMutation = useRFMRecalculateMutation()
 
-  // Redirect to onboarding if no template configured
-  useEffect(() => {
-    if (!loadingTemplate && activeTemplate && !activeTemplate.template) {
-      navigate('/dashboard/rfm/onboarding', { replace: true })
-    }
-  }, [activeTemplate, loadingTemplate, navigate])
+  const [hintDismissed, setHintDismissed] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return window.localStorage.getItem('rfm:template-hint-dismissed') === '1'
+  })
+
+  function dismissHint() {
+    setHintDismissed(true)
+    window.localStorage.setItem('rfm:template-hint-dismissed', '1')
+  }
+
+  const templateNeverChanged = activeTemplate?.active_template_type === 'preset' || activeTemplate?.active_template_type === 'standard'
+  const showTemplateHint = !hintDismissed && !loadingTemplate && templateNeverChanged
 
   if (isLoading || loadingTemplate) {
     return (
@@ -70,11 +77,11 @@ export default function RFMDashboardPage() {
   }
 
   return (
-    <div>
+    <div className="max-w-5xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 animate-in">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">
             RFM-сегментация
           </h1>
           <div className="flex items-center gap-3 mt-1 text-sm text-neutral-500">
@@ -93,36 +100,49 @@ export default function RFMDashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            leftIcon={<Settings className="w-4 h-4" />}
             onClick={() => navigate('/dashboard/rfm/template')}
-            className={cn(
-              'flex items-center gap-2 py-2 px-3 rounded',
-              'border border-neutral-900 text-sm font-medium text-neutral-600',
-              'hover:bg-neutral-50',
-              'transition-all duration-150',
-            )}
           >
-            <Settings className="w-4 h-4" />
-            <span className="hidden sm:inline">Сменить</span>
-          </button>
-          <button
-            type="button"
+            Сменить шаблон
+          </Button>
+          <Button
+            variant="primary"
+            leftIcon={<RefreshCw className={cn('w-4 h-4', recalcMutation.isPending && 'animate-spin')} />}
             onClick={handleRecalculate}
             disabled={recalcMutation.isPending}
-            className={cn(
-              'flex items-center gap-2 py-2 px-4 rounded',
-              'bg-accent text-white text-sm font-medium',
-              'hover:bg-accent-hover active:bg-accent/80',
-              'transition-all duration-150',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-            )}
           >
-            <RefreshCw className={cn('w-4 h-4', recalcMutation.isPending && 'animate-spin')} />
             Обновить
-          </button>
+          </Button>
         </div>
       </div>
+
+      {/* Template hint */}
+      {showTemplateHint && (
+        <div className="mb-4 flex items-start gap-3 rounded border border-accent/30 bg-accent/5 p-3 animate-in">
+          <Lightbulb className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm text-neutral-700">
+            Можете выбрать другой шаблон сегментации, если стандартный не подходит. Нажмите{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/rfm/template')}
+              className="underline font-medium text-accent hover:text-accent-hover cursor-pointer"
+            >
+              «Сменить шаблон»
+            </button>{' '}
+            сверху.
+          </div>
+          <button
+            type="button"
+            onClick={dismissHint}
+            className="text-neutral-400 hover:text-neutral-600 transition-colors cursor-pointer shrink-0"
+            aria-label="Скрыть подсказку"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Recalc feedback */}
       {recalcMutation.isSuccess && (
@@ -142,7 +162,7 @@ export default function RFMDashboardPage() {
           <div className="w-16 h-16 rounded bg-neutral-100 flex items-center justify-center mb-4">
             <RefreshCw className="w-8 h-8 text-neutral-400" />
           </div>
-          <h3 className="font-serif text-xl font-bold text-neutral-800 mb-1.5 tracking-tight">Данных пока нет</h3>
+          <h3 className="font-display text-xl font-bold text-neutral-800 mb-1.5 tracking-tight">Данных пока нет</h3>
           <p className="text-sm text-neutral-400 max-w-xs leading-relaxed mb-4">Запустите пересчёт RFM-сегментов</p>
           <button
             type="button"
@@ -182,7 +202,7 @@ export default function RFMDashboardPage() {
                 onClick={() => navigate(`/dashboard/rfm/segments/${seg.segment}`)}
                 className={cn(
                   'w-full grid grid-cols-[1fr_80px_60px_100px_120px_40px] gap-2 px-6 py-4',
-                  'hover:bg-neutral-50 transition-colors duration-150 text-left group',
+                  'cursor-pointer hover:bg-neutral-50 hover:scale-[1.005] transition-all duration-150 text-left group',
                   'animate-in',
                   `animate-in-delay-${Math.min(i + 1, 5)}`,
                 )}

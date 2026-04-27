@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { botsApi } from '@/features/bots/api'
 import { useBotQuery } from '@/features/bots/queries'
@@ -20,7 +20,7 @@ const MessageContentEditor = lazy(() =>
 )
 
 const inputClassName = cn(
-  'w-full px-4 py-2.5 rounded-lg border border-surface-border',
+  'w-full px-4 py-2.5 rounded border border-neutral-200',
   'text-sm placeholder:text-neutral-400 bg-white',
   'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
   'transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
@@ -37,10 +37,10 @@ interface BookingDraft {
 
 function editorFallback() {
   return (
-    <div className="space-y-3 rounded-xl border border-surface-border bg-white p-4">
-      <div className="h-11 rounded-lg bg-neutral-100 animate-pulse" />
-      <div className="h-32 rounded-lg bg-neutral-100 animate-pulse" />
-      <div className="h-11 rounded-lg bg-neutral-100 animate-pulse" />
+    <div className="space-y-3 rounded border border-neutral-200 bg-white p-4">
+      <div className="h-11 rounded bg-neutral-100 animate-pulse" />
+      <div className="h-32 rounded bg-neutral-100 animate-pulse" />
+      <div className="h-11 rounded bg-neutral-100 animate-pulse" />
     </div>
   )
 }
@@ -138,7 +138,7 @@ function SaveFooter({
   onSave: () => void
 }) {
   return (
-    <div className="mt-6 flex flex-col gap-3 border-t border-surface-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-6 flex flex-col gap-3 border-t border-neutral-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-h-5 text-sm">
         {saveError && <span className="text-red-600">{saveError}</span>}
         {saveSuccess && <span className="text-green-600">Сохранено</span>}
@@ -148,7 +148,7 @@ function SaveFooter({
         onClick={onSave}
         disabled={isSaving}
         className={cn(
-          'inline-flex min-h-11 items-center justify-center rounded-lg px-5 text-sm font-medium',
+          'inline-flex min-h-11 items-center justify-center rounded px-5 text-sm font-medium',
           'bg-accent text-white hover:bg-accent/90 transition-colors',
           'disabled:cursor-not-allowed disabled:opacity-50',
         )}
@@ -240,30 +240,88 @@ export default function BotBookingSettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl rounded-2xl border border-surface-border bg-white p-6 shadow-sm">
-      <div className="mb-5">
+    <div className="max-w-4xl">
+      <div className="animate-in mb-6">
         <Link
           to={`/dashboard/bots/${id}?tab=modules`}
-          className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm text-neutral-500 transition-colors hover:text-neutral-700"
+          className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded text-sm text-neutral-500 transition-colors hover:text-neutral-700"
         >
           <ArrowLeft className="h-4 w-4" />
           К модулям
         </Link>
-        <h1 className="text-lg font-semibold text-neutral-900">
-          <span className="mb-0.5 block font-mono text-[10px] font-normal uppercase tracking-widest text-neutral-400">
-            Настройки модуля
-          </span>
-          Бронирование
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-neutral-500">
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">Бронирование</h1>
+        <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">Настройки модуля</p>
+        <p className="mt-2 max-w-2xl text-sm text-neutral-500">
           Сообщение, доступные даты, слоты времени и точки продаж для бронирования столиков.
         </p>
       </div>
 
-      <div className="space-y-5">
-        <div>
-          <div className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-neutral-400">
-            Первое сообщение
+      <div className="space-y-6">
+        <section className="rounded border border-neutral-900 bg-white p-4 sm:p-5 md:p-6">
+          <div className="mb-5">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-neutral-300 mb-1">Точки продаж</p>
+            <h3 className="text-sm font-semibold text-neutral-700">Привязка к точкам продаж</h3>
+          </div>
+          <section className="rounded border border-neutral-200 bg-neutral-50/70 p-4">
+            {availablePosLocations.length === 0 ? (
+              <p className="text-sm text-neutral-500">
+                Для этого бота пока не привязаны точки продаж во вкладке «Подключение».
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {availablePosLocations.map((location) => {
+                  const isChecked = draft.pos_ids.includes(location.id)
+                  return (
+                    <div key={location.id} className="rounded border border-neutral-200 bg-white px-3 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-medium text-neutral-900">{location.name}</div>
+                          {location.address && (
+                            <div className="text-xs text-neutral-500">{location.address}</div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={isChecked}
+                          onClick={() =>
+                            setDraft((current) =>
+                              current
+                                ? {
+                                    ...current,
+                                    pos_ids: isChecked
+                                      ? current.pos_ids.filter((id) => id !== location.id)
+                                      : [...current.pos_ids, location.id],
+                                  }
+                                : current,
+                            )
+                          }
+                          className={cn(
+                            'relative h-6 w-10 shrink-0 rounded-full transition-colors cursor-pointer',
+                            isChecked ? 'bg-accent' : 'bg-neutral-300',
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
+                              isChecked && 'translate-x-4',
+                            )}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+        </section>
+
+        <section className="rounded border border-neutral-900 bg-white p-4 sm:p-5 md:p-6">
+          <div className="mb-5">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-neutral-300 mb-1">Старт</p>
+            <h3 className="text-sm font-semibold text-neutral-700">Приветственное сообщение</h3>
+            <p className="text-sm text-neutral-500 mt-1">Что увидит гость, когда нажмёт «Забронировать столик».</p>
           </div>
           <Suspense fallback={editorFallback()}>
             <MessageContentEditor
@@ -274,38 +332,63 @@ export default function BotBookingSettingsPage() {
               placeholders={placeholders}
             />
           </Suspense>
-        </div>
+        </section>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-neutral-700">Бронь доступна от</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={draft.date_from_days}
-              onChange={(event) =>
-                setDraft((current) => (current ? { ...current, date_from_days: event.target.value.replace(/\D/g, '') } : current))
-              }
-              className={inputClassName}
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-neutral-700">Бронь доступна до</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={draft.date_to_days}
-              onChange={(event) =>
-                setDraft((current) => (current ? { ...current, date_to_days: event.target.value.replace(/\D/g, '') } : current))
-              }
-              className={inputClassName}
-            />
-          </label>
-        </div>
+        <section className="rounded border border-neutral-900 bg-white p-4 sm:p-5 md:p-6">
+          <div className="mb-5">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-neutral-300 mb-1">Период</p>
+            <h3 className="text-sm font-semibold text-neutral-700">Когда можно бронировать</h3>
+            <p className="text-sm text-neutral-500 mt-1">
+              За сколько дней наперёд гость может выбрать дату — например, от 0 (сегодня) до 7 (на неделю вперёд).
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label htmlFor="booking-from-days" className="block text-sm font-medium text-neutral-700">Бронь доступна от</label>
+              <div className="flex items-stretch">
+                <input
+                  id="booking-from-days"
+                  type="text"
+                  inputMode="numeric"
+                  value={draft.date_from_days}
+                  onChange={(event) =>
+                    setDraft((current) => (current ? { ...current, date_from_days: event.target.value.replace(/\D/g, '') } : current))
+                  }
+                  className={cn(inputClassName, 'rounded-r-none')}
+                />
+                <span className="inline-flex items-center px-3 text-sm text-neutral-500 bg-neutral-50 border border-l-0 border-neutral-200 rounded-r">
+                  дней
+                </span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="booking-to-days" className="block text-sm font-medium text-neutral-700">Бронь доступна до</label>
+              <div className="flex items-stretch">
+                <input
+                  id="booking-to-days"
+                  type="text"
+                  inputMode="numeric"
+                  value={draft.date_to_days}
+                  onChange={(event) =>
+                    setDraft((current) => (current ? { ...current, date_to_days: event.target.value.replace(/\D/g, '') } : current))
+                  }
+                  className={cn(inputClassName, 'rounded-r-none')}
+                />
+                <span className="inline-flex items-center px-3 text-sm text-neutral-500 bg-neutral-50 border border-l-0 border-neutral-200 rounded-r">
+                  дней
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <div className="text-sm font-medium text-neutral-700">Слоты времени</div>
+        <section className="rounded border border-neutral-900 bg-white p-4 sm:p-5 md:p-6">
+          <div className="mb-5 flex items-start justify-between gap-3">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-neutral-300 mb-1">Расписание</p>
+              <h3 className="text-sm font-semibold text-neutral-700">Слоты времени</h3>
+              <p className="text-sm text-neutral-500 mt-1">Интервалы, на которые гость может забронировать столик.</p>
+            </div>
             <button
               type="button"
               onClick={() =>
@@ -315,9 +398,9 @@ export default function BotBookingSettingsPage() {
                     : current,
                 )
               }
-              className="text-xs font-medium text-accent hover:text-accent/80"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded text-sm font-medium text-accent hover:text-accent/80 transition-colors shrink-0"
             >
-              + Добавить слот
+              <span>+ Добавить слот</span>
             </button>
           </div>
           <div className="space-y-2">
@@ -363,17 +446,21 @@ export default function BotBookingSettingsPage() {
                         : current,
                     )
                   }
-                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-neutral-400 hover:bg-red-50 hover:text-red-600"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
-        <div>
-          <div className="mb-2 text-sm font-medium text-neutral-700">Количество гостей</div>
+        <section className="rounded border border-neutral-900 bg-white p-4 sm:p-5 md:p-6">
+          <div className="mb-5">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-neutral-300 mb-1">Гости</p>
+            <h3 className="text-sm font-semibold text-neutral-700">Количество гостей</h3>
+            <p className="text-sm text-neutral-500 mt-1">Варианты, из которых гость выберет размер компании.</p>
+          </div>
           <div className="space-y-2">
             {draft.party_size_options.map((option, index) => (
               <div key={index} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
@@ -400,7 +487,7 @@ export default function BotBookingSettingsPage() {
                         : current,
                     )
                   }
-                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-neutral-400 hover:bg-red-50 hover:text-red-600"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -413,52 +500,12 @@ export default function BotBookingSettingsPage() {
                   current ? { ...current, party_size_options: [...current.party_size_options, ''] } : current,
                 )
               }
-              className="text-xs font-medium text-accent hover:text-accent/80"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded text-sm font-medium text-accent hover:text-accent/80 transition-colors"
             >
               + Добавить вариант
             </button>
           </div>
-        </div>
-
-        <div>
-          <div className="mb-2 text-sm font-medium text-neutral-700">Точки продаж для бронирования</div>
-          {availablePosLocations.length === 0 ? (
-            <p className="text-xs text-neutral-500">
-              Сначала привяжите точки продаж во вкладке «Подключение».
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {availablePosLocations.map((location) => {
-                const isChecked = draft.pos_ids.includes(location.id)
-                return (
-                  <label
-                    key={location.id}
-                    className="flex items-center gap-3 rounded-lg border border-surface-border bg-white px-3 py-2.5"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() =>
-                        setDraft((current) =>
-                          current
-                            ? {
-                                ...current,
-                                pos_ids: isChecked
-                                  ? current.pos_ids.filter((id) => id !== location.id)
-                                  : [...current.pos_ids, location.id],
-                              }
-                            : current,
-                        )
-                      }
-                      className="h-4 w-4 rounded border-neutral-300 text-accent focus:ring-accent/20"
-                    />
-                    <span className="text-sm text-neutral-800">{location.name}</span>
-                  </label>
-                )
-              })}
-            </div>
-          )}
-        </div>
+        </section>
       </div>
 
       <SaveFooter isSaving={isSaving} saveError={saveError} saveSuccess={saveSuccess} onSave={save} />

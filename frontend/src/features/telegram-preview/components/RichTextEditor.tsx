@@ -127,7 +127,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
       <div className={cn('space-y-2', className)}>
         <div
           className={cn(
-            'w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm',
+            'w-full px-3 py-2 border border-neutral-200 rounded text-sm bg-white',
             'focus-within:ring-2 focus-within:ring-accent/20 focus-within:border-accent',
             'transition-colors',
           )}
