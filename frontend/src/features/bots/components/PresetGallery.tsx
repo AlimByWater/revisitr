@@ -2,12 +2,6 @@ import { cn } from '@/lib/utils'
 import { Check, RotateCcw } from 'lucide-react'
 import type { ModulePreset, BotModuleSettings } from '../types'
 
-const presetIcons: Record<string, string> = {
-  tabs: '📑',
-  list: '📋',
-  carousel: '🎠',
-}
-
 interface PresetGalleryProps {
   presets: ModulePreset[]
   currentSettings: BotModuleSettings | null
@@ -78,12 +72,59 @@ export function PresetGallery({
                   <Check className="h-3 w-3" />
                 </div>
               )}
-              <span className="text-2xl">{presetIcons[preset.preset_key] || '📄'}</span>
+              <PresetThumbnail presetKey={preset.preset_key} />
               <span className="text-sm font-medium text-neutral-900">{preset.name}</span>
               <span className="text-xs text-neutral-500 leading-relaxed">{preset.description}</span>
             </button>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+function PresetThumbnail({ presetKey }: { presetKey: string }) {
+  if (presetKey === 'tabs') {
+    return (
+      <div className="w-full rounded-lg border border-surface-border bg-neutral-50 p-2">
+        <div className="mb-2 grid grid-cols-3 gap-1">
+          <div className="h-5 rounded bg-accent/20" />
+          <div className="h-5 rounded bg-white border border-surface-border" />
+          <div className="h-5 rounded bg-white border border-surface-border" />
+        </div>
+        <div className="space-y-1">
+          <div className="h-2 rounded bg-neutral-300" />
+          <div className="h-2 rounded bg-neutral-200" />
+          <div className="h-2 w-4/5 rounded bg-neutral-200" />
+        </div>
+      </div>
+    )
+  }
+
+  if (presetKey === 'carousel') {
+    return (
+      <div className="w-full rounded-lg border border-surface-border bg-neutral-50 p-2">
+        <div className="mb-2 h-12 rounded bg-neutral-300" />
+        <div className="space-y-1">
+          <div className="h-2 rounded bg-neutral-300" />
+          <div className="h-2 w-3/4 rounded bg-neutral-200" />
+        </div>
+        <div className="mt-2 flex items-center justify-between rounded bg-white px-2 py-1 border border-surface-border">
+          <span className="text-[10px] text-neutral-400">←</span>
+          <span className="text-[10px] text-neutral-400">1/5</span>
+          <span className="text-[10px] text-neutral-400">→</span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="w-full rounded-lg border border-surface-border bg-neutral-50 p-2">
+      <div className="space-y-1">
+        <div className="h-2 rounded bg-neutral-300" />
+        <div className="h-2 rounded bg-neutral-200" />
+        <div className="h-2 rounded bg-neutral-200" />
+        <div className="h-2 w-5/6 rounded bg-neutral-200" />
       </div>
     </div>
   )

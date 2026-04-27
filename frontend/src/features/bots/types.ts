@@ -76,6 +76,26 @@ export interface BotModuleSettings {
   updated_at: string
 }
 
+export type PresetButtonStyle = '' | 'primary' | 'success' | 'danger'
+
+export interface MenuPresetCategoryCustomization {
+  category_id: number
+  label?: string
+  icon_image_url?: string
+  icon_custom_emoji_id?: string
+  style?: PresetButtonStyle
+  emoji_only?: boolean
+}
+
+export interface MenuPresetCustomizations {
+  title?: string
+  subtitle?: string
+  category_order?: number[]
+  categories?: MenuPresetCategoryCustomization[]
+  tab_button_style?: PresetButtonStyle
+  nav_button_style?: PresetButtonStyle
+}
+
 export interface BookingTimeSlot {
   start: string
   end: string

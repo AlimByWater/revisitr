@@ -37,11 +37,16 @@ type botsRepo interface {
 	GetByOrgID(ctx context.Context, orgID int) ([]entity.Bot, error)
 }
 
+type ownerLinksRepo interface {
+	GetLinkByOrgID(ctx context.Context, orgID int) ([]entity.MasterBotLink, error)
+}
+
 type Usecase struct {
-	logger    *slog.Logger
-	repo      emojiPacksRepo
-	bots      botsRepo
-	syncSvc   *emojisync.Service
+	logger  *slog.Logger
+	repo    emojiPacksRepo
+	bots    botsRepo
+	owners  ownerLinksRepo
+	syncSvc *emojisync.Service
 }
 
 func New(repo emojiPacksRepo, opts ...Option) *Usecase {
@@ -58,6 +63,12 @@ func WithSync(bots botsRepo, syncSvc *emojisync.Service) Option {
 	return func(uc *Usecase) {
 		uc.bots = bots
 		uc.syncSvc = syncSvc
+	}
+}
+
+func WithOwnerLinks(owners ownerLinksRepo) Option {
+	return func(uc *Usecase) {
+		uc.owners = owners
 	}
 }
 
@@ -261,7 +272,8 @@ func (uc *Usecase) SyncToTelegram(ctx context.Context, orgID, packID, botID int)
 	if bot.OrgID != orgID {
 		return nil, ErrNotOwner
 	}
-	if bot.CreatedByTelegramID == nil {
+	ownerTgID := uc.resolveOwnerTelegramID(ctx, orgID, bot)
+	if ownerTgID == 0 {
 		return nil, ErrBotNoOwner
 	}
 
@@ -271,7 +283,7 @@ func (uc *Usecase) SyncToTelegram(ctx context.Context, orgID, packID, botID int)
 		return nil, fmt.Errorf("create telego bot: %w", err)
 	}
 
-	syncedItems, err := uc.syncSvc.SyncPack(ctx, tgBot, bot.Username, *bot.CreatedByTelegramID, pack)
+	syncedItems, err := uc.syncSvc.SyncPack(ctx, tgBot, bot.Username, ownerTgID, pack)
 	if err != nil {
 		return nil, fmt.Errorf("sync pack: %w", err)
 	}
@@ -303,7 +315,7 @@ func (uc *Usecase) autoSync(ctx context.Context, orgID int, pack *entity.EmojiPa
 		return
 	}
 
-	// Find first bot for org with owner telegram ID
+	// Find first active bot for org
 	bots, err := uc.bots.GetByOrgID(ctx, orgID)
 	if err != nil {
 		uc.logger.Error("auto-sync: get bots", "error", err)
@@ -312,13 +324,19 @@ func (uc *Usecase) autoSync(ctx context.Context, orgID int, pack *entity.EmojiPa
 
 	var bot *entity.Bot
 	for i := range bots {
-		if bots[i].CreatedByTelegramID != nil && bots[i].Status == "active" {
+		if bots[i].Status == "active" {
 			bot = &bots[i]
 			break
 		}
 	}
 	if bot == nil {
-		uc.logger.Warn("auto-sync: no active bot with owner for org", "org_id", orgID)
+		uc.logger.Warn("auto-sync: no active bot for org", "org_id", orgID)
+		return
+	}
+
+	ownerTgID := uc.resolveOwnerTelegramID(ctx, orgID, bot)
+	if ownerTgID == 0 {
+		uc.logger.Warn("auto-sync: no owner telegram id for org", "org_id", orgID, "bot_id", bot.ID)
 		return
 	}
 
@@ -328,7 +346,7 @@ func (uc *Usecase) autoSync(ctx context.Context, orgID int, pack *entity.EmojiPa
 		return
 	}
 
-	syncedItems, err := uc.syncSvc.SyncPack(ctx, tgBot, bot.Username, *bot.CreatedByTelegramID, pack)
+	syncedItems, err := uc.syncSvc.SyncPack(ctx, tgBot, bot.Username, ownerTgID, pack)
 	if err != nil {
 		uc.logger.Error("auto-sync: sync pack", "error", err, "pack_id", pack.ID)
 		return
@@ -343,4 +361,18 @@ func (uc *Usecase) autoSync(ctx context.Context, orgID int, pack *entity.EmojiPa
 	}
 
 	uc.logger.Info("auto-sync: pack synced", "pack_id", pack.ID, "items", len(syncedItems))
+}
+
+func (uc *Usecase) resolveOwnerTelegramID(ctx context.Context, orgID int, bot *entity.Bot) int64 {
+	if bot != nil && bot.CreatedByTelegramID != nil && *bot.CreatedByTelegramID != 0 {
+		return *bot.CreatedByTelegramID
+	}
+	if uc.owners == nil {
+		return 0
+	}
+	links, err := uc.owners.GetLinkByOrgID(ctx, orgID)
+	if err != nil || len(links) == 0 {
+		return 0
+	}
+	return links[0].TelegramUserID
 }

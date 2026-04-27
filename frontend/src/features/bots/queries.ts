@@ -60,6 +60,15 @@ export function useSelectPresetMutation(botId: number, moduleKey: string) {
   )
 }
 
+export function useUpdateCustomizationsMutation(botId: number, moduleKey: string) {
+  return useApiMutation(
+    `update-customizations-${botId}-${moduleKey}`,
+    (customizations: Record<string, unknown>) =>
+      modulePresetsApi.updateCustomizations(botId, moduleKey, customizations),
+    [`bot-module-settings-${botId}-${moduleKey}`],
+  )
+}
+
 export function useResetPresetMutation(botId: number, moduleKey: string) {
   return useApiMutation(
     `reset-preset-${botId}-${moduleKey}`,

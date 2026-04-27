@@ -17,13 +17,13 @@ import (
 	campaignsGroup "revisitr/internal/controller/http/group/campaigns"
 	clientsGroup "revisitr/internal/controller/http/group/clients"
 	dashboardGroup "revisitr/internal/controller/http/group/dashboard"
+	emojipacksGroup "revisitr/internal/controller/http/group/emojipacks"
 	filesGroup "revisitr/internal/controller/http/group/files"
 	"revisitr/internal/controller/http/group/health"
 	integrationsGroup "revisitr/internal/controller/http/group/integrations"
 	loyaltyGroup "revisitr/internal/controller/http/group/loyalty"
 	marketplaceGroup "revisitr/internal/controller/http/group/marketplace"
 	masterbotGroup "revisitr/internal/controller/http/group/masterbot"
-	emojipacksGroup "revisitr/internal/controller/http/group/emojipacks"
 	menusGroup "revisitr/internal/controller/http/group/menus"
 	modulepresetsGroup "revisitr/internal/controller/http/group/modulepresets"
 	onboardingGroup "revisitr/internal/controller/http/group/onboarding"
@@ -50,10 +50,10 @@ import (
 	campaignsUC "revisitr/internal/usecase/campaigns"
 	clientsUC "revisitr/internal/usecase/clients"
 	dashboardUC "revisitr/internal/usecase/dashboard"
+	emojipacksUC "revisitr/internal/usecase/emojipacks"
 	integrationsUC "revisitr/internal/usecase/integrations"
 	loyaltyUC "revisitr/internal/usecase/loyalty"
 	marketplaceUC "revisitr/internal/usecase/marketplace"
-	emojipacksUC "revisitr/internal/usecase/emojipacks"
 	menusUC "revisitr/internal/usecase/menus"
 	modulepresetsUC "revisitr/internal/usecase/modulepresets"
 	onboardingUC "revisitr/internal/usecase/onboarding"
@@ -108,6 +108,7 @@ func main() {
 
 	// Emoji packs repo
 	emojiPacksRepo := pgRepo.NewEmojiPacks(pg)
+	masterBotLinksRepo := pgRepo.NewMasterBot(pg)
 
 	// Module presets repos
 	modulePresetsRepo := pgRepo.NewModulePresets(pg)
@@ -166,6 +167,7 @@ func main() {
 	emojiSyncSvc := emojisyncService.New(logger, cfg.GetBaseURL())
 	emojiPacksUsecase := emojipacksUC.New(emojiPacksRepo,
 		emojipacksUC.WithSync(botsRepo, emojiSyncSvc),
+		emojipacksUC.WithOwnerLinks(masterBotLinksRepo),
 	)
 
 	// Module presets usecase

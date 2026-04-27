@@ -20,8 +20,13 @@ import (
 const (
 	callbackVenuePrefix      = "venue:"
 	callbackMenuRoot         = "menu:root"
+	callbackMenuNoop         = "menu:noop"
+	callbackMenuTabPref      = "menu:tab:"
 	callbackMenuCategoryPref = "menu:cat:"
 	callbackMenuItemPref     = "menu:item:"
+	callbackMenuCardPref     = "menu:card:"
+	callbackMenuCardNavPref  = "menu:cardnav:"
+	callbackMenuCardClose    = "menu:cardclose"
 	callbackMenuCarouselPref = "menu:car:"
 	callbackBookingIntro     = "booking:intro"
 	callbackBookingStart     = "booking:start"
@@ -189,9 +194,23 @@ func (h *handler) handleCallbackQuery(ctx context.Context, query *telego.Callbac
 	case data == callbackMenuRoot:
 		h.answerCallback(query.ID, "")
 		h.renderMenuRoot(ctx, chatID)
+	case data == callbackMenuNoop:
+		h.answerCallback(query.ID, "")
+	case strings.HasPrefix(data, callbackMenuTabPref):
+		h.answerCallback(query.ID, "")
+		h.handleMenuTabCallback(ctx, chatID, strings.TrimPrefix(data, callbackMenuTabPref))
 	case strings.HasPrefix(data, callbackMenuCategoryPref):
 		h.answerCallback(query.ID, "")
 		h.handleMenuCategoryCallback(ctx, chatID, strings.TrimPrefix(data, callbackMenuCategoryPref))
+	case strings.HasPrefix(data, callbackMenuCardPref):
+		h.answerCallback(query.ID, "")
+		h.handleMenuCardCallback(ctx, query, strings.TrimPrefix(data, callbackMenuCardPref))
+	case strings.HasPrefix(data, callbackMenuCardNavPref):
+		h.answerCallback(query.ID, "")
+		h.handleMenuCardNavigationCallback(ctx, query, strings.TrimPrefix(data, callbackMenuCardNavPref))
+	case data == callbackMenuCardClose:
+		h.answerCallback(query.ID, "")
+		_ = h.deleteMessage(chatID, query.Message.GetMessageID())
 	case strings.HasPrefix(data, callbackMenuItemPref):
 		h.answerCallback(query.ID, "")
 		h.handleMenuItemCallback(ctx, chatID, strings.TrimPrefix(data, callbackMenuItemPref))
@@ -373,33 +392,15 @@ func (h *handler) resolveMenuRenderMode(ctx context.Context) string {
 }
 
 func (h *handler) renderMenuRoot(ctx context.Context, chatID int64) {
-	menu, _, ok := h.resolveMenuForChat(ctx, chatID)
-	if !ok || menu == nil {
-		h.sendText(chatID, h.menuUnavailableMessage())
+	h.renderMenuTabs(ctx, chatID, 0)
+}
+
+func (h *handler) handleMenuTabCallback(ctx context.Context, chatID int64, value string) {
+	categoryID, err := strconv.Atoi(value)
+	if err != nil {
 		return
 	}
-
-	var buttons [][]entity.InlineButton
-	for _, category := range menu.Categories {
-		label := category.Name
-		if category.IconEmoji != nil && *category.IconEmoji != "" {
-			label = *category.IconEmoji + " " + label
-		}
-		buttons = append(buttons, []entity.InlineButton{{
-			Text: label,
-			Data: callbackMenuCategoryPref + strconv.Itoa(category.ID) + ":0",
-		}})
-	}
-
-	content := h.menuIntroContent(menu)
-	content.Buttons = buttons
-
-	state := h.currentFlowState(ctx, chatID)
-	state.Flow = "menu"
-	state.MenuCategoryID = 0
-	state.MenuPage = 0
-	state.FlowMessageID = h.replaceFlowMessage(ctx, chatID, state, content)
-	_ = h.saveFlowState(ctx, chatID, state)
+	h.renderMenuTabs(ctx, chatID, categoryID)
 }
 
 func (h *handler) handleMenuCategoryCallback(ctx context.Context, chatID int64, value string) {
@@ -956,6 +957,58 @@ func (h *handler) replaceFlowMessage(ctx context.Context, chatID int64, state Fl
 	return messageID
 }
 
+func (h *handler) updateMessageByID(ctx context.Context, chatID int64, messageID int, content entity.MessageContent) int {
+	if messageID == 0 || len(content.Parts) == 0 {
+		return h.sendContentMessage(ctx, chatID, content)
+	}
+
+	part := content.Parts[0]
+	markup := h.inlineKeyboard(content.Buttons)
+	cleanText, emojiEntities := h.processEmojiMarkers(ctx, part.Text)
+	part.Text = cleanText
+
+	switch part.Type {
+	case entity.PartPhoto:
+		params := tu.EditMessageCaption(tu.ID(chatID), messageID, part.Text)
+		if len(emojiEntities) > 0 {
+			params = params.WithCaptionEntities(emojiEntities...)
+		} else if part.ParseMode != "" {
+			params = params.WithParseMode(part.ParseMode)
+		}
+		if markup != nil {
+			params = params.WithReplyMarkup(markup)
+		}
+		if _, err := h.bot.EditMessageCaption(ctx, params); err == nil {
+			return messageID
+		} else {
+			h.logger.Warn("edit message photo failed, replacing", "error", err, "chat_id", chatID, "message_id", messageID)
+		}
+	case entity.PartText:
+		params := tu.EditMessageText(tu.ID(chatID), messageID, part.Text)
+		if len(emojiEntities) > 0 {
+			params = params.WithEntities(emojiEntities...)
+		} else if part.ParseMode != "" {
+			params = params.WithParseMode(part.ParseMode)
+		}
+		if markup != nil {
+			params = params.WithReplyMarkup(markup)
+		}
+		if _, err := h.bot.EditMessageText(ctx, params); err == nil {
+			return messageID
+		} else {
+			h.logger.Warn("edit message text failed, replacing", "error", err, "chat_id", chatID, "message_id", messageID)
+		}
+	default:
+	}
+
+	_ = h.deleteMessage(chatID, messageID)
+	return h.sendContentMessage(ctx, chatID, content)
+}
+
+func (h *handler) updateFlowMessage(ctx context.Context, chatID int64, state FlowState, content entity.MessageContent) int {
+	return h.updateMessageByID(ctx, chatID, state.FlowMessageID, content)
+}
+
 var emojiMarkerRe = regexp.MustCompile(`\{\{emoji:([^}]+)\}\}`)
 
 func stripEmojiMarkers(text string) string {
@@ -1114,6 +1167,12 @@ func (h *handler) inlineKeyboard(rows [][]entity.InlineButton) *telego.InlineKey
 			}
 			if button.Data != "" {
 				inline.CallbackData = button.Data
+			}
+			if button.Style != "" {
+				inline.Style = button.Style
+			}
+			if button.IconCustomEmojiID != "" {
+				inline.IconCustomEmojiID = button.IconCustomEmojiID
 			}
 			buttons = append(buttons, inline)
 		}

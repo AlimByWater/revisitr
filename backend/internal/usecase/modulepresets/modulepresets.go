@@ -1,6 +1,7 @@
 package modulepresets
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -140,8 +141,21 @@ func (uc *Usecase) UpdateCustomizations(ctx context.Context, botID, orgID int, m
 		return ErrPresetNotFound
 	}
 
+	trimmed := bytes.TrimSpace(customizations)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		trimmed = []byte("{}")
+	}
+
+	var decoded any
+	if err := json.Unmarshal(trimmed, &decoded); err != nil {
+		return fmt.Errorf("update customizations: invalid json: %w", err)
+	}
+
 	existing.Customized = true
-	existing.Customizations = entity.JSONB(customizations)
+	if objectValue, ok := decoded.(map[string]any); ok && len(objectValue) == 0 {
+		existing.Customized = false
+	}
+	existing.Customizations = entity.JSONB(trimmed)
 	if err := uc.settings.Upsert(ctx, existing); err != nil {
 		return fmt.Errorf("update customizations: %w", err)
 	}

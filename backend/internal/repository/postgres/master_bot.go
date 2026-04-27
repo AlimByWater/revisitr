@@ -33,7 +33,7 @@ func (r *MasterBot) CreateLink(ctx context.Context, link *entity.MasterBotLink) 
 func (r *MasterBot) GetLinkByTelegramID(ctx context.Context, telegramUserID int64) (*entity.MasterBotLink, error) {
 	var link entity.MasterBotLink
 	err := r.pg.DB().GetContext(ctx, &link,
-		"SELECT * FROM master_bot_links WHERE telegram_user_id = $1 AND is_active = true",
+		"SELECT id, org_id, telegram_user_id, COALESCE(telegram_username, '') AS telegram_username, is_active, created_at, updated_at FROM master_bot_links WHERE telegram_user_id = $1 AND is_active = true",
 		telegramUserID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -47,7 +47,7 @@ func (r *MasterBot) GetLinkByTelegramID(ctx context.Context, telegramUserID int6
 func (r *MasterBot) GetLinkByOrgID(ctx context.Context, orgID int) ([]entity.MasterBotLink, error) {
 	var links []entity.MasterBotLink
 	err := r.pg.DB().SelectContext(ctx, &links,
-		"SELECT * FROM master_bot_links WHERE org_id = $1 AND is_active = true", orgID)
+		"SELECT id, org_id, telegram_user_id, COALESCE(telegram_username, '') AS telegram_username, is_active, created_at, updated_at FROM master_bot_links WHERE org_id = $1 AND is_active = true", orgID)
 	if err != nil {
 		return nil, fmt.Errorf("master_bot.GetLinkByOrgID: %w", err)
 	}
