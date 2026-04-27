@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, CircleAlert, CircleCheckBig, LayoutTemplate, ListTree, UtensilsCrossed } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBotQuery, useBotModuleSettingsQuery, useModulePresetsQuery, useResetPresetMutation, useSelectPresetMutation, useUpdateCustomizationsMutation } from '@/features/bots/queries'
 import type { MenuPresetCustomizations } from '@/features/bots/types'
@@ -8,6 +8,7 @@ import { MenuPresetCustomizer, createDefaultMenuPresetCustomizations, isMenuPres
 import { PresetGallery } from '@/features/bots/components/PresetGallery'
 import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 import { ErrorState } from '@/components/common/ErrorState'
+import { InfoHint } from '@/components/common/InfoHint'
 import { useMenusQuery } from '@/features/menus/queries'
 import { menusApi } from '@/features/menus/api'
 import type { Menu } from '@/features/menus/types'
@@ -100,6 +101,14 @@ export default function BotMenuSettingsPage() {
     return presetChanged || customizationsChanged
   }, [activeMenu, draft, moduleSettings?.preset_key, normalizedFromServer, presets, selectedPresetKey])
 
+  const selectedPreset = useMemo(
+    () => presets.find((preset) => preset.preset_key === selectedPresetKey) ?? presets[0] ?? null,
+    [presets, selectedPresetKey],
+  )
+
+  const categoryCount = draft.categories?.length ?? activeMenu?.categories?.length ?? 0
+  const activeMenuName = activeMenu?.name || 'Меню не выбрано'
+
   if (botLoading || presetsLoading || settingsLoading || menusLoading || !posBindingsLoaded) {
     return <CardSkeleton />
   }
@@ -148,94 +157,183 @@ export default function BotMenuSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 py-6">
-      <div className="flex items-center gap-3">
-        <Link
-          to={`/dashboard/bots/${id}?tab=modules`}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-surface-border text-neutral-500 transition-colors hover:text-neutral-700"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h1 className="text-lg font-semibold text-neutral-900">
-            Настройки модуля «Меню»
-          </h1>
-          <p className="text-sm text-neutral-500">{bot.name}</p>
+    <div className="mx-auto max-w-7xl space-y-6 py-6">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex items-start gap-3">
+          <Link
+            to={`/dashboard/bots/${id}?tab=modules`}
+            className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-surface-border bg-white text-neutral-500 transition-colors hover:text-neutral-700"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+                Настройки модуля «Меню»
+              </h1>
+              <span
+                className={cn(
+                  'inline-flex min-h-7 items-center rounded-full border px-2.5 text-xs font-medium',
+                  hasDraftChanges
+                    ? 'border-amber-200 bg-amber-50 text-amber-700'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                )}
+              >
+                {hasDraftChanges ? 'Есть несохранённые изменения' : 'Изменения сохранены'}
+              </span>
+            </div>
+            <p className="text-sm text-neutral-500">{bot.name}</p>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="rounded-xl border border-surface-border bg-white p-5">
-        <PresetGallery
-          presets={presets}
-          currentSettings={
-            moduleSettings
-              ? {
-                  ...moduleSettings,
-                  preset_key: selectedPresetKey || moduleSettings.preset_key,
-                }
-              : null
-          }
-          onSelect={handleSelectPreset}
-          onReset={handleLocalReset}
-          isSelecting={isSaving}
-          isResetting={isSaving}
-        />
-      </div>
-
-      <div className="rounded-xl border border-surface-border bg-white p-5">
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold text-neutral-900">Кастомизация</h3>
-          <p className="mt-1 text-xs text-neutral-500">
-            Меняйте табы и тексты. Логика переходов остаётся фиксированной внутри пресета.
-          </p>
-        </div>
-
-        <MenuPresetCustomizer
-          menu={activeMenu}
-          value={draft}
-          onChange={setDraft}
-        />
-
-        <div className="mt-6 flex flex-col gap-3 border-t border-surface-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-h-5 text-sm">
-            {saveError && <span className="text-red-600">{saveError}</span>}
-            {saveSuccess && <span className="text-green-600">Пресет сохранён</span>}
+      <div className="sticky top-4 z-10 rounded-2xl border border-surface-border bg-white/95 p-4 shadow-sm backdrop-blur">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-neutral-50 px-3 py-2">
+              <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Шаблон</div>
+              <div className="mt-1 flex items-center gap-2 text-sm font-medium text-neutral-900">
+                <LayoutTemplate className="h-4 w-4 text-neutral-400" />
+                <span>{selectedPreset?.name || 'Не выбран'}</span>
+              </div>
+            </div>
+            <div className="rounded-xl bg-neutral-50 px-3 py-2">
+              <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Меню</div>
+              <div className="mt-1 flex items-center gap-2 text-sm font-medium text-neutral-900">
+                <UtensilsCrossed className="h-4 w-4 text-neutral-400" />
+                <span>{activeMenuName}</span>
+              </div>
+            </div>
+            <div className="rounded-xl bg-neutral-50 px-3 py-2">
+              <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Категории</div>
+              <div className="mt-1 flex items-center gap-2 text-sm font-medium text-neutral-900">
+                <ListTree className="h-4 w-4 text-neutral-400" />
+                <span>{categoryCount}</span>
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              onClick={handleLocalReset}
-              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-surface-border px-4 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-50"
-            >
-              Сбросить локально
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={isSaving || !hasDraftChanges}
-              className={cn(
-                'inline-flex min-h-11 items-center justify-center rounded-lg px-5 text-sm font-medium text-white transition-colors',
-                'bg-accent hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50',
+          <div className="flex flex-col gap-3 lg:min-w-[22rem]">
+            <div className="min-h-5 text-sm">
+              {saveError && (
+                <span className="inline-flex items-center gap-1.5 text-red-600">
+                  <CircleAlert className="h-4 w-4" />
+                  {saveError}
+                </span>
               )}
-            >
-              {isSaving ? 'Сохранение...' : 'Сохранить изменения'}
-            </button>
+              {saveSuccess && (
+                <span className="inline-flex items-center gap-1.5 text-emerald-600">
+                  <CircleCheckBig className="h-4 w-4" />
+                  Пресет сохранён
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={handleLocalReset}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-surface-border px-4 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-50"
+              >
+                Сбросить локально
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSaving || !hasDraftChanges}
+                className={cn(
+                  'inline-flex min-h-11 items-center justify-center rounded-xl px-5 text-sm font-medium text-white transition-colors',
+                  'bg-accent hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50',
+                )}
+              >
+                {isSaving ? 'Сохранение...' : 'Сохранить изменения'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-surface-border bg-white p-5">
-        <h3 className="text-sm font-semibold text-neutral-900">Управление меню</h3>
-        <p className="mt-1 text-xs text-neutral-500">
-          Категории, позиции, цены и привязка к точкам продаж редактируются в отдельном разделе.
-        </p>
-        <Link
-          to={`/dashboard/menus?botId=${id}`}
-          className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-accent transition-colors hover:text-accent/80"
-        >
-          Открыть управление меню →
-        </Link>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <main className="space-y-6">
+          <section className="rounded-2xl border border-surface-border bg-white p-6">
+            <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div className="max-w-2xl">
+                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Шаг 1</div>
+                <div className="mt-1 flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-neutral-900">Выберите способ показа меню в боте</h2>
+                  <InfoHint content="Сначала выберите общий формат показа меню. Детали текста, кнопок и категорий настраиваются ниже." />
+                </div>
+              </div>
+            </div>
+
+            <PresetGallery
+              presets={presets}
+              currentSettings={
+                moduleSettings
+                  ? {
+                      ...moduleSettings,
+                      preset_key: selectedPresetKey || moduleSettings.preset_key,
+                    }
+                  : null
+              }
+              onSelect={handleSelectPreset}
+              onReset={handleLocalReset}
+              isSelecting={isSaving}
+              isResetting={isSaving}
+            />
+          </section>
+
+          <section className="rounded-2xl border border-surface-border bg-white p-6">
+            <div className="mb-5 max-w-2xl">
+              <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Шаг 2</div>
+              <div className="mt-1 flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-neutral-900">Настройте тексты, кнопки и категории</h2>
+                <InfoHint content="Здесь можно править подписи, порядок и иконки. Переходы внутри выбранного шаблона останутся прежними." />
+              </div>
+            </div>
+
+            <MenuPresetCustomizer
+              menu={activeMenu}
+              value={draft}
+              onChange={setDraft}
+            />
+          </section>
+        </main>
+
+        <aside className="space-y-4 xl:sticky xl:top-28 xl:self-start">
+          <section className="rounded-2xl border border-surface-border bg-white p-5">
+            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Контекст</div>
+            <h3 className="mt-2 text-base font-semibold text-neutral-900">Что вы редактируете сейчас</h3>
+            <dl className="mt-4 space-y-3 text-sm">
+              <div>
+                <dt className="text-neutral-400">Бот</dt>
+                <dd className="mt-1 font-medium text-neutral-900">{bot.name}</dd>
+              </div>
+              <div>
+                <dt className="text-neutral-400">Активное меню</dt>
+                <dd className="mt-1 font-medium text-neutral-900">{activeMenuName}</dd>
+              </div>
+              <div>
+                <dt className="text-neutral-400">Сейчас выбран</dt>
+                <dd className="mt-1 font-medium text-neutral-900">{selectedPreset?.name || 'Шаблон не выбран'}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="rounded-2xl border border-surface-border bg-white p-5">
+            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Отдельный раздел</div>
+            <h3 className="mt-2 text-base font-semibold text-neutral-900">Управление составом меню</h3>
+            <p className="mt-2 text-sm text-neutral-500">
+              Цены, блюда, фото и привязку к точкам продаж редактируйте отдельно, чтобы не смешивать контент и шаблон показа.
+            </p>
+            <Link
+              to={`/dashboard/menus?botId=${id}`}
+              className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-accent transition-colors hover:text-accent/80"
+            >
+              Открыть управление меню →
+            </Link>
+          </section>
+        </aside>
       </div>
     </div>
   )

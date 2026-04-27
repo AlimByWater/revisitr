@@ -4,6 +4,7 @@ import { EmojiPicker } from '@/features/emoji-packs'
 import type { EmojiItem } from '@/features/emoji-packs/types'
 import type { Menu } from '@/features/menus/types'
 import { ButtonStylePicker } from '@/features/telegram-preview/components/ButtonStylePicker'
+import { InfoHint } from '@/components/common/InfoHint'
 import type {
   MenuPresetCategoryCustomization,
   MenuPresetCustomizations,
@@ -223,60 +224,87 @@ export function MenuPresetCustomizer({
   }
 
   return (
-    <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-neutral-700">Заголовок</span>
-          <input
-            value={value.title ?? ''}
-            onChange={(event) => update({ title: event.target.value })}
-            className={inputClassName}
-            placeholder="Меню"
-          />
-        </label>
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-neutral-700">Подзаголовок</span>
-          <input
-            value={value.subtitle ?? ''}
-            onChange={(event) => update({ subtitle: event.target.value })}
-            className={inputClassName}
-            placeholder="Короткое пояснение над категориями"
-          />
-        </label>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-surface-border p-4">
-          <div className="mb-2 text-sm font-medium text-neutral-800">Стиль табов</div>
-          <div className="flex items-center gap-3">
-            <ButtonStylePicker
-              value={value.tab_button_style ?? ''}
-              onChange={(style) => update({ tab_button_style: style })}
-            />
-            <span className="text-sm text-neutral-500">Цвет для кнопок категорий</span>
+    <div className="space-y-8">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
+        <div className="rounded-2xl border border-surface-border bg-neutral-50/70 p-5">
+          <div className="mb-4">
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-semibold text-neutral-900">Тексты блока</h4>
+              <InfoHint content="Здесь меняются заголовок и короткое пояснение, которое пользователь увидит над категориями в боте." />
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-neutral-700">Заголовок</span>
+              <input
+                value={value.title ?? ''}
+                onChange={(event) => update({ title: event.target.value })}
+                className={inputClassName}
+                placeholder="Меню"
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-neutral-700">Подзаголовок</span>
+              <input
+                value={value.subtitle ?? ''}
+                onChange={(event) => update({ subtitle: event.target.value })}
+                className={inputClassName}
+                placeholder="Короткое пояснение над категориями"
+              />
+            </label>
           </div>
         </div>
 
-        <div className="rounded-xl border border-surface-border p-4">
-          <div className="mb-2 text-sm font-medium text-neutral-800">Стиль навигации</div>
-          <div className="flex items-center gap-3">
-            <ButtonStylePicker
-              value={value.nav_button_style ?? ''}
-              onChange={(style) => update({ nav_button_style: style })}
-            />
-            <span className="text-sm text-neutral-500">
-              Стрелки и счётчик карточки блюда
-            </span>
+        <div className="rounded-2xl border border-surface-border bg-neutral-50/70 p-5">
+          <div className="mb-4">
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-semibold text-neutral-900">Глобальный стиль кнопок</h4>
+              <InfoHint content="Общий стиль для табов и навигации. Если нужно, ниже можно задать отдельный стиль только для конкретной категории." />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-surface-border bg-white px-4 py-3">
+              <div>
+                <div className="text-sm font-medium text-neutral-800">Стиль табов</div>
+                <div className="mt-1 text-sm text-neutral-500">Цвет для кнопок категорий</div>
+              </div>
+              <ButtonStylePicker
+                value={value.tab_button_style ?? ''}
+                onChange={(style) => update({ tab_button_style: style })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-surface-border bg-white px-4 py-3">
+              <div>
+                <div className="text-sm font-medium text-neutral-800">Стиль навигации</div>
+                <div className="mt-1 text-sm text-neutral-500">Стрелки и счётчик карточки блюда</div>
+              </div>
+              <ButtonStylePicker
+                value={value.nav_button_style ?? ''}
+                onChange={(style) => update({ nav_button_style: style })}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="space-y-3">
-        <div>
-          <h4 className="text-sm font-medium text-neutral-800">Категории</h4>
-          <p className="mt-1 text-xs text-neutral-500">
-            Меняйте порядок, подписи и эмодзи. Flow остаётся фиксированным внутри пресета.
-          </p>
+      <section className="space-y-4">
+        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-semibold text-neutral-900">Категории</h4>
+              <InfoHint content="Здесь можно менять порядок, подписи и иконки категорий. Логика переходов внутри выбранного шаблона не меняется." />
+            </div>
+          </div>
+          <div className="text-sm text-neutral-400">{categories.length} категорий</div>
+        </div>
+
+        <div className="hidden rounded-xl border border-surface-border bg-neutral-50 px-4 py-3 xl:grid xl:grid-cols-[5.5rem_minmax(0,1.4fr)_12rem_12rem] xl:gap-4">
+          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Порядок</div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Подпись</div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Иконка</div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Стиль</div>
         </div>
 
         {categories.map((category, index) => {
@@ -284,135 +312,140 @@ export function MenuPresetCustomizer({
           return (
             <div
               key={category.category_id}
-              className="grid gap-3 rounded-xl border border-surface-border p-4 lg:grid-cols-[auto_minmax(0,1fr)_auto_auto]"
+              className="rounded-2xl border border-surface-border bg-white p-4"
             >
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => moveCategory(category.category_id, -1)}
-                  disabled={index === 0}
-                  className="rounded-lg border border-surface-border p-2 text-neutral-500 disabled:opacity-40"
-                  aria-label="Переместить вверх"
-                >
-                  <ArrowUp className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moveCategory(category.category_id, 1)}
-                  disabled={index === categories.length - 1}
-                  className="rounded-lg border border-surface-border p-2 text-neutral-500 disabled:opacity-40"
-                  aria-label="Переместить вниз"
-                >
-                  <ArrowDown className="h-4 w-4" />
-                </button>
-              </div>
-
-              <label className="space-y-2">
-                <span className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400">
-                  Подпись
-                </span>
-                <input
-                  value={category.label ?? ''}
-                  onChange={(event) =>
-                    updateCategory(category.category_id, (current) => ({
-                      ...current,
-                      label: event.target.value,
-                      emoji_only:
-                        !event.target.value.trim() &&
-                        Boolean(current.icon_custom_emoji_id || current.icon_image_url),
-                    }))
-                  }
-                  className={inputClassName}
-                  placeholder={menuCategory?.name ?? 'Категория'}
-                />
-                {menuCategory?.name && menuCategory.name !== category.label && (
-                  <div className="text-xs text-neutral-400">Исходное название: {menuCategory.name}</div>
-                )}
-                <div className="text-xs text-neutral-400">
-                  Если оставить подпись пустой и выбрать emoji, таб автоматически станет emoji-only.
+              <div className="grid gap-4 xl:grid-cols-[5.5rem_minmax(0,1.4fr)_12rem_12rem] xl:items-start">
+                <div className="flex items-center gap-2 xl:pt-8">
+                  <button
+                    type="button"
+                    onClick={() => moveCategory(category.category_id, -1)}
+                    disabled={index === 0}
+                    className="rounded-lg border border-surface-border p-2 text-neutral-500 disabled:opacity-40"
+                    aria-label="Переместить вверх"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveCategory(category.category_id, 1)}
+                    disabled={index === categories.length - 1}
+                    className="rounded-lg border border-surface-border p-2 text-neutral-500 disabled:opacity-40"
+                    aria-label="Переместить вниз"
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </button>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-neutral-500">
-                  <span>Таб:</span>
-                  <span className="inline-flex min-h-8 items-center gap-2 rounded-full border border-surface-border bg-white px-3 py-1">
-                    {category.icon_image_url ? (
-                      <img
-                        src={category.icon_image_url}
-                        alt={category.label || menuCategory?.name || 'Категория'}
-                        className="h-4 w-4 rounded object-cover"
-                      />
-                    ) : null}
-                    {(category.label || '').trim() && <span>{category.label}</span>}
-                    {!(category.label || '').trim() && !category.icon_image_url && <span>{menuCategory?.name || 'Категория'}</span>}
+
+                <label className="space-y-2">
+                  <span className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400 xl:hidden">
+                    Подпись
                   </span>
-                </div>
-              </label>
-
-              <div className="space-y-2">
-                <span className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400">
-                  Эмодзи
-                </span>
-                <div className="flex items-center gap-2">
-                  <EmojiPicker
-                    selected={category.icon_image_url}
-                    onSelect={(item: EmojiItem) =>
+                  <input
+                    value={category.label ?? ''}
+                    onChange={(event) =>
                       updateCategory(category.category_id, (current) => ({
                         ...current,
-                        icon_image_url: item.image_url,
-                        icon_custom_emoji_id: item.tg_custom_emoji_id ?? '',
-                        emoji_only: !current.label?.trim(),
+                        label: event.target.value,
+                        emoji_only:
+                          !event.target.value.trim() &&
+                          Boolean(current.icon_custom_emoji_id || current.icon_image_url),
                       }))
                     }
-                  >
-                    {category.icon_image_url ? (
-                      <img
-                        src={category.icon_image_url}
-                        alt="Эмодзи категории"
-                        className="h-6 w-6 rounded object-cover"
-                      />
-                    ) : (
-                      <ImageIcon className="h-4 w-4 text-neutral-500" />
+                    className={inputClassName}
+                    placeholder={menuCategory?.name ?? 'Категория'}
+                  />
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-400">
+                    {menuCategory?.name && menuCategory.name !== category.label && (
+                      <span>Исходное название: {menuCategory.name}</span>
                     )}
-                  </EmojiPicker>
-                  {category.icon_image_url && (
-                    <button
-                      type="button"
-                      onClick={() =>
+                    <span>Если оставить подпись пустой, в табе останется только иконка.</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-neutral-500">
+                    <span>Превью:</span>
+                    <span className="inline-flex min-h-8 items-center gap-2 rounded-full border border-surface-border bg-neutral-50 px-3 py-1">
+                      {category.icon_image_url ? (
+                        <img
+                          src={category.icon_image_url}
+                          alt={category.label || menuCategory?.name || 'Категория'}
+                          className="h-4 w-4 rounded object-cover"
+                        />
+                      ) : null}
+                      {(category.label || '').trim() && <span>{category.label}</span>}
+                      {!(category.label || '').trim() && !category.icon_image_url && <span>{menuCategory?.name || 'Категория'}</span>}
+                    </span>
+                  </div>
+                </label>
+
+                <div className="space-y-2">
+                  <span className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400 xl:hidden">
+                    Иконка
+                  </span>
+                  <div className="flex min-h-12 items-center gap-2 rounded-xl border border-surface-border bg-neutral-50 px-3 py-2">
+                    <EmojiPicker
+                      selected={category.icon_image_url}
+                      onSelect={(item: EmojiItem) =>
                         updateCategory(category.category_id, (current) => ({
                           ...current,
-                          icon_image_url: '',
-                          icon_custom_emoji_id: '',
-                          emoji_only: false,
+                          icon_image_url: item.image_url,
+                          icon_custom_emoji_id: item.tg_custom_emoji_id ?? '',
+                          emoji_only: !current.label?.trim(),
                         }))
                       }
-                      className="text-xs font-medium text-neutral-500 hover:text-neutral-700"
                     >
-                      Убрать
-                    </button>
-                  )}
+                      {category.icon_image_url ? (
+                        <img
+                          src={category.icon_image_url}
+                          alt="Эмодзи категории"
+                          className="h-6 w-6 rounded object-cover"
+                        />
+                      ) : (
+                        <ImageIcon className="h-4 w-4 text-neutral-500" />
+                      )}
+                    </EmojiPicker>
+                    <div className="text-sm text-neutral-500">
+                      {category.icon_image_url ? 'Иконка выбрана' : 'Добавить иконку'}
+                    </div>
+                    {category.icon_image_url && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateCategory(category.category_id, (current) => ({
+                            ...current,
+                            icon_image_url: '',
+                            icon_custom_emoji_id: '',
+                            emoji_only: false,
+                          }))
+                        }
+                        className="ml-auto text-xs font-medium text-neutral-500 hover:text-neutral-700"
+                      >
+                        Убрать
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <span className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400">
-                  Стиль
-                </span>
-                <div className="flex items-center gap-3">
-                  <ButtonStylePicker
-                    value={category.style ?? ''}
-                    onChange={(style) =>
-                      updateCategory(category.category_id, (current) => ({
-                        ...current,
-                        style,
-                      }))
-                    }
-                  />
-                  <span className="text-sm text-neutral-500">Только для этой кнопки</span>
+                <div className="space-y-2">
+                  <span className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400 xl:hidden">
+                    Стиль
+                  </span>
+                  <div className="flex min-h-12 items-center gap-3 rounded-xl border border-surface-border bg-neutral-50 px-3 py-2">
+                    <ButtonStylePicker
+                      value={category.style ?? ''}
+                      onChange={(style) =>
+                        updateCategory(category.category_id, (current) => ({
+                          ...current,
+                          style,
+                        }))
+                      }
+                    />
+                    <span className="text-sm text-neutral-500">Только для этой кнопки</span>
+                  </div>
                 </div>
               </div>
             </div>
           )
         })}
-      </div>
+      </section>
     </div>
   )
 }

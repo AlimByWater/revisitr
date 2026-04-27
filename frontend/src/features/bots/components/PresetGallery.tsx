@@ -27,8 +27,8 @@ export function PresetGallery({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-neutral-900">Шаблон отображения</h3>
-          <p className="mt-0.5 text-xs text-neutral-500">
-            Выберите как меню будет выглядеть в боте
+          <p className="mt-0.5 text-sm text-neutral-500">
+            Выберите формат, затем переходите к локальным правкам текста и категорий.
           </p>
         </div>
         {isCustomized && (
@@ -48,7 +48,7 @@ export function PresetGallery({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {presets.map((preset) => {
           const isActive = preset.preset_key === activeKey
           return (
@@ -60,7 +60,7 @@ export function PresetGallery({
               }}
               disabled={isSelecting || isResetting}
               className={cn(
-                'relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center',
+                'relative flex h-full flex-col items-start gap-3 rounded-2xl border p-4 text-left',
                 'transition-all hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed',
                 isActive
                   ? 'border-accent bg-accent/5 shadow-sm'
@@ -68,13 +68,15 @@ export function PresetGallery({
               )}
             >
               {isActive && (
-                <div className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-white">
+                <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-white">
                   <Check className="h-3 w-3" />
                 </div>
               )}
               <PresetThumbnail presetKey={preset.preset_key} />
-              <span className="text-sm font-medium text-neutral-900">{preset.name}</span>
-              <span className="text-xs text-neutral-500 leading-relaxed">{preset.description}</span>
+              <div className="space-y-1">
+                <div className="text-base font-semibold text-neutral-900">{preset.name}</div>
+                <div className="text-sm leading-relaxed text-neutral-500">{preset.description}</div>
+              </div>
             </button>
           )
         })}
@@ -86,16 +88,16 @@ export function PresetGallery({
 function PresetThumbnail({ presetKey }: { presetKey: string }) {
   if (presetKey === 'tabs') {
     return (
-      <div className="w-full rounded-lg border border-surface-border bg-neutral-50 p-2">
-        <div className="mb-2 grid grid-cols-3 gap-1">
-          <div className="h-5 rounded bg-accent/20" />
-          <div className="h-5 rounded bg-white border border-surface-border" />
-          <div className="h-5 rounded bg-white border border-surface-border" />
+      <div className="w-full rounded-xl border border-surface-border bg-neutral-50 p-3">
+        <div className="mb-3 grid grid-cols-3 gap-1.5">
+          <div className="h-6 rounded-md bg-accent/20" />
+          <div className="h-6 rounded-md border border-surface-border bg-white" />
+          <div className="h-6 rounded-md border border-surface-border bg-white" />
         </div>
-        <div className="space-y-1">
-          <div className="h-2 rounded bg-neutral-300" />
-          <div className="h-2 rounded bg-neutral-200" />
-          <div className="h-2 w-4/5 rounded bg-neutral-200" />
+        <div className="space-y-1.5">
+          <div className="h-2.5 rounded bg-neutral-300" />
+          <div className="h-2.5 rounded bg-neutral-200" />
+          <div className="h-2.5 w-4/5 rounded bg-neutral-200" />
         </div>
       </div>
     )
@@ -103,13 +105,13 @@ function PresetThumbnail({ presetKey }: { presetKey: string }) {
 
   if (presetKey === 'carousel') {
     return (
-      <div className="w-full rounded-lg border border-surface-border bg-neutral-50 p-2">
-        <div className="mb-2 h-12 rounded bg-neutral-300" />
-        <div className="space-y-1">
-          <div className="h-2 rounded bg-neutral-300" />
-          <div className="h-2 w-3/4 rounded bg-neutral-200" />
+      <div className="w-full rounded-xl border border-surface-border bg-neutral-50 p-3">
+        <div className="mb-3 h-16 rounded-lg bg-neutral-300" />
+        <div className="space-y-1.5">
+          <div className="h-2.5 rounded bg-neutral-300" />
+          <div className="h-2.5 w-3/4 rounded bg-neutral-200" />
         </div>
-        <div className="mt-2 flex items-center justify-between rounded bg-white px-2 py-1 border border-surface-border">
+        <div className="mt-3 flex items-center justify-between rounded-lg border border-surface-border bg-white px-2 py-1.5">
           <span className="text-[10px] text-neutral-400">←</span>
           <span className="text-[10px] text-neutral-400">1/5</span>
           <span className="text-[10px] text-neutral-400">→</span>
@@ -119,12 +121,12 @@ function PresetThumbnail({ presetKey }: { presetKey: string }) {
   }
 
   return (
-    <div className="w-full rounded-lg border border-surface-border bg-neutral-50 p-2">
-      <div className="space-y-1">
-        <div className="h-2 rounded bg-neutral-300" />
-        <div className="h-2 rounded bg-neutral-200" />
-        <div className="h-2 rounded bg-neutral-200" />
-        <div className="h-2 w-5/6 rounded bg-neutral-200" />
+    <div className="w-full rounded-xl border border-surface-border bg-neutral-50 p-3">
+      <div className="space-y-1.5">
+        <div className="h-2.5 rounded bg-neutral-300" />
+        <div className="h-2.5 rounded bg-neutral-200" />
+        <div className="h-2.5 rounded bg-neutral-200" />
+        <div className="h-2.5 w-5/6 rounded bg-neutral-200" />
       </div>
     </div>
   )
