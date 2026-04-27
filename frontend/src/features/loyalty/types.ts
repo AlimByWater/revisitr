@@ -10,6 +10,7 @@ export interface LoyaltyProgram {
   type: 'bonus' | 'discount'
   config: ProgramConfig
   is_active: boolean
+  client_count?: number
   created_at: string
   updated_at: string
   levels?: LoyaltyLevel[]

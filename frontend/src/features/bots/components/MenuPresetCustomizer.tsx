@@ -372,7 +372,7 @@ export function MenuPresetCustomizer({
 interface SortableCategoryRowProps {
   id: string
   category: MenuPresetCategoryCustomization
-  menuCategory?: Menu['categories'][number]
+  menuCategory?: NonNullable<Menu['categories']>[number]
   isExpanded: boolean
   onToggleExpanded: () => void
   onUpdateCategory: (

@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import { useBotQuery } from "@/features/bots/queries";
 import { botsApi } from "@/features/bots/api";
 import { menusApi } from "@/features/menus/api";
-import { Drawer } from "@/components/common/Drawer";
 import { usePOSQuery } from "@/features/pos/queries";
 import { useProgramsQuery } from "@/features/loyalty/queries";
 import { ErrorState } from "@/components/common/ErrorState";
