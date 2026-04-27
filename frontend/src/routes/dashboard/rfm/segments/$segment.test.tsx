@@ -149,7 +149,8 @@ describe('SegmentDetailPage', () => {
     })
     render(<SegmentDetailPage />)
 
-    expect(screen.getByText(/Стр\. 1 из 3/)).toBeInTheDocument()
+    expect(screen.getByText('Всего 45 клиентов')).toBeInTheDocument()
+    expect(screen.getByText('1 / 3')).toBeInTheDocument()
   })
 
   it('changes sort order on column header click', async () => {

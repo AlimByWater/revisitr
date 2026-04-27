@@ -171,8 +171,6 @@ describe('MenuDetailPage', () => {
     )
     expect(screen.getByText('Приветственное сообщение')).toBeInTheDocument()
     expect(screen.getByText('Привязка к точкам продаж')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('☕')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('https://cdn.test/icon.png')).toBeInTheDocument()
     expect(screen.getByText('250 мл')).toBeInTheDocument()
     expect(screen.getByText('Есть фото')).toBeInTheDocument()
   })

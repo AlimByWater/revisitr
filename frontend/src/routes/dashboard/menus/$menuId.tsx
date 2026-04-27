@@ -328,7 +328,6 @@ export default function MenuDetailPage() {
             )}
           </div>
         </section>
-      </div>
 
       <section className="bg-white rounded border border-neutral-900 p-6 animate-in animate-in-delay-3">
         <div className="mb-5">
