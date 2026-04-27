@@ -271,8 +271,8 @@ export default function EmojiPacksPage() {
     <div>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Эмодзи-паки</h1>
-          <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
+          <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">Эмодзи-паки</h1>
+          <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
             Иконки для категорий меню
           </p>
         </div>
@@ -330,7 +330,7 @@ export default function EmojiPacksPage() {
           <div className="w-16 h-16 rounded bg-neutral-100 flex items-center justify-center mb-4">
             <Smile className="w-8 h-8 text-neutral-400" />
           </div>
-          <h3 className="font-serif text-xl font-bold text-neutral-800 mb-1.5">Нет эмодзи-паков</h3>
+          <h3 className="font-display text-xl font-bold text-neutral-800 mb-1.5">Нет эмодзи-паков</h3>
           <p className="text-sm text-neutral-400 max-w-xs leading-relaxed">
             Создайте пак и добавьте иконки для категорий меню
           </p>

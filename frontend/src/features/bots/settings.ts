@@ -131,14 +131,14 @@ export interface SystemButtonMeta {
 export function getSystemButtons(modules: string[]): SystemButtonMeta[] {
   const buttons: SystemButtonMeta[] = [
     { label: 'Контакты', managed_by_module: 'contacts', configureLabel: 'Контакты', isExpandable: false },
-    { label: 'На главную', managed_by_module: 'home', configureLabel: 'Главная', isExpandable: false },
+    { label: 'Главная страница', managed_by_module: 'home', configureLabel: 'Главная', isExpandable: false },
   ]
 
   if (modules.includes('loyalty')) {
     buttons.push({ label: 'Лояльность', managed_by_module: 'loyalty', configureLabel: 'Лояльность', isExpandable: false })
   }
   if (modules.includes('menu')) {
-    buttons.push({ label: 'Меню', managed_by_module: 'menu', configureLabel: 'Меню', isExpandable: true })
+    buttons.push({ label: 'Меню', managed_by_module: 'menu', configureLabel: 'Меню', isExpandable: false })
   }
   if (modules.includes('booking')) {
     buttons.push({ label: 'Забронировать', managed_by_module: 'booking', configureLabel: 'Бронирование', isExpandable: true })

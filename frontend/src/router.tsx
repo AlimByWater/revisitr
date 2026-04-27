@@ -1,5 +1,5 @@
-import { Suspense, lazy, useState, type ComponentType, type LazyExoticComponent } from 'react'
-import { createBrowserRouter, redirect, Outlet } from 'react-router-dom'
+import { Suspense, lazy, useEffect, useState, type ComponentType, type LazyExoticComponent } from 'react'
+import { createBrowserRouter, redirect, Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from './components/layout/Sidebar'
 import { Footer } from './components/layout/Footer'
 import { Header } from './components/layout/Header'
@@ -45,6 +45,7 @@ const MarketplacePage = lazy(() => import('./routes/dashboard/marketplace/index'
 const BillingPage = lazy(() => import('./routes/dashboard/billing/index'))
 const InvoicesPage = lazy(() => import('./routes/dashboard/billing/invoices'))
 const CreatePromotionPage = lazy(() => import('./routes/dashboard/promotions/create'))
+const EditPromotionPage = lazy(() => import('./routes/dashboard/promotions/create'))
 const PredictionsPage = lazy(() => import('./routes/dashboard/clients/predictions'))
 const RFMDashboardPage = lazy(() => import('./routes/dashboard/rfm/index'))
 const RFMOnboardingPage = lazy(() => import('./routes/dashboard/rfm/onboarding'))
@@ -73,6 +74,11 @@ function lazyElement(Component: LazyExoticComponent<ComponentType<any>>) {
 function DashboardLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const { theme } = useTheme()
+  const location = useLocation()
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [location.pathname])
 
   if (theme === 'aurora') {
     return (
@@ -158,6 +164,7 @@ export const router = createBrowserRouter(
             { path: 'rfm/template', element: lazyElement(RFMTemplatePage) },
             { path: 'rfm/segments/:segment', element: lazyElement(SegmentDetailPage) },
             { path: 'promotions/create', element: lazyElement(CreatePromotionPage) },
+            { path: 'promotions/:promoId', element: lazyElement(EditPromotionPage) },
             { path: 'promotions', element: lazyElement(PromotionsPage) },
             { path: 'promotions/codes', element: lazyElement(PromoCodesPage) },
             { path: 'promotions/archive', element: lazyElement(PromotionsArchivePage) },

@@ -492,12 +492,13 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="max-w-2xl space-y-8">
-      <div className="animate-in">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+    <div className="max-w-2xl space-y-6">
+      <div className="animate-in mb-6">
+        <p className="font-mono text-[10px] uppercase tracking-wider text-neutral-300 mb-1">Revisitr</p>
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">
           Настройки аккаунта
         </h1>
-        <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
+        <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
           Управление профилем, безопасностью и реквизитами
         </p>
       </div>

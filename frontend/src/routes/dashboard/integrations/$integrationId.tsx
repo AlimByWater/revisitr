@@ -35,15 +35,16 @@ const TYPE_LABELS: Record<string, string> = {
 
 const STATUS_STYLES: Record<
   string,
-  { bg: string; text: string; label: string }
+  { bg: string; text: string; border: string; label: string }
 > = {
-  active: { bg: 'bg-green-50', text: 'text-green-700', label: 'Активна' },
+  active: { bg: 'bg-emerald-500/10', text: 'text-emerald-700', border: 'border-emerald-500/30', label: 'Активна' },
   inactive: {
     bg: 'bg-neutral-100',
-    text: 'text-neutral-500',
+    text: 'text-neutral-600',
+    border: 'border-neutral-300',
     label: 'Неактивна',
   },
-  error: { bg: 'bg-red-50', text: 'text-red-700', label: 'Ошибка' },
+  error: { bg: 'bg-red-500/10', text: 'text-red-700', border: 'border-red-500/30', label: 'Ошибка' },
 }
 
 const TABS = [
@@ -122,7 +123,7 @@ export default function IntegrationDetailPage() {
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h1 className="font-serif text-2xl font-bold text-neutral-900">
+            <h1 className="font-display text-2xl font-bold text-neutral-900">
               {TYPE_LABELS[integration.type] || integration.type}
             </h1>
             {integration.type === 'mock' && (
@@ -132,9 +133,10 @@ export default function IntegrationDetailPage() {
             )}
             <span
               className={cn(
-                'text-xs font-medium px-2 py-0.5 rounded-full',
+                'font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border',
                 status.bg,
                 status.text,
+                status.border,
               )}
             >
               {status.label}
@@ -234,17 +236,19 @@ function OverviewTab({
       </div>
 
       {(syncMutation.isError || testMutation.isError) && (
-        <p className="text-sm text-red-600 bg-red-50 p-3 rounded">
-          {integration.type === 'iiko' || integration.type === 'rkeeper'
-            ? 'Ошибка подключения к POS-системе. Проверьте настройки.'
-            : 'Произошла ошибка. Попробуйте снова.'}
-        </p>
+        <div className="flex items-start gap-3 rounded p-4 bg-orange-50 border border-accent/30">
+          <span className="text-sm text-orange-800/90">
+            {integration.type === 'iiko' || integration.type === 'rkeeper'
+              ? 'Ошибка подключения к POS-системе. Проверьте настройки.'
+              : 'Произошла ошибка. Попробуйте снова.'}
+          </span>
+        </div>
       )}
 
       {syncMutation.isSuccess && (
-        <p className="text-sm text-green-700 bg-green-50 p-3 rounded">
-          Синхронизация завершена успешно.
-        </p>
+        <div className="flex items-start gap-3 rounded p-4 bg-emerald-50 border border-emerald-500/25">
+          <p className="text-sm text-emerald-800/90">Синхронизация завершена успешно.</p>
+        </div>
       )}
 
       {/* Stats */}

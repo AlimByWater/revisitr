@@ -9,19 +9,19 @@ import { TableSkeleton } from '@/components/common/LoadingSkeleton'
 const typeConfig: Record<Promotion['type'], { label: string; className: string }> = {
   discount: {
     label: 'Скидка',
-    className: 'bg-blue-100 text-blue-700',
+    className: 'bg-accent/10 text-accent border border-accent/30',
   },
   bonus: {
     label: 'Бонус',
-    className: 'bg-purple-100 text-purple-700',
+    className: 'bg-neutral-100 text-neutral-600 border border-neutral-300',
   },
   tag_update: {
     label: 'Тег',
-    className: 'bg-amber-100 text-amber-700',
+    className: 'bg-amber-500/10 text-amber-700 border border-amber-500/30',
   },
   campaign: {
     label: 'Рассылка',
-    className: 'bg-cyan-100 text-cyan-700',
+    className: 'bg-accent/10 text-accent border border-accent/30',
   },
 }
 
@@ -63,10 +63,10 @@ export default function PromotionsArchivePage() {
   return (
     <div>
       <div className="mb-6 animate-in">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">
           Архив акций
         </h1>
-        <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
+        <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
           Завершённые и деактивированные акции
         </p>
       </div>
@@ -144,10 +144,10 @@ export default function PromotionsArchivePage() {
                   const isExpired =
                     promo.ends_at && new Date(promo.ends_at) < new Date()
                   const reason = !promo.active
-                    ? { label: 'Деактивирована', className: 'bg-neutral-100 text-neutral-500' }
+                    ? { label: 'Деактивирована', className: 'bg-neutral-100 text-neutral-600 border border-neutral-300' }
                     : isExpired
-                      ? { label: 'Истекла', className: 'bg-red-100 text-red-700' }
-                      : { label: 'Завершена', className: 'bg-neutral-100 text-neutral-500' }
+                      ? { label: 'Истекла', className: 'bg-red-500/10 text-red-700 border border-red-500/30' }
+                      : { label: 'Завершена', className: 'bg-neutral-100 text-neutral-600 border border-neutral-300' }
 
                   return (
                     <tr
@@ -179,7 +179,7 @@ export default function PromotionsArchivePage() {
                       <td className="px-6 py-4 hidden sm:table-cell">
                         <span
                           className={cn(
-                            'text-xs font-medium px-2 py-1 rounded-full',
+                            'font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded',
                             promoType.className,
                           )}
                         >
@@ -189,7 +189,7 @@ export default function PromotionsArchivePage() {
                       <td className="px-6 py-4">
                         <span
                           className={cn(
-                            'text-xs font-medium px-2 py-1 rounded-full',
+                            'font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded',
                             reason.className,
                           )}
                         >

@@ -123,10 +123,10 @@ export default function RFMTemplatePage() {
           <ChevronLeft className="w-4 h-4" />
           RFM-сегменты
         </button>
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">
           {showCustom ? 'Ручная настройка' : 'Выбор шаблона'}
         </h1>
-        <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
+        <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
           {showCustom ? 'Задайте пороги вручную' : 'Выберите подходящий тип заведения'}
         </p>
       </div>
@@ -181,30 +181,28 @@ export default function RFMTemplatePage() {
                   onClick={() => setSelectedKey(t.key)}
                   className={cn(
                     'relative text-left bg-white rounded border border-neutral-900 p-6',
-                    'transition-all duration-200',
+                    'cursor-pointer transition-all duration-150',
                     'animate-in',
                     `animate-in-delay-${i + 1}`,
-                    isSelected ? 'bg-neutral-50' : 'hover:bg-neutral-50',
+                    isSelected ? 'bg-neutral-50' : 'hover:bg-neutral-50 hover:scale-[1.01]',
                   )}
                 >
                   {isSelected && (
-                    <div className="absolute top-4 right-4 w-6 h-6 rounded-full bg-accent flex items-center justify-center">
-                      <Check className="w-3.5 h-3.5 text-white" />
+                    <div className="absolute top-4 right-4 w-5 h-5 rounded bg-accent flex items-center justify-center">
+                      <Check className="w-3 h-3 text-white" />
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center gap-2.5 mb-2">
                     {Icon && (
-                      <div className="w-10 h-10 rounded bg-neutral-100 flex items-center justify-center shrink-0">
-                        <Icon className="w-5 h-5" style={{ color: iconData.color }} />
-                      </div>
+                      <Icon className="w-5 h-5 shrink-0" style={{ color: iconData.color }} />
                     )}
-                    <h3 className="font-semibold text-neutral-900">{t.name}</h3>
+                    <h3 className="text-sm font-semibold text-neutral-900">{t.name}</h3>
                   </div>
                   <p className="text-sm text-neutral-500 leading-relaxed">{t.description}</p>
 
                   {activeKey === t.key && !hasChanged && (
-                    <p className="mt-3 text-xs text-neutral-400">Текущий шаблон</p>
+                    <p className="mt-3 font-mono text-[10px] text-neutral-400 uppercase tracking-wider">Текущий шаблон</p>
                   )}
                 </button>
               )

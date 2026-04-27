@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { EmojiPicker } from "@/features/emoji-packs";
+import { CustomSelect } from "@/components/common/CustomSelect";
 import { RichTextEditor, type RichTextEditorHandle } from "./RichTextEditor";
 import { ButtonStylePicker } from "./ButtonStylePicker";
 import {
@@ -201,7 +202,7 @@ export function MessageContentEditor({
           <button
             type="button"
             onClick={() => setShowTypeMenu(!showTypeMenu)}
-            className="flex min-h-11 items-center gap-2 w-full px-3 py-2 border border-dashed border-neutral-300 rounded-lg text-sm text-neutral-500 hover:border-neutral-400 hover:text-neutral-600 transition-colors"
+            className="flex min-h-11 items-center gap-2 w-full px-3 py-2 border border-dashed border-neutral-300 rounded text-sm text-neutral-500 hover:border-neutral-400 hover:text-neutral-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Добавить блок
@@ -213,7 +214,7 @@ export function MessageContentEditor({
             />
           </button>
           {showTypeMenu && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-10 py-1">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded shadow-lg z-10 py-1">
               {PART_TYPE_OPTIONS.map((opt) => (
                 <button
                   key={opt.type}
@@ -304,40 +305,36 @@ function SortablePartEditor({
     <div
       ref={setNodeRef}
       style={style}
-      className="bg-white border border-neutral-200 rounded-lg p-3"
+      className="w-full box-border bg-white border border-neutral-200 rounded p-3"
     >
       <div className="flex items-center gap-2 mb-2">
         <button
           type="button"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg cursor-grab text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded cursor-grab text-neutral-400 hover:text-neutral-600 hover:bg-white"
           {...attributes}
           {...listeners}
           aria-label={`Перетащить блок ${index + 1}`}
         >
           <GripVertical className="w-4 h-4" />
         </button>
-        <select
-          value={part.type}
-          onChange={(e) =>
-            onUpdate(
-              index,
-              convertPartType(part, e.target.value as MessagePartType),
-            )
-          }
-          className="text-xs font-medium uppercase text-neutral-500 bg-transparent border border-neutral-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent/30"
-          aria-label={`Тип блока ${index + 1}`}
-        >
-          {PART_TYPE_OPTIONS.map((option) => (
-            <option key={option.type} value={option.type}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <div className="w-32">
+          <CustomSelect
+            value={part.type}
+            onChange={(v) =>
+              onUpdate(
+                index,
+                convertPartType(part, v as MessagePartType),
+              )
+            }
+            options={PART_TYPE_OPTIONS.map((o) => ({ value: o.type, label: o.label }))}
+            ghost
+          />
+        </div>
         {canRemove && (
           <button
             type="button"
             onClick={() => onRemove(index)}
-            className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50"
+            className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded text-neutral-400 hover:text-red-500 hover:bg-red-50"
             aria-label={`Удалить блок ${index + 1}`}
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -490,7 +487,7 @@ function PlaceholderPicker({
         role="dialog"
         aria-label="Выбор плейсхолдера"
         className={cn(
-          "absolute right-0 top-full z-50 mt-1 w-64 max-h-72 overflow-y-auto rounded-lg border border-neutral-200 bg-white py-1 shadow-lg",
+          "absolute right-0 top-full z-50 mt-1 w-64 max-h-72 overflow-y-auto rounded border border-neutral-200 bg-white py-1 shadow-lg",
           "transition-all duration-150 origin-top-right",
           open
             ? "opacity-100 scale-y-100 pointer-events-auto"
@@ -642,7 +639,7 @@ function MediaUploadField({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="flex items-center gap-2 w-full px-3 py-3 border border-dashed border-neutral-300 rounded-lg text-sm text-neutral-500 hover:border-accent hover:text-accent transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 w-full px-3 py-3 border border-dashed border-neutral-300 rounded text-sm text-neutral-500 hover:border-accent hover:text-accent transition-colors disabled:opacity-50"
         >
           <Upload className="w-4 h-4" />
           {uploading ? "Загрузка..." : label}

@@ -5,7 +5,8 @@ import type { Tariff } from '@/features/billing/types'
 import { Link } from 'react-router-dom'
 import { Check, Crown, Zap, AlertTriangle, CreditCard } from 'lucide-react'
 
-function formatPrice(kopeks: number): string {
+function formatPrice(kopeks: number, slug?: string): string {
+  if (slug === 'enterprise') return 'От 35 000 ₽'
   if (kopeks === 0) return 'Бесплатно'
   return `${(kopeks / 100).toLocaleString('ru-RU')} ₽`
 }
@@ -45,8 +46,8 @@ function TariffCard({
       className={cn(
         'relative flex flex-col rounded border p-6 transition-all',
         isCurrent
-          ? 'border-accent/50 bg-accent/5 ring-1 ring-accent/20'
-          : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-md',
+          ? 'border-2 border-accent bg-white'
+          : 'border border-neutral-900 bg-white',
       )}
     >
       {isPro && (
@@ -60,8 +61,8 @@ function TariffCard({
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-neutral-900">{tariff.name}</h3>
         <p className="text-2xl font-bold text-neutral-900 mt-2">
-          {formatPrice(tariff.price)}
-          {tariff.price > 0 && (
+          {formatPrice(tariff.price, tariff.slug)}
+          {tariff.price > 0 && tariff.slug !== 'enterprise' && (
             <span className="text-sm font-normal text-neutral-400">
               /{tariff.interval === 'month' ? 'мес' : 'год'}
             </span>
@@ -154,11 +155,12 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Биллинг</h1>
-          <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">Управление подпиской и тарифом</p>
+        <div className="animate-in mb-6">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-neutral-300 mb-1">Revisitr</p>
+          <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">Биллинг</h1>
+          <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">Управление подпиской и тарифом</p>
         </div>
         <Link
           to="/dashboard/billing/invoices"
@@ -179,7 +181,7 @@ export default function BillingPage() {
                   <h2 className="text-lg font-semibold text-neutral-900">{subscription.tariff_name}</h2>
                   <StatusBadge status={subscription.status} />
                 </div>
-                <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
+                <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
                   Действует до {new Date(subscription.current_period_end).toLocaleDateString('ru-RU')}
                 </p>
               </div>
@@ -229,13 +231,13 @@ export default function BillingPage() {
 
       {/* Tariff cards */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
             <div key={i} className="rounded border border-neutral-900 bg-white p-6 h-80 animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {tariffs?.map((tariff) => (
             <TariffCard
               key={tariff.id}

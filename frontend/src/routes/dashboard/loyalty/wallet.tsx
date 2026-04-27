@@ -7,7 +7,7 @@ import {
   useSaveWalletConfigMutation,
   useRevokeWalletPassMutation,
 } from '@/features/wallet/queries'
-import { Smartphone, Apple, CreditCard, Shield, Palette, Users, Ban } from 'lucide-react'
+import { Smartphone, Apple, CreditCard, Shield, Palette, Users, Ban, SlidersHorizontal, ChevronDown } from 'lucide-react'
 import { ErrorState } from '@/components/common/ErrorState'
 import { TableSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -33,11 +33,24 @@ export default function WalletPage() {
   const appleConfig = configs?.find((c) => c.platform === 'apple')
   const googleConfig = configs?.find((c) => c.platform === 'google')
 
+  const handleSave = async (
+    platform: 'apple' | 'google',
+    credentials: WalletCredentials,
+    design: WalletDesign,
+    isEnabled: boolean,
+  ) => {
+    await saveConfig.trigger({
+      platform,
+      data: { platform, is_enabled: isEnabled, credentials, design },
+    })
+    setEditPlatform(null)
+  }
+
   return (
     <div className="space-y-6">
       <div className="animate-in">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Wallet</h1>
-        <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">Wallet</h1>
+        <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
           Карты лояльности в Apple Wallet и Google Wallet
         </p>
       </div>
@@ -54,33 +67,39 @@ export default function WalletPage() {
 
       {/* Platform configs */}
       <div className="grid gap-3 sm:grid-cols-2 animate-in animate-in-delay-2">
-        <PlatformCard
-          platform="apple"
-          config={appleConfig}
-          onEdit={() => setEditPlatform('apple')}
-        />
-        <PlatformCard
-          platform="google"
-          config={googleConfig}
-          onEdit={() => setEditPlatform('google')}
-        />
+        <div>
+          <PlatformCard
+            platform="apple"
+            config={appleConfig}
+            isExpanded={editPlatform === 'apple'}
+            onToggle={() => setEditPlatform(editPlatform === 'apple' ? null : 'apple')}
+          />
+          {editPlatform === 'apple' && (
+            <ConfigForm
+              platform="apple"
+              config={appleConfig}
+              onSave={(creds, design, isEnabled) => handleSave('apple', creds, design, isEnabled)}
+              onCancel={() => setEditPlatform(null)}
+            />
+          )}
+        </div>
+        <div>
+          <PlatformCard
+            platform="google"
+            config={googleConfig}
+            isExpanded={editPlatform === 'google'}
+            onToggle={() => setEditPlatform(editPlatform === 'google' ? null : 'google')}
+          />
+          {editPlatform === 'google' && (
+            <ConfigForm
+              platform="google"
+              config={googleConfig}
+              onSave={(creds, design, isEnabled) => handleSave('google', creds, design, isEnabled)}
+              onCancel={() => setEditPlatform(null)}
+            />
+          )}
+        </div>
       </div>
-
-      {/* Edit form */}
-      {editPlatform && (
-        <ConfigForm
-          platform={editPlatform}
-          config={configs?.find((c) => c.platform === editPlatform)}
-          onSave={async (credentials, design, isEnabled) => {
-            await saveConfig.trigger({
-              platform: editPlatform,
-              data: { platform: editPlatform, is_enabled: isEnabled, credentials, design },
-            })
-            setEditPlatform(null)
-          }}
-          onCancel={() => setEditPlatform(null)}
-        />
-      )}
 
       {/* Passes list */}
       <div className="space-y-3 animate-in animate-in-delay-3">
@@ -169,11 +188,13 @@ function StatCard({ label, value, icon: Icon }: { label: string; value: number; 
 function PlatformCard({
   platform,
   config,
-  onEdit,
+  isExpanded,
+  onToggle,
 }: {
   platform: 'apple' | 'google'
   config?: WalletConfig
-  onEdit: () => void
+  isExpanded: boolean
+  onToggle: () => void
 }) {
   const plt = platformConfig[platform]
   const Icon = plt.icon
@@ -192,21 +213,34 @@ function PlatformCard({
             </p>
           </div>
         </div>
-        <span className={cn(
-          'inline-block h-2.5 w-2.5 rounded-full',
-          config?.is_enabled ? 'bg-green-500' : 'bg-neutral-300',
-        )} />
+        <span
+          className={cn(
+            'font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border shrink-0',
+            config?.is_enabled
+              ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30'
+              : 'bg-neutral-100 text-neutral-600 border-neutral-300',
+          )}
+        >
+          {config?.is_enabled ? 'Активна' : 'Неактивна'}
+        </span>
       </div>
-      {config?.design.description && (
-        <p className="text-sm text-neutral-500">{config.design.description}</p>
-      )}
+      <p className="text-sm text-neutral-500">
+        {config?.design.description || 'Карта лояльности'}
+      </p>
       <div className="flex-1" />
       <button
-        onClick={onEdit}
+        onClick={onToggle}
         type="button"
-        className="w-full rounded px-3 py-2 text-sm font-medium bg-accent text-white hover:bg-accent-hover transition-colors"
+        className="inline-flex h-8 w-fit cursor-pointer items-center justify-center gap-1.5 rounded px-2.5 text-xs font-medium text-accent border border-accent/30 bg-accent/5 hover:bg-accent/10 transition-colors"
       >
+        <SlidersHorizontal className="h-3.5 w-3.5" />
         {config ? 'Настроить' : 'Подключить'}
+        <ChevronDown
+          className={cn(
+            'h-3.5 w-3.5 transition-transform',
+            isExpanded && 'rotate-180',
+          )}
+        />
       </button>
     </div>
   )
@@ -237,13 +271,13 @@ function ConfigForm({
   const plt = platformConfig[platform]
 
   return (
-    <div className="border border-neutral-900 rounded bg-white p-5 space-y-5 animate-in">
+    <div className="mt-2 rounded border border-neutral-200 bg-neutral-100 p-5 space-y-5 animate-in">
       <h3 className="text-sm font-semibold text-neutral-900 flex items-center gap-2">
         <Shield className="h-4 w-4 text-neutral-500" />
         Настройка {plt.label}
       </h3>
 
-      <label className="flex items-center gap-2">
+      <label className="flex items-center gap-2 cursor-pointer">
         <input
           type="checkbox"
           checked={isEnabled}
@@ -323,7 +357,7 @@ function ConfigForm({
               type="color"
               value={design.background_color || '#1a1a2e'}
               onChange={(e) => setDesign({ ...design, background_color: e.target.value })}
-              className="w-full h-8 rounded border border-neutral-900 cursor-pointer"
+              className="w-full h-8 rounded border border-neutral-200 cursor-pointer"
             />
           </div>
           <div>
@@ -332,7 +366,7 @@ function ConfigForm({
               type="color"
               value={design.foreground_color || '#ffffff'}
               onChange={(e) => setDesign({ ...design, foreground_color: e.target.value })}
-              className="w-full h-8 rounded border border-neutral-900 cursor-pointer"
+              className="w-full h-8 rounded border border-neutral-200 cursor-pointer"
             />
           </div>
           <div>
@@ -341,7 +375,7 @@ function ConfigForm({
               type="color"
               value={design.label_color || '#a0a0a0'}
               onChange={(e) => setDesign({ ...design, label_color: e.target.value })}
-              className="w-full h-8 rounded border border-neutral-900 cursor-pointer"
+              className="w-full h-8 rounded border border-neutral-200 cursor-pointer"
             />
           </div>
         </div>
@@ -352,7 +386,7 @@ function ConfigForm({
           type="button"
           onClick={() => onSave(credentials, design, isEnabled)}
           className={cn(
-            'px-4 py-2.5 rounded text-sm font-medium',
+            'px-4 py-2.5 rounded text-sm font-medium cursor-pointer',
             'bg-accent text-white',
             'hover:bg-accent-hover active:bg-accent/80',
             'transition-colors',
@@ -364,9 +398,8 @@ function ConfigForm({
           type="button"
           onClick={onCancel}
           className={cn(
-            'px-4 py-2.5 rounded text-sm font-medium',
-            'border border-neutral-900 text-neutral-700',
-            'hover:bg-neutral-50 transition-colors',
+            'px-4 py-2.5 rounded text-sm font-medium cursor-pointer',
+            'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors',
           )}
         >
           Отмена

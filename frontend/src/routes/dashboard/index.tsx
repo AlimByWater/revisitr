@@ -50,11 +50,11 @@ export default function DashboardHome() {
     <div>
       <div className="animate-in mb-4">
         <h1
-          className="font-serif text-3xl font-bold text-neutral-900 tracking-tight mb-1"
+          className="font-display text-3xl font-bold text-neutral-900 tracking-tight mb-1"
         >
           Дашборд
         </h1>
-        <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
+        <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
           Обзор ключевых показателей
         </p>
       </div>

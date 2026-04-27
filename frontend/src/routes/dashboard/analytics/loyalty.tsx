@@ -31,10 +31,10 @@ export default function LoyaltyAnalyticsPage() {
   return (
     <div>
       <div className="animate-in mb-4">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">
           Лояльность
         </h1>
-        <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
+        <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
           Клиентская база и программа лояльности
         </p>
       </div>
@@ -131,7 +131,7 @@ export default function LoyaltyAnalyticsPage() {
               Доля клиентов в программе лояльности
             </h3>
             <div className="flex items-center gap-4">
-              <div className="flex-1 h-3 bg-neutral-100 rounded overflow-hidden">
+              <div className="flex-1 h-8 bg-neutral-100 rounded overflow-hidden">
                 <div
                   className="h-full bg-[#EF3219] rounded transition-all duration-700"
                   style={{ width: `${data.demographics.loyalty_percent}%` }}

@@ -1,14 +1,21 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+
 import { cn } from '@/lib/utils'
-import { useCreatePromotionMutation } from '@/features/promotions/queries'
+import {
+  useCreatePromotionMutation,
+  usePromotionQuery,
+  useUpdatePromotionMutation,
+} from '@/features/promotions/queries'
 import { usePreviewAudienceMutation, useUploadFileMutation } from '@/features/campaigns/queries'
 import { ClientFilterBuilder } from '@/components/filters/ClientFilterBuilder'
 import { DatePicker } from '@/components/common/DatePicker'
-import { ArrowLeft, Plus, X, Check, Upload, FileText } from 'lucide-react'
+import { CustomSelect } from '@/components/common/CustomSelect'
+import { ArrowLeft, Plus, X, Check, Upload, FileText, AlertCircle } from 'lucide-react'
 import type { SegmentFilter } from '@/features/segments/types'
 import type {
   CreatePromotionRequest,
+  UpdatePromotionRequest,
   PromotionTrigger,
   PromotionAction,
 } from '@/features/promotions/types'
@@ -70,16 +77,21 @@ const btnPrimaryClass = cn(
 )
 
 const btnSecondaryClass = cn(
-  'px-5 py-2.5 rounded text-sm font-medium',
-  'border border-neutral-900 text-neutral-700',
-  'hover:bg-neutral-50 transition-colors',
+  'px-5 py-2.5 rounded text-sm font-medium cursor-pointer',
+  'border border-neutral-200 text-neutral-700 bg-white',
+  'hover:bg-neutral-50 hover:border-neutral-300 transition-colors',
 )
 
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function CreatePromotionPage() {
   const navigate = useNavigate()
+  const { promoId } = useParams<{ promoId?: string }>()
+  const editingId = promoId ? Number(promoId) : 0
+  const isEditMode = editingId > 0
+  const { data: existingPromo } = usePromotionQuery(editingId)
   const createMutation = useCreatePromotionMutation()
+  const updateMutation = useUpdatePromotionMutation()
   const previewMutation = usePreviewAudienceMutation()
 
   // Wizard step
@@ -102,6 +114,40 @@ export default function CreatePromotionPage() {
 
   // Step 4: Actions
   const [actions, setActions] = useState<PromotionAction[]>([])
+
+  // ── Edit-mode prefill ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!existingPromo) return
+    setName(existingPromo.name ?? '')
+    setStartsAt(existingPromo.starts_at ? existingPromo.starts_at.slice(0, 10) : '')
+    setEndsAt(existingPromo.ends_at ? existingPromo.ends_at.slice(0, 10) : '')
+    if (existingPromo.usage_limit) {
+      setUnlimited(false)
+      setUsageLimit(existingPromo.usage_limit)
+    } else {
+      setUnlimited(true)
+      setUsageLimit('')
+    }
+    setCombinable(!!existingPromo.combinable)
+    setCombinableWithLoyalty(!!existingPromo.combinable_with_loyalty)
+    if (existingPromo.filter) setFilter(existingPromo.filter)
+    if (existingPromo.triggers) setTriggers(existingPromo.triggers)
+    if (existingPromo.actions && existingPromo.actions.length > 0) {
+      setActions(existingPromo.actions)
+    } else {
+      const fromResult: PromotionAction[] = []
+      if (existingPromo.result?.discount_percent != null) {
+        fromResult.push({ type: 'discount', discount_percent: existingPromo.result.discount_percent })
+      } else if (existingPromo.result?.bonus_amount != null) {
+        fromResult.push({ type: 'bonus', bonus_amount: existingPromo.result.bonus_amount })
+      } else if (existingPromo.result?.tag_add) {
+        fromResult.push({ type: 'data_update', tag_add: existingPromo.result.tag_add })
+      } else if (existingPromo.result?.campaign_id) {
+        fromResult.push({ type: 'campaign', campaign_id: existingPromo.result.campaign_id })
+      }
+      if (fromResult.length > 0) setActions(fromResult)
+    }
+  }, [existingPromo])
 
   // ── Validation ─────────────────────────────────────────────────────────────
 
@@ -176,20 +222,32 @@ export default function CreatePromotionPage() {
       ...(combinableWithLoyalty && { combinable_with_loyalty: combinableWithLoyalty }),
     } as CreatePromotionRequest
 
-    createMutation.mutate(data, {
-      onSuccess: () => navigate('/dashboard/promotions'),
-    })
+    if (isEditMode) {
+      updateMutation.mutate(
+        { id: editingId, data: data as UpdatePromotionRequest },
+        { onSuccess: () => navigate('/dashboard/promotions') },
+      )
+    } else {
+      createMutation.mutate(data, {
+        onSuccess: () => navigate('/dashboard/promotions'),
+      })
+    }
   }
 
   // ── Navigation ─────────────────────────────────────────────────────────────
 
+  function jumpToStep(target: number) {
+    setStep(target)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   function goNext() {
-    if (step < 4 && isStepValid(step)) setStep(step + 1)
+    if (step < 4 && isStepValid(step)) jumpToStep(step + 1)
     if (step === 4) handleSubmit()
   }
 
   function goBack() {
-    if (step > 1) setStep(step - 1)
+    if (step > 1) jumpToStep(step - 1)
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -197,7 +255,7 @@ export default function CreatePromotionPage() {
   return (
     <div className="max-w-2xl">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6 animate-in">
         <button
           onClick={() => navigate('/dashboard/promotions')}
           type="button"
@@ -206,44 +264,43 @@ export default function CreatePromotionPage() {
         >
           <ArrowLeft className="w-5 h-5 text-neutral-500" />
         </button>
-        <h1 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
-          Создать акцию
+        <h1 className="font-display text-2xl font-bold text-neutral-900 tracking-tight">
+          {isEditMode ? 'Редактировать акцию' : 'Создать акцию'}
         </h1>
       </div>
 
       {/* Step indicator */}
-      <nav aria-label="Шаги создания акции" className="mb-8">
+      <nav aria-label="Шаги создания акции" className="mb-8 animate-in animate-in-delay-1">
         <ol className="flex items-center gap-2">
           {STEPS.map((s, i) => {
             const isActive = s.num === step
-            const isCompleted = s.num < step
+            const isCompleted = s.num < step && isStepValid(s.num)
+            const isMissing = s.num !== step && !isStepValid(s.num)
             return (
               <li key={s.num} className="flex items-center gap-2 flex-1">
                 <button
                   type="button"
-                  onClick={() => {
-                    // Allow going back to completed steps
-                    if (s.num < step) setStep(s.num)
-                  }}
-                  disabled={s.num > step}
+                  onClick={() => jumpToStep(s.num)}
                   className={cn(
-                    'flex items-center gap-2 w-full rounded px-3 py-2.5 text-left transition-colors',
+                    'flex items-center gap-2 w-full rounded px-3 py-2.5 text-left transition-colors cursor-pointer',
                     isActive && 'bg-accent/10',
-                    isCompleted && 'cursor-pointer hover:bg-neutral-50',
-                    s.num > step && 'cursor-default',
+                    !isActive && 'hover:bg-neutral-50',
                   )}
                   aria-current={isActive ? 'step' : undefined}
                 >
                   <span
                     className={cn(
-                      'flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors',
+                      'flex-shrink-0 w-7 h-7 rounded flex items-center justify-center text-xs font-semibold transition-colors',
                       isActive && 'bg-accent text-white',
                       isCompleted && 'bg-accent/20 text-accent',
-                      !isActive && !isCompleted && 'bg-neutral-100 text-neutral-400',
+                      isMissing && !isActive && 'bg-amber-500/10 text-amber-700',
+                      !isActive && !isCompleted && !isMissing && 'bg-neutral-100 text-neutral-400',
                     )}
                   >
                     {isCompleted ? (
                       <Check className="w-3.5 h-3.5" />
+                    ) : isMissing && !isActive ? (
+                      <AlertCircle className="w-3.5 h-3.5" />
                     ) : (
                       s.num
                     )}
@@ -253,7 +310,8 @@ export default function CreatePromotionPage() {
                       'text-xs font-medium hidden sm:block',
                       isActive && 'text-accent',
                       isCompleted && 'text-neutral-600',
-                      !isActive && !isCompleted && 'text-neutral-400',
+                      isMissing && !isActive && 'text-amber-700',
+                      !isActive && !isCompleted && !isMissing && 'text-neutral-400',
                     )}
                   >
                     {s.label}
@@ -348,13 +406,13 @@ export default function CreatePromotionPage() {
             <button
               type="button"
               onClick={goNext}
-              disabled={!isStepValid(step) || (step === 4 && createMutation.isPending)}
+              disabled={!isStepValid(step) || (step === 4 && (createMutation.isPending || updateMutation.isPending))}
               className={btnPrimaryClass}
             >
               {step === 4
-                ? createMutation.isPending
-                  ? 'Создание...'
-                  : 'Создать акцию'
+                ? (createMutation.isPending || updateMutation.isPending)
+                  ? 'Сохранение...'
+                  : isEditMode ? 'Сохранить' : 'Создать акцию'
                 : 'Далее'}
             </button>
           </div>
@@ -594,7 +652,7 @@ function TriggerCard({ trigger, onChange, onRemove }: TriggerCardProps) {
       <button
         type="button"
         onClick={onRemove}
-        className="absolute top-3 right-3 p-1 rounded-md hover:bg-neutral-200 transition-colors"
+        className="absolute top-3 right-3 p-1 rounded hover:bg-neutral-200 transition-colors"
         aria-label="Удалить триггер"
       >
         <X className="w-4 h-4 text-neutral-400" />
@@ -604,17 +662,12 @@ function TriggerCard({ trigger, onChange, onRemove }: TriggerCardProps) {
         {/* Trigger type */}
         <div>
           <label className={labelClass}>Тип триггера</label>
-          <select
+          <CustomSelect
             value={trigger.type}
-            onChange={(e) => onChange({ type: e.target.value })}
-            className={inputClass}
-          >
-            {TRIGGER_TYPES.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => onChange({ type: v })}
+            options={TRIGGER_TYPES.map((opt) => ({ value: opt.value, label: opt.label }))}
+            light
+          />
         </div>
 
         {/* Conditional fields */}
@@ -669,18 +722,15 @@ function TriggerCard({ trigger, onChange, onRemove }: TriggerCardProps) {
         {trigger.type === 'event' && (
           <div>
             <label className={labelClass}>Тип события</label>
-            <select
+            <CustomSelect
               value={trigger.event_type ?? ''}
-              onChange={(e) => onChange({ ...trigger, event_type: e.target.value || undefined })}
-              className={inputClass}
-            >
-              <option value="">Выберите событие</option>
-              {EVENT_TYPES.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => onChange({ ...trigger, event_type: v || undefined })}
+              options={[
+                { value: '', label: 'Выберите событие' },
+                ...EVENT_TYPES.map((opt) => ({ value: opt.value, label: opt.label })),
+              ]}
+              light
+            />
           </div>
         )}
       </div>
@@ -755,7 +805,7 @@ function ActionCard({ action, onChange, onRemove }: ActionCardProps) {
       <button
         type="button"
         onClick={onRemove}
-        className="absolute top-3 right-3 p-1 rounded-md hover:bg-neutral-200 transition-colors"
+        className="absolute top-3 right-3 p-1 rounded hover:bg-neutral-200 transition-colors"
         aria-label="Удалить действие"
       >
         <X className="w-4 h-4 text-neutral-400" />
@@ -765,17 +815,12 @@ function ActionCard({ action, onChange, onRemove }: ActionCardProps) {
         {/* Action type */}
         <div>
           <label className={labelClass}>Тип действия</label>
-          <select
+          <CustomSelect
             value={action.type}
-            onChange={(e) => onChange({ type: e.target.value })}
-            className={inputClass}
-          >
-            {ACTION_TYPES.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => onChange({ type: v })}
+            options={ACTION_TYPES.map((opt) => ({ value: opt.value, label: opt.label }))}
+            light
+          />
         </div>
 
         {/* Conditional fields */}

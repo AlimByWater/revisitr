@@ -30,10 +30,10 @@ export default function SalesAnalyticsPage() {
   return (
     <div>
       <div className="animate-in mb-4">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">
+        <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">
           Продажи
         </h1>
-        <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider mt-1">
+        <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
           Аналитика транзакций и выручки
         </p>
       </div>
@@ -214,11 +214,11 @@ export default function SalesAnalyticsPage() {
           <h3 className="text-sm font-semibold text-neutral-700 mb-1">
             Программа лояльности
           </h3>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-4">
+          <p className="text-[10px] uppercase tracking-widest text-neutral-400 mb-5">
             Средний чек: участники vs остальные
           </p>
-          <div className="flex items-end gap-4">
-            <ComparisonBar
+          <div className="space-y-4">
+            <HorizontalBar
               label="Участники"
               value={data.comparison.participants_avg_amount}
               max={Math.max(
@@ -227,7 +227,7 @@ export default function SalesAnalyticsPage() {
               )}
               color="bg-[#EF3219]"
             />
-            <ComparisonBar
+            <HorizontalBar
               label="Без программы"
               value={data.comparison.non_participants_avg_amount}
               max={Math.max(
@@ -278,7 +278,7 @@ function StatCard({
   )
 }
 
-function ComparisonBar({
+function HorizontalBar({
   label,
   value,
   max,
@@ -291,17 +291,19 @@ function ComparisonBar({
 }) {
   const pct = max > 0 ? (value / max) * 100 : 0
   return (
-    <div className="flex-1">
-      <div className="h-16 bg-neutral-100 rounded overflow-hidden flex items-end">
+    <div>
+      <div className="flex items-baseline justify-between mb-1.5">
+        <span className="text-xs font-medium text-neutral-600">{label}</span>
+        <span className="font-mono text-sm font-semibold text-neutral-900 tabular-nums">
+          {formatCurrency(value)}
+        </span>
+      </div>
+      <div className="h-8 bg-neutral-100 rounded overflow-hidden">
         <div
-          className={cn('w-full rounded transition-all duration-500', color)}
-          style={{ height: `${pct}%` }}
+          className={cn('h-full rounded transition-all duration-500', color)}
+          style={{ width: `${pct}%` }}
         />
       </div>
-      <p className="text-xs font-medium text-neutral-600 mt-2">{label}</p>
-      <p className="font-mono text-sm font-semibold text-neutral-900">
-        {formatCurrency(value)}
-      </p>
     </div>
   )
 }

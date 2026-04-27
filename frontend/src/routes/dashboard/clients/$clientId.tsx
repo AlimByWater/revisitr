@@ -62,15 +62,15 @@ const transactionTypeConfig: Record<
 > = {
   earn: {
     label: 'Начисление',
-    className: 'bg-green-100 text-green-700',
+    className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/30',
   },
   spend: {
     label: 'Списание',
-    className: 'bg-orange-100 text-orange-700',
+    className: 'bg-red-500/10 text-red-700 border border-red-500/30',
   },
   adjust: {
     label: 'Корректировка',
-    className: 'bg-blue-100 text-blue-700',
+    className: 'bg-neutral-100 text-neutral-600 border border-neutral-300',
   },
 }
 
@@ -172,7 +172,7 @@ export default function ClientDetailPage() {
         Назад к клиентам
       </Link>
 
-      <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight mb-6">{fullName}</h1>
+      <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight mb-6 animate-in">{fullName}</h1>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-neutral-200">

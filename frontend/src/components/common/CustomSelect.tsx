@@ -23,6 +23,8 @@ interface CustomSelectProps {
   width?: string
   /** Use lighter border (border-neutral-200) for selects inside bordered containers */
   light?: boolean
+  /** Ghost variant — transparent by default, becomes white card on hover. Use inside gray bg parent. */
+  ghost?: boolean
 }
 
 export function CustomSelect({
@@ -35,6 +37,7 @@ export function CustomSelect({
   className,
   width,
   light = false,
+  ghost = false,
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -75,8 +78,14 @@ export function CustomSelect({
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         className={cn(
-          'w-full flex items-center gap-3 border rounded px-4 py-2 text-sm font-medium text-neutral-900 bg-white cursor-pointer hover:bg-neutral-50 transition-colors',
-          light ? 'border-neutral-200' : 'border-neutral-900',
+          'w-full flex items-center gap-3 rounded px-4 py-2 text-sm font-medium text-neutral-900 cursor-pointer transition-colors',
+          ghost
+            ? 'border border-neutral-200 bg-transparent hover:bg-white'
+            : cn(
+                'border bg-white hover:bg-neutral-50',
+                light ? 'border-neutral-200' : 'border-neutral-900',
+              ),
+          ghost && open && 'bg-white border-neutral-200',
           disabled && 'cursor-not-allowed bg-neutral-100 border-neutral-300 text-neutral-500 hover:bg-neutral-100',
         )}
       >

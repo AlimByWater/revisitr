@@ -73,7 +73,10 @@ export default function POSDetailPage() {
         Назад к точкам продаж
       </Link>
 
-      <h1 className="font-serif font-serif text-3xl font-bold text-neutral-900 tracking-tight mb-8">{location.name}</h1>
+      <div className="mb-6 animate-in">
+        <p className="font-mono text-[10px] uppercase tracking-wider text-neutral-300 mb-1">Точка продаж</p>
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">{location.name}</h1>
+      </div>
 
       {/* General info */}
       <div className="bg-white rounded border border-neutral-900 p-6 mb-6">
@@ -171,7 +174,7 @@ export default function POSDetailPage() {
                   <div
                     className={cn(
                       'w-9 h-5 rounded-full transition-colors',
-                      'peer-checked:bg-green-400 bg-neutral-300',
+                      'peer-checked:bg-accent bg-neutral-300',
                       'relative after:content-[""] after:absolute after:top-0.5 after:start-[2px]',
                       'after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all',
                       'peer-checked:after:translate-x-full',

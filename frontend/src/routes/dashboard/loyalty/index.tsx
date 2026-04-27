@@ -1,15 +1,15 @@
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useState } from 'react'
-import { ArrowLeft, Heart, Plus } from 'lucide-react'
+import { ArrowLeft, Heart, Plus, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useProgramsQuery, useUpdateProgramMutation } from '@/features/loyalty/queries'
 import { CreateProgramModal } from '@/components/loyalty/CreateProgramModal'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorState } from '@/components/common/ErrorState'
 import { CardSkeleton } from '@/components/common/LoadingSkeleton'
+import { Button } from '@/components/common/Button'
 
 export default function LoyaltyProgramsPage() {
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const botId = searchParams.get('botId')
   const { data: programs, isLoading, isError, mutate } = useProgramsQuery()
@@ -25,7 +25,7 @@ export default function LoyaltyProgramsPage() {
       {botId && (
         <Link
           to={`/dashboard/bots/${botId}?tab=modules`}
-          className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm text-neutral-500 transition-colors hover:text-neutral-700"
+          className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded text-sm text-neutral-500 transition-colors hover:text-neutral-700"
         >
           <ArrowLeft className="h-4 w-4" />
           Назад к модулям бота
@@ -33,27 +33,19 @@ export default function LoyaltyProgramsPage() {
       )}
 
       <div className="flex items-center justify-between mb-6 animate-in">
-        <h1 className="font-serif text-3xl font-bold text-neutral-900 tracking-tight">Программы лояльности</h1>
-        <button
-          type="button"
+        <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">Программы лояльности</h1>
+        <Button
+          variant="primary"
+          leftIcon={<Plus className="w-4 h-4" />}
           onClick={() => setShowCreate(true)}
-          className={cn(
-            'flex items-center gap-2 py-2.5 px-4 rounded',
-            'bg-accent text-white text-sm font-medium',
-            'hover:bg-accent-hover active:bg-accent/80',
-            'transition-all duration-150',
-            'focus:outline-none focus:ring-2 focus:ring-accent/20',
-            '',
-          )}
         >
-          <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">Создать программу</span>
           <span className="sm:hidden">Создать</span>
-        </button>
+        </Button>
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[0, 1, 2].map((i) => (
             <div key={i} className={cn('animate-in', `animate-in-delay-${i + 1}`)}>
               <CardSkeleton />
@@ -76,76 +68,84 @@ export default function LoyaltyProgramsPage() {
           variant="loyalty"
         />
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {programs.map((program, i) => (
-            <button
+            <Link
               key={program.id}
-              type="button"
-              onClick={() =>
-                navigate(`/dashboard/loyalty/${program.id}${botId ? `?botId=${botId}` : ''}`)
-              }
+              to={`/dashboard/loyalty/${program.id}${botId ? `?botId=${botId}` : ''}`}
               className={cn(
-                'w-full text-left bg-white rounded border border-neutral-900 p-6',
-                'hover:border-neutral-300 hover:shadow-md',
-                'transition-all duration-200 group',
-                'animate-in',
+                'bg-white rounded border border-neutral-900 p-6',
+                'cursor-pointer hover:scale-[1.02] transition-transform duration-150',
+                'group animate-in',
                 `animate-in-delay-${Math.min(i + 1, 5)}`,
               )}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-base font-semibold text-neutral-900">
-                    {program.name}
-                  </h3>
-                  <span
-                    className={cn(
-                      'text-xs font-medium px-2 py-0.5 rounded-full',
-                      program.type === 'bonus'
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'bg-purple-50 text-purple-700',
-                    )}
-                  >
-                    {program.type === 'bonus' ? 'Бонусная' : 'Скидочная'}
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-base font-semibold text-neutral-900">
+                  {program.name}
+                </h3>
+                <span
+                  className={cn(
+                    'font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border shrink-0',
+                    program.is_active
+                      ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30'
+                      : 'bg-neutral-100 text-neutral-600 border-neutral-300',
+                  )}
+                >
+                  {program.is_active ? 'Активна' : 'Неактивна'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 mb-3">
+                <span
+                  className={cn(
+                    'font-mono text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded',
+                    program.type === 'bonus'
+                      ? 'bg-accent text-white'
+                      : 'bg-neutral-900 text-white',
+                  )}
+                >
+                  {program.type === 'bonus' ? 'Бонусная' : 'Скидочная'}
+                </span>
+                {program.levels && program.levels.length > 0 && (
+                  <span className="text-xs text-neutral-400">
+                    <span className="font-mono tabular-nums">{program.levels.length}</span>{' '}
+                    {pluralLevels(program.levels.length)}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-neutral-200">
+                <div className="flex items-center gap-1.5 text-neutral-400">
+                  <Users className="w-3.5 h-3.5" />
+                  <span className="font-mono text-[11px] uppercase tracking-wider tabular-nums">
+                    {(program.client_count ?? 0).toLocaleString('ru-RU')} клиентов
                   </span>
                 </div>
-
-                <div className="flex items-center gap-4">
-                  {program.levels && (
-                    <span className="text-xs text-neutral-500">
-                      <span className="font-mono tabular-nums">{program.levels.length}</span>{' '}
-                      {pluralLevels(program.levels.length)}
-                    </span>
-                  )}
-                  <label
-                    className="relative inline-flex items-center cursor-pointer"
+                <label
+                  className="relative inline-flex items-center cursor-pointer"
+                  onClick={(e) => e.preventDefault()}
+                  aria-label={program.is_active ? 'Деактивировать программу' : 'Активировать программу'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={program.is_active}
+                    onChange={() => handleToggleActive(program.id, program.is_active)}
                     onClick={(e) => e.stopPropagation()}
-                    aria-label={
-                      program.is_active
-                        ? 'Деактивировать программу'
-                        : 'Активировать программу'
-                    }
-                  >
-                    <input
-                      type="checkbox"
-                      checked={program.is_active}
-                      onChange={() =>
-                        handleToggleActive(program.id, program.is_active)
-                      }
-                      className="sr-only peer"
-                    />
-                    <div
-                      className={cn(
-                        'w-9 h-5 rounded-full transition-colors',
-                        'peer-checked:bg-accent bg-neutral-300',
-                        'after:content-[""] after:absolute after:top-0.5 after:start-[2px]',
-                        'after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all',
-                        'peer-checked:after:translate-x-full',
-                      )}
-                    />
-                  </label>
-                </div>
+                    className="sr-only peer"
+                  />
+                  <div
+                    className={cn(
+                      'w-9 h-5 rounded-full transition-colors',
+                      'peer-checked:bg-accent bg-neutral-300',
+                      'after:content-[""] after:absolute after:top-0.5 after:start-[2px]',
+                      'after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all',
+                      'peer-checked:after:translate-x-full',
+                    )}
+                  />
+                </label>
               </div>
-            </button>
+            </Link>
           ))}
         </div>
       )}

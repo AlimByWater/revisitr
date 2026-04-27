@@ -7,6 +7,14 @@ import {
   ArrowLeft, ArrowRight, Bot, Check, ExternalLink,
   Loader2, Plus, Trash2, GripVertical,
 } from 'lucide-react'
+import { CustomSelect } from '@/components/common/CustomSelect'
+
+const FIELD_TYPE_OPTIONS = [
+  { value: 'text', label: 'Текст' },
+  { value: 'phone', label: 'Телефон' },
+  { value: 'date', label: 'Дата' },
+  { value: 'email', label: 'Email' },
+]
 
 const MODULES = [
   { id: 'loyalty', label: 'Лояльность', desc: 'Бонусная программа и уровни' },
@@ -22,7 +30,7 @@ const DEFAULT_FORM_FIELDS: FormField[] = [
 ]
 
 const inputClass = cn(
-  'w-full px-4 py-2.5 rounded-lg border border-surface-border',
+  'w-full px-4 py-2.5 rounded border border-neutral-200',
   'text-sm placeholder:text-neutral-400',
   'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
   'transition-colors',
@@ -150,14 +158,17 @@ export default function CreateBotPage() {
   return (
     <div className="max-w-2xl mx-auto animate-in">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-4">
         <Link
           to="/dashboard/bots"
-          className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
+          className="p-2 rounded text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <h1 className="font-serif text-2xl font-bold text-neutral-900">Создать бота</h1>
+        <div>
+          <h1 className="font-display text-3xl font-bold text-neutral-900 tracking-tight">Создать бота</h1>
+          <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">Создание нового бота</p>
+        </div>
       </div>
 
       {/* Progress */}
@@ -166,7 +177,7 @@ export default function CreateBotPage() {
           <div key={label} className="flex-1">
             <div
               className={cn(
-                'h-1.5 rounded-full transition-all duration-500',
+                'h-1.5 rounded transition-all duration-500',
                 i < step ? 'bg-accent' : i === step ? 'bg-accent/50' : 'bg-neutral-200',
               )}
             />
@@ -181,7 +192,7 @@ export default function CreateBotPage() {
       </div>
 
       {/* Step content */}
-      <div className="bg-white rounded-xl border border-surface-border p-6">
+      <div className="bg-white rounded border border-neutral-900 p-6">
         {/* Step 1: Basic info */}
         {step === 0 && (
           <div className="space-y-5">
@@ -235,7 +246,7 @@ export default function CreateBotPage() {
                 onClick={() => setStep(1)}
                 disabled={!isStep1Valid}
                 className={cn(
-                  'flex items-center gap-2 py-2.5 px-5 rounded-lg',
+                  'flex items-center gap-2 py-2.5 px-5 rounded',
                   'bg-accent text-white text-sm font-medium',
                   'hover:bg-accent-hover transition-colors',
                   'disabled:opacity-40 disabled:cursor-not-allowed',
@@ -275,7 +286,7 @@ export default function CreateBotPage() {
               </div>
               <div className="space-y-2">
                 {formFields.map((field, idx) => (
-                  <div key={idx} className="flex items-center gap-2 p-3 rounded-lg bg-neutral-50 border border-neutral-100">
+                  <div key={idx} className="flex items-center gap-2 p-3 rounded bg-neutral-50 border border-neutral-100">
                     <GripVertical className="w-4 h-4 text-neutral-300 shrink-0" />
                     <input
                       type="text"
@@ -284,16 +295,13 @@ export default function CreateBotPage() {
                       placeholder="Название поля"
                       className="flex-1 px-3 py-1.5 text-sm rounded border border-neutral-200 focus:outline-none focus:border-accent"
                     />
-                    <select
+                    <CustomSelect
                       value={field.type}
-                      onChange={(e) => updateFormField(idx, { type: e.target.value })}
-                      className="px-2 py-1.5 text-xs rounded border border-neutral-200"
-                    >
-                      <option value="text">Текст</option>
-                      <option value="phone">Телефон</option>
-                      <option value="date">Дата</option>
-                      <option value="email">Email</option>
-                    </select>
+                      onChange={(v) => updateFormField(idx, { type: v })}
+                      options={FIELD_TYPE_OPTIONS}
+                      width="120px"
+                      light
+                    />
                     <label className="flex items-center gap-1 text-xs text-neutral-500 whitespace-nowrap">
                       <input
                         type="checkbox"
@@ -317,20 +325,20 @@ export default function CreateBotPage() {
             <div className="flex justify-between pt-2">
               <button
                 onClick={() => setStep(0)}
-                className="flex items-center gap-2 py-2.5 px-4 rounded-lg border border-surface-border text-sm text-neutral-600 hover:bg-neutral-50 transition-colors"
+                className="flex items-center gap-2 py-2.5 px-4 rounded border border-neutral-200 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" /> Назад
               </button>
               <div className="flex gap-2">
                 <button
                   onClick={() => setStep(2)}
-                  className="py-2.5 px-4 rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
+                  className="py-2.5 px-4 rounded text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
                 >
                   Пропустить
                 </button>
                 <button
                   onClick={() => setStep(2)}
-                  className="flex items-center gap-2 py-2.5 px-5 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-colors"
+                  className="flex items-center gap-2 py-2.5 px-5 rounded bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-colors"
                 >
                   Далее <ArrowRight className="w-4 h-4" />
                 </button>
@@ -347,7 +355,7 @@ export default function CreateBotPage() {
               <label
                 key={mod.id}
                 className={cn(
-                  'flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-all',
+                  'flex items-center gap-4 p-4 rounded border cursor-pointer transition-all',
                   modules.includes(mod.id)
                     ? 'border-accent bg-accent/5'
                     : 'border-neutral-200 hover:border-neutral-300',
@@ -369,13 +377,13 @@ export default function CreateBotPage() {
             <div className="flex justify-between pt-4">
               <button
                 onClick={() => setStep(1)}
-                className="flex items-center gap-2 py-2.5 px-4 rounded-lg border border-surface-border text-sm text-neutral-600 hover:bg-neutral-50 transition-colors"
+                className="flex items-center gap-2 py-2.5 px-4 rounded border border-neutral-200 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" /> Назад
               </button>
               <button
                 onClick={() => { setStep(3); handleCreateManaged() }}
-                className="flex items-center gap-2 py-2.5 px-5 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-colors"
+                className="flex items-center gap-2 py-2.5 px-5 rounded bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-colors"
               >
                 <Bot className="w-4 h-4" /> Создать бота
               </button>
@@ -396,7 +404,7 @@ export default function CreateBotPage() {
                 <p className="text-red-600 text-sm">{error}</p>
                 <button
                   onClick={handleCreateManaged}
-                  className="py-2.5 px-5 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-colors"
+                  className="py-2.5 px-5 rounded bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-colors"
                 >
                   Повторить
                 </button>
@@ -428,7 +436,7 @@ export default function CreateBotPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(
-                    'inline-flex items-center gap-2 py-3 px-6 rounded-lg',
+                    'inline-flex items-center gap-2 py-3 px-6 rounded',
                     'bg-[#2AABEE] text-white text-sm font-medium',
                     'hover:bg-[#229ED9] transition-colors',
                   )}
@@ -467,7 +475,7 @@ export default function CreateBotPage() {
                       onClick={handleFallbackCreate}
                       disabled={!fallbackToken.trim() || fallbackCreating}
                       className={cn(
-                        'w-full py-2.5 px-4 rounded-lg',
+                        'w-full py-2.5 px-4 rounded',
                         'bg-neutral-900 text-white text-sm font-medium',
                         'hover:bg-neutral-800 transition-colors',
                         'disabled:opacity-40 disabled:cursor-not-allowed',
