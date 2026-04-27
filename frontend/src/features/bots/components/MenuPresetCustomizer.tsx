@@ -1,4 +1,22 @@
-import { ArrowDown, ArrowUp, ImageIcon } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ChevronDown, GripVertical, ImageIcon } from 'lucide-react'
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
 import { EmojiPicker } from '@/features/emoji-packs'
 import type { EmojiItem } from '@/features/emoji-packs/types'
@@ -181,6 +199,15 @@ export function MenuPresetCustomizer({
   onChange,
 }: MenuPresetCustomizerProps) {
   const categories = value.categories ?? []
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState<number[]>([])
+  const categorySensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+  const sortableIds = useMemo(
+    () => categories.map((category) => `category-${category.category_id}`),
+    [categories],
+  )
 
   if (!menu || categories.length === 0) {
     return (
@@ -210,13 +237,23 @@ export function MenuPresetCustomizer({
     })
   }
 
-  const moveCategory = (categoryId: number, direction: -1 | 1) => {
-    const index = categories.findIndex((category) => category.category_id === categoryId)
-    const nextIndex = index + direction
-    if (index < 0 || nextIndex < 0 || nextIndex >= categories.length) return
-    const next = [...categories]
-    const [item] = next.splice(index, 1)
-    next.splice(nextIndex, 0, item)
+  const toggleExpanded = (categoryId: number) => {
+    setExpandedCategoryIds((current) =>
+      current.includes(categoryId)
+        ? current.filter((id) => id !== categoryId)
+        : [...current, categoryId],
+    )
+  }
+
+  const handleCategoryDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = sortableIds.indexOf(String(active.id))
+    const newIndex = sortableIds.indexOf(String(over.id))
+    if (oldIndex < 0 || newIndex < 0) return
+
+    const next = arrayMove(categories, oldIndex, newIndex)
     update({
       categories: next,
       category_order: next.map((category) => category.category_id),
@@ -294,56 +331,137 @@ export function MenuPresetCustomizer({
           <div>
             <div className="flex items-center gap-2">
               <h4 className="text-sm font-semibold text-neutral-900">Категории</h4>
-              <InfoHint content="Здесь можно менять порядок, подписи и иконки категорий. Логика переходов внутри выбранного шаблона не меняется." />
+              <InfoHint content="Перетаскивайте строки, чтобы менять порядок. Откройте нужную категорию, чтобы изменить название, иконку или цвет." />
             </div>
+            <p className="mt-1 text-sm text-neutral-500">
+              Перетаскивайте категории за ручку слева. Название, иконка и цвет меняются внутри раскрытой строки.
+            </p>
           </div>
           <div className="text-sm text-neutral-400">{categories.length} категорий</div>
         </div>
 
-        <div className="hidden rounded-xl border border-surface-border bg-neutral-50 px-4 py-3 xl:grid xl:grid-cols-[5.5rem_minmax(0,1.4fr)_12rem_12rem] xl:gap-4">
-          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Порядок</div>
-          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Подпись</div>
-          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Иконка</div>
-          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Стиль</div>
+        <DndContext
+          sensors={categorySensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleCategoryDragEnd}
+        >
+          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {categories.map((category) => {
+                const menuCategory = menu.categories?.find((item) => item.id === category.category_id)
+                return (
+                  <SortableCategoryRow
+                    key={category.category_id}
+                    id={`category-${category.category_id}`}
+                    category={category}
+                    menuCategory={menuCategory}
+                    isExpanded={expandedCategoryIds.includes(category.category_id)}
+                    onToggleExpanded={() => toggleExpanded(category.category_id)}
+                    onUpdateCategory={updateCategory}
+                  />
+                )
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
+      </section>
+    </div>
+  )
+}
+
+interface SortableCategoryRowProps {
+  id: string
+  category: MenuPresetCategoryCustomization
+  menuCategory?: Menu['categories'][number]
+  isExpanded: boolean
+  onToggleExpanded: () => void
+  onUpdateCategory: (
+    categoryId: number,
+    updater: (category: MenuPresetCategoryCustomization) => MenuPresetCategoryCustomization,
+  ) => void
+}
+
+function SortableCategoryRow({
+  id,
+  category,
+  menuCategory,
+  isExpanded,
+  onToggleExpanded,
+  onUpdateCategory,
+}: SortableCategoryRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+  const title = category.label || menuCategory?.name || 'Без названия'
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div
+        className={cn(
+          'overflow-hidden rounded-2xl border border-surface-border bg-white',
+          isDragging && 'shadow-lg ring-1 ring-accent/20',
+        )}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button
+            type="button"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600 cursor-grab active:cursor-grabbing touch-none"
+            aria-label={`Перетащить категорию ${title}`}
+            {...listeners}
+            {...attributes}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={onToggleExpanded}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-50/70">
+              {category.icon_image_url ? (
+                <img
+                  src={category.icon_image_url}
+                  alt={title}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-xs font-medium text-neutral-300" aria-hidden="true">—</span>
+              )}
+            </span>
+
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium text-neutral-900">{title}</div>
+            </div>
+
+            <span
+              className={cn(
+                'h-3 w-3 shrink-0 rounded-full border border-white shadow-sm',
+                styleIndicatorClass(category.style ?? ''),
+              )}
+              aria-hidden="true"
+            />
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 shrink-0 text-neutral-400 transition-transform',
+                isExpanded && 'rotate-180',
+              )}
+            />
+          </button>
         </div>
 
-        {categories.map((category, index) => {
-          const menuCategory = menu.categories?.find((item) => item.id === category.category_id)
-          return (
-            <div
-              key={category.category_id}
-              className="rounded-2xl border border-surface-border bg-white p-4"
-            >
-              <div className="grid gap-4 xl:grid-cols-[5.5rem_minmax(0,1.4fr)_12rem_12rem] xl:items-start">
-                <div className="flex items-center gap-2 xl:pt-8">
-                  <button
-                    type="button"
-                    onClick={() => moveCategory(category.category_id, -1)}
-                    disabled={index === 0}
-                    className="rounded-lg border border-surface-border p-2 text-neutral-500 disabled:opacity-40"
-                    aria-label="Переместить вверх"
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveCategory(category.category_id, 1)}
-                    disabled={index === categories.length - 1}
-                    className="rounded-lg border border-surface-border p-2 text-neutral-500 disabled:opacity-40"
-                    aria-label="Переместить вниз"
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </button>
-                </div>
-
+        {isExpanded && (
+          <div className="border-t border-surface-border bg-neutral-50/40 px-5 py-4">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_16.5rem] lg:items-start">
+              <div className="space-y-2">
                 <label className="space-y-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400 xl:hidden">
-                    Подпись
-                  </span>
+                  <span className="text-sm font-medium text-neutral-700">Название</span>
                   <input
                     value={category.label ?? ''}
                     onChange={(event) =>
-                      updateCategory(category.category_id, (current) => ({
+                      onUpdateCategory(category.category_id, (current) => ({
                         ...current,
                         label: event.target.value,
                         emoji_only:
@@ -351,101 +469,89 @@ export function MenuPresetCustomizer({
                           Boolean(current.icon_custom_emoji_id || current.icon_image_url),
                       }))
                     }
-                    className={inputClassName}
+                    className={cn(inputClassName, 'text-base')}
                     placeholder={menuCategory?.name ?? 'Категория'}
                   />
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-400">
-                    {menuCategory?.name && menuCategory.name !== category.label && (
-                      <span>Исходное название: {menuCategory.name}</span>
-                    )}
-                    <span>Если оставить подпись пустой, в табе останется только иконка.</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-neutral-500">
-                    <span>Превью:</span>
-                    <span className="inline-flex min-h-8 items-center gap-2 rounded-full border border-surface-border bg-neutral-50 px-3 py-1">
-                      {category.icon_image_url ? (
-                        <img
-                          src={category.icon_image_url}
-                          alt={category.label || menuCategory?.name || 'Категория'}
-                          className="h-4 w-4 rounded object-cover"
-                        />
-                      ) : null}
-                      {(category.label || '').trim() && <span>{category.label}</span>}
-                      {!(category.label || '').trim() && !category.icon_image_url && <span>{menuCategory?.name || 'Категория'}</span>}
-                    </span>
-                  </div>
                 </label>
+                <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-400">
+                  <span>Если оставить название пустым, в табе останется только иконка.</span>
+                  {menuCategory?.name && menuCategory.name !== category.label && (
+                    <span>Исходное: {menuCategory.name}</span>
+                  )}
+                </div>
+              </div>
 
-                <div className="space-y-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400 xl:hidden">
-                    Иконка
-                  </span>
-                  <div className="flex min-h-12 items-center gap-2 rounded-xl border border-surface-border bg-neutral-50 px-3 py-2">
-                    <EmojiPicker
-                      selected={category.icon_image_url}
-                      onSelect={(item: EmojiItem) =>
-                        updateCategory(category.category_id, (current) => ({
-                          ...current,
-                          icon_image_url: item.image_url,
-                          icon_custom_emoji_id: item.tg_custom_emoji_id ?? '',
-                          emoji_only: !current.label?.trim(),
-                        }))
-                      }
-                    >
-                      {category.icon_image_url ? (
-                        <img
-                          src={category.icon_image_url}
-                          alt="Эмодзи категории"
-                          className="h-6 w-6 rounded object-cover"
-                        />
-                      ) : (
-                        <ImageIcon className="h-4 w-4 text-neutral-500" />
-                      )}
-                    </EmojiPicker>
-                    <div className="text-sm text-neutral-500">
-                      {category.icon_image_url ? 'Иконка выбрана' : 'Добавить иконку'}
-                    </div>
-                    {category.icon_image_url && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateCategory(category.category_id, (current) => ({
+              <div className="rounded-xl border border-surface-border bg-white px-4 py-3">
+                <div className="space-y-3">
+                  <div>
+                    <div className="mb-2 text-sm font-medium text-neutral-800">Эмоджи-иконка</div>
+                    <div className="flex min-h-10 items-center gap-2">
+                      <EmojiPicker
+                        selected={category.icon_image_url}
+                        onSelect={(item: EmojiItem) =>
+                          onUpdateCategory(category.category_id, (current) => ({
                             ...current,
-                            icon_image_url: '',
-                            icon_custom_emoji_id: '',
-                            emoji_only: false,
+                            icon_image_url: item.image_url,
+                            icon_custom_emoji_id: item.tg_custom_emoji_id ?? '',
+                            emoji_only: !current.label?.trim(),
                           }))
                         }
-                        className="ml-auto text-xs font-medium text-neutral-500 hover:text-neutral-700"
                       >
-                        Убрать
-                      </button>
-                    )}
+                        {category.icon_image_url ? (
+                          <img
+                            src={category.icon_image_url}
+                            alt="Эмоджи-иконка категории"
+                            className="h-8 w-8 rounded object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-8 w-8 items-center justify-center rounded bg-neutral-50 text-neutral-400">
+                            <ImageIcon className="h-4 w-4 text-neutral-400" />
+                          </div>
+                        )}
+                      </EmojiPicker>
+                      {!category.icon_image_url && (
+                        <div className="text-sm text-neutral-500">Добавить эмоджи-иконку</div>
+                      )}
+                      {category.icon_image_url && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onUpdateCategory(category.category_id, (current) => ({
+                              ...current,
+                              icon_image_url: '',
+                              icon_custom_emoji_id: '',
+                              emoji_only: false,
+                            }))
+                          }
+                          className="ml-auto text-xs font-medium text-neutral-500 hover:text-neutral-700"
+                        >
+                          Убрать
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400 xl:hidden">
-                    Стиль
-                  </span>
-                  <div className="flex min-h-12 items-center gap-3 rounded-xl border border-surface-border bg-neutral-50 px-3 py-2">
-                    <ButtonStylePicker
-                      value={category.style ?? ''}
-                      onChange={(style) =>
-                        updateCategory(category.category_id, (current) => ({
-                          ...current,
-                          style,
-                        }))
-                      }
-                    />
-                    <span className="text-sm text-neutral-500">Только для этой кнопки</span>
+                  <div className="border-t border-surface-border pt-3">
+                    <div className="mb-2 text-sm font-medium text-neutral-800">Цвет кнопки</div>
+                    <div className="flex min-h-10 items-center gap-3">
+                      <ButtonStylePicker
+                        value={category.style ?? ''}
+                        onChange={(style) =>
+                          onUpdateCategory(category.category_id, (current) => ({
+                            ...current,
+                            style,
+                          }))
+                        }
+                      />
+                      <span className="text-sm text-neutral-500">Только для этой категории</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          )
-        })}
-      </section>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -457,4 +563,11 @@ function readString(value: unknown): string {
 function readStyle(value: unknown): PresetButtonStyle {
   if (value === 'primary' || value === 'success' || value === 'danger') return value
   return ''
+}
+
+function styleIndicatorClass(style: PresetButtonStyle): string {
+  if (style === 'primary') return 'bg-blue-500'
+  if (style === 'success') return 'bg-green-500'
+  if (style === 'danger') return 'bg-red-500'
+  return 'bg-neutral-300'
 }
