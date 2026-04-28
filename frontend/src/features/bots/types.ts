@@ -79,6 +79,12 @@ export interface BotModuleSettings {
 
 export type PresetButtonStyle = '' | 'primary' | 'success' | 'danger'
 
+export interface MenuPresetItemCustomization {
+  item_id: number
+  label?: string
+  hidden?: boolean
+}
+
 export interface MenuPresetCategoryCustomization {
   category_id: number
   label?: string
@@ -86,6 +92,8 @@ export interface MenuPresetCategoryCustomization {
   icon_custom_emoji_id?: string
   style?: PresetButtonStyle
   emoji_only?: boolean
+  item_order?: number[]
+  items?: MenuPresetItemCustomization[]
 }
 
 export interface MenuPresetCustomizations {

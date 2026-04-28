@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -115,7 +115,7 @@ describe('MenuDetailPage', () => {
     } as unknown as ReturnType<typeof usePOSQuery>)
   })
 
-  it('renders intro editor, bindings, category icon fields, and full item data', () => {
+  it('renders bindings, categories, and full item data', () => {
     mockUseMenuQuery.mockReturnValue({
       data: {
         id: 5,
@@ -169,8 +169,9 @@ describe('MenuDetailPage', () => {
       'href',
       '/dashboard/bots/12?tab=modules',
     )
-    expect(screen.getByText('Приветственное сообщение')).toBeInTheDocument()
     expect(screen.getByText('Привязка к точкам продаж')).toBeInTheDocument()
+    // Categories are collapsed by default — expand to see items
+    fireEvent.click(screen.getByText('Кофе'))
     expect(screen.getByText('250 мл')).toBeInTheDocument()
     expect(screen.getByText('Есть фото')).toBeInTheDocument()
   })

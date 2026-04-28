@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ChevronDown, GripVertical, ImageIcon } from 'lucide-react'
+import { ChevronDown, Eye, EyeOff, GripVertical, ImageIcon } from 'lucide-react'
 import {
   DndContext,
   KeyboardSensor,
@@ -20,12 +20,13 @@ import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
 import { EmojiPicker } from '@/features/emoji-packs'
 import type { EmojiItem } from '@/features/emoji-packs/types'
-import type { Menu } from '@/features/menus/types'
+import type { Menu, MenuItem } from '@/features/menus/types'
 import { ButtonStylePicker } from '@/features/telegram-preview/components/ButtonStylePicker'
 import { InfoHint } from '@/components/common/InfoHint'
 import type {
   MenuPresetCategoryCustomization,
   MenuPresetCustomizations,
+  MenuPresetItemCustomization,
   PresetButtonStyle,
 } from '../types'
 
@@ -49,6 +50,8 @@ export function createDefaultMenuPresetCustomizations(menu: Menu | null): MenuPr
     icon_custom_emoji_id: '',
     style: '' as PresetButtonStyle,
     emoji_only: false,
+    item_order: (category.items ?? []).map((item) => item.id),
+    items: [] as MenuPresetItemCustomization[],
   }))
 
   return {
@@ -73,6 +76,24 @@ export function normalizeMenuPresetCustomizations(
     if (!item || typeof item !== 'object') continue
     const categoryId = Number((item as { category_id?: unknown }).category_id)
     if (!Number.isFinite(categoryId)) continue
+
+    const rawItemOrder = Array.isArray((item as { item_order?: unknown }).item_order)
+      ? ((item as { item_order?: unknown[] }).item_order as unknown[])
+          .map((v) => Number(v))
+          .filter((v) => Number.isFinite(v))
+      : undefined
+
+    const rawItems = Array.isArray((item as { items?: unknown }).items)
+      ? ((item as { items?: unknown[] }).items as unknown[])
+          .filter((v): v is Record<string, unknown> => v != null && typeof v === 'object')
+          .map((v) => ({
+            item_id: Number(v.item_id),
+            label: readString(v.label),
+            hidden: Boolean(v.hidden),
+          }))
+          .filter((v) => Number.isFinite(v.item_id))
+      : undefined
+
     rawById.set(categoryId, {
       category_id: categoryId,
       label: readString((item as { label?: unknown }).label),
@@ -80,6 +101,8 @@ export function normalizeMenuPresetCustomizations(
       icon_custom_emoji_id: readString((item as { icon_custom_emoji_id?: unknown }).icon_custom_emoji_id),
       style: readStyle((item as { style?: unknown }).style),
       emoji_only: Boolean((item as { emoji_only?: unknown }).emoji_only),
+      item_order: rawItemOrder,
+      items: rawItems,
     })
   }
 
@@ -110,6 +133,8 @@ export function normalizeMenuPresetCustomizations(
         icon_custom_emoji_id: override?.icon_custom_emoji_id || '',
         style: readStyle(override?.style || category.style || ''),
         emoji_only: Boolean(override?.emoji_only),
+        item_order: override?.item_order ?? category.item_order,
+        items: override?.items ?? category.items ?? [],
       }
     })
 
@@ -180,6 +205,24 @@ export function sanitizeMenuPresetCustomizations(
       }
       if (Boolean(category.emoji_only)) {
         entry.emoji_only = true
+      }
+
+      const defaultItemOrder = fallback?.item_order ?? []
+      const currentItemOrder = category.item_order ?? []
+      if (JSON.stringify(currentItemOrder) !== JSON.stringify(defaultItemOrder)) {
+        entry.item_order = currentItemOrder
+      }
+
+      const dirtyItems = (category.items ?? [])
+        .filter((item) => item.label?.trim() || item.hidden)
+        .map((item) => {
+          const cleaned: Record<string, unknown> = { item_id: item.item_id }
+          if (item.label?.trim()) cleaned.label = item.label.trim()
+          if (item.hidden) cleaned.hidden = true
+          return cleaned
+        })
+      if (dirtyItems.length > 0) {
+        entry.items = dirtyItems
       }
 
       return Object.keys(entry).length > 1 ? entry : null
@@ -330,11 +373,11 @@ export function MenuPresetCustomizer({
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <h4 className="text-sm font-semibold text-neutral-900">Категории</h4>
-              <InfoHint content="Перетаскивайте строки, чтобы менять порядок. Откройте нужную категорию, чтобы изменить название, иконку или цвет." />
+              <h4 className="text-sm font-semibold text-neutral-900">Категории и позиции</h4>
+              <InfoHint content="Перетаскивайте строки, чтобы менять порядок. Откройте категорию, чтобы настроить иконку, цвет и управлять отображением позиций." />
             </div>
             <p className="mt-1 text-sm text-neutral-500">
-              Перетаскивайте категории за ручку слева. Название, иконка и цвет меняются внутри раскрытой строки.
+              Перетаскивайте категории за ручку слева. Внутри — настройки отображения и позиции.
             </p>
           </div>
           <div className="text-sm text-neutral-400">{categories.length} категорий</div>
@@ -394,7 +437,70 @@ function SortableCategoryRow({
     transform: CSS.Transform.toString(transform),
     transition,
   }
-  const title = category.label || menuCategory?.name || 'Без названия'
+  const canonicalName = menuCategory?.name || 'Без названия'
+  const canonicalIcon = menuCategory?.icon_image_url || ''
+  const hasLabelOverride = Boolean(category.label?.trim()) && category.label?.trim() !== menuCategory?.name?.trim()
+  const hasIconOverride = Boolean(category.icon_image_url) && category.icon_image_url !== canonicalIcon
+  const displayIcon = category.icon_image_url || canonicalIcon
+
+  const menuItems = menuCategory?.items ?? []
+  const itemOrder = category.item_order ?? menuItems.map((item) => item.id)
+  const itemCustomizations = category.items ?? []
+  const itemCustomById = new Map(itemCustomizations.map((item) => [item.item_id, item]))
+
+  const orderedItems = useMemo(() => {
+    const orderIndex = new Map(itemOrder.map((id, index) => [id, index]))
+    return [...menuItems].sort((a, b) => {
+      const ai = orderIndex.get(a.id)
+      const bi = orderIndex.get(b.id)
+      if (ai == null && bi == null) return 0
+      if (ai == null) return 1
+      if (bi == null) return -1
+      return ai - bi
+    })
+  }, [menuItems, itemOrder])
+
+  const itemSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+  const itemSortableIds = useMemo(
+    () => orderedItems.map((item) => `item-${item.id}`),
+    [orderedItems],
+  )
+
+  const handleItemDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = itemSortableIds.indexOf(String(active.id))
+    const newIndex = itemSortableIds.indexOf(String(over.id))
+    if (oldIndex < 0 || newIndex < 0) return
+
+    const reordered = arrayMove(orderedItems, oldIndex, newIndex)
+    onUpdateCategory(category.category_id, (current) => ({
+      ...current,
+      item_order: reordered.map((item) => item.id),
+    }))
+  }
+
+  const updateItem = (itemId: number, patch: Partial<MenuPresetItemCustomization>) => {
+    onUpdateCategory(category.category_id, (current) => {
+      const existing = (current.items ?? []).find((i) => i.item_id === itemId)
+      const updated: MenuPresetItemCustomization = {
+        item_id: itemId,
+        label: patch.label ?? existing?.label,
+        hidden: patch.hidden ?? existing?.hidden,
+      }
+      const items = existing
+        ? (current.items ?? []).map((i) => (i.item_id === itemId ? updated : i))
+        : [...(current.items ?? []), updated]
+      return { ...current, items }
+    })
+  }
+
+  const hiddenCount = orderedItems.filter((item) => itemCustomById.get(item.id)?.hidden).length
+  const itemCount = menuItems.length
 
   return (
     <div ref={setNodeRef} style={style}>
@@ -408,7 +514,7 @@ function SortableCategoryRow({
           <button
             type="button"
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600 cursor-grab active:cursor-grabbing touch-none"
-            aria-label={`Перетащить категорию ${title}`}
+            aria-label={`Перетащить категорию ${canonicalName}`}
             {...listeners}
             {...attributes}
           >
@@ -421,10 +527,10 @@ function SortableCategoryRow({
             className="flex min-w-0 flex-1 items-center gap-3 text-left"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-50/70">
-              {category.icon_image_url ? (
+              {displayIcon ? (
                 <img
-                  src={category.icon_image_url}
-                  alt={title}
+                  src={displayIcon}
+                  alt={canonicalName}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -433,7 +539,13 @@ function SortableCategoryRow({
             </span>
 
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium text-neutral-900">{title}</div>
+              <div className="truncate text-sm font-medium text-neutral-900">{canonicalName}</div>
+              <div className="flex items-center gap-2 text-xs text-neutral-400">
+                <span>{itemCount} позиций</span>
+                {hiddenCount > 0 && (
+                  <span className="text-amber-600">{hiddenCount} скрыто</span>
+                )}
+              </div>
             </div>
 
             <span
@@ -453,11 +565,11 @@ function SortableCategoryRow({
         </div>
 
         {isExpanded && (
-          <div className="border-t border-surface-border bg-neutral-50/40 px-5 py-4">
+          <div className="border-t border-surface-border bg-neutral-50/40 px-5 py-4 space-y-4">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_16.5rem] lg:items-start">
               <div className="space-y-2">
                 <label className="space-y-2">
-                  <span className="text-sm font-medium text-neutral-700">Название</span>
+                  <span className="text-sm font-medium text-neutral-700">Название в боте</span>
                   <input
                     value={category.label ?? ''}
                     onChange={(event) =>
@@ -473,18 +585,33 @@ function SortableCategoryRow({
                     placeholder={menuCategory?.name ?? 'Категория'}
                   />
                 </label>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-400">
-                  <span>Если оставить название пустым, в табе останется только иконка.</span>
-                  {menuCategory?.name && menuCategory.name !== category.label && (
-                    <span>Исходное: {menuCategory.name}</span>
-                  )}
-                </div>
+                {hasLabelOverride ? (
+                  <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-100 px-3 py-1.5 text-xs text-amber-700">
+                    <span>Оригинал: <span className="font-medium">{menuCategory?.name}</span></span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateCategory(category.category_id, (current) => ({
+                          ...current,
+                          label: menuCategory?.name ?? '',
+                        }))
+                      }
+                      className="ml-auto text-xs font-medium text-amber-600 hover:text-amber-800"
+                    >
+                      Сбросить
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-xs text-neutral-400">
+                    Используется название из меню. Если оставить пустым — в табе останется только иконка.
+                  </div>
+                )}
               </div>
 
               <div className="rounded-xl border border-surface-border bg-white px-4 py-3">
                 <div className="space-y-3">
                   <div>
-                    <div className="mb-2 text-sm font-medium text-neutral-800">Эмоджи-иконка</div>
+                    <div className="mb-2 text-sm font-medium text-neutral-800">Иконка в боте</div>
                     <div className="flex min-h-10 items-center gap-2">
                       <EmojiPicker
                         selected={category.icon_image_url}
@@ -500,7 +627,7 @@ function SortableCategoryRow({
                         {category.icon_image_url ? (
                           <img
                             src={category.icon_image_url}
-                            alt="Эмоджи-иконка категории"
+                            alt="Иконка категории в боте"
                             className="h-8 w-8 rounded object-cover"
                           />
                         ) : (
@@ -509,8 +636,11 @@ function SortableCategoryRow({
                           </div>
                         )}
                       </EmojiPicker>
-                      {!category.icon_image_url && (
-                        <div className="text-sm text-neutral-500">Добавить эмоджи-иконку</div>
+                      {!category.icon_image_url && !canonicalIcon && (
+                        <div className="text-sm text-neutral-500">Добавить иконку</div>
+                      )}
+                      {!category.icon_image_url && canonicalIcon && (
+                        <div className="text-sm text-neutral-400">Используется иконка из меню</div>
                       )}
                       {category.icon_image_url && (
                         <button
@@ -529,6 +659,26 @@ function SortableCategoryRow({
                         </button>
                       )}
                     </div>
+                    {hasIconOverride && canonicalIcon && (
+                      <div className="mt-2 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-100 px-3 py-1.5 text-xs text-amber-700">
+                        <span className="flex items-center gap-1.5">
+                          В меню: <img src={canonicalIcon} alt="" className="h-5 w-5 rounded object-cover inline" />
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onUpdateCategory(category.category_id, (current) => ({
+                              ...current,
+                              icon_image_url: canonicalIcon,
+                              icon_custom_emoji_id: '',
+                            }))
+                          }
+                          className="ml-auto text-xs font-medium text-amber-600 hover:text-amber-800"
+                        >
+                          Сбросить
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="border-t border-surface-border pt-3">
@@ -549,11 +699,148 @@ function SortableCategoryRow({
                 </div>
               </div>
             </div>
+
+            {orderedItems.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium text-neutral-700">Позиции</div>
+                  <div className="text-xs text-neutral-400">
+                    {orderedItems.length - hiddenCount} из {orderedItems.length} показано
+                  </div>
+                </div>
+                <DndContext
+                  sensors={itemSensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleItemDragEnd}
+                >
+                  <SortableContext items={itemSortableIds} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-1">
+                      {orderedItems.map((menuItem) => {
+                        const custom = itemCustomById.get(menuItem.id)
+                        return (
+                          <SortableItemRow
+                            key={menuItem.id}
+                            id={`item-${menuItem.id}`}
+                            menuItem={menuItem}
+                            customization={custom}
+                            onUpdate={(patch) => updateItem(menuItem.id, patch)}
+                          />
+                        )
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              </div>
+            )}
           </div>
         )}
       </div>
     </div>
   )
+}
+
+interface SortableItemRowProps {
+  id: string
+  menuItem: MenuItem
+  customization?: MenuPresetItemCustomization
+  onUpdate: (patch: Partial<MenuPresetItemCustomization>) => void
+}
+
+function SortableItemRow({ id, menuItem, customization, onUpdate }: SortableItemRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  const isHidden = customization?.hidden ?? false
+  const hasLabelOverride = Boolean(customization?.label?.trim()) && customization?.label?.trim() !== menuItem.name.trim()
+  const [editing, setEditing] = useState(false)
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'flex items-center gap-2 rounded-xl border border-surface-border bg-white px-3 py-2',
+        isDragging && 'shadow-md ring-1 ring-accent/20',
+        isHidden && 'opacity-50',
+      )}
+    >
+      <button
+        type="button"
+        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-neutral-300 hover:text-neutral-500 cursor-grab active:cursor-grabbing touch-none"
+        {...listeners}
+        {...attributes}
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+
+      <div className="min-w-0 flex-1">
+        {editing ? (
+          <input
+            value={customization?.label ?? menuItem.name}
+            onChange={(e) => onUpdate({ label: e.target.value })}
+            onBlur={() => setEditing(false)}
+            onKeyDown={(e) => e.key === 'Enter' && setEditing(false)}
+            className="w-full rounded border border-surface-border bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-accent/30"
+            placeholder={menuItem.name}
+            autoFocus
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="text-left w-full"
+          >
+            <div className={cn('text-sm text-neutral-900', isHidden && 'line-through')}>
+              {hasLabelOverride ? customization!.label : menuItem.name}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-neutral-400">
+              <span>{formatPrice(menuItem.price)}</span>
+              {menuItem.weight && <span>{menuItem.weight}</span>}
+              {hasLabelOverride && (
+                <span className="text-blue-500">оригинал: {menuItem.name}</span>
+              )}
+            </div>
+          </button>
+        )}
+      </div>
+
+      {hasLabelOverride && !editing && (
+        <button
+          type="button"
+          onClick={() => onUpdate({ label: '' })}
+          className="text-xs text-amber-600 hover:text-amber-800 shrink-0"
+          title="Сбросить название"
+        >
+          Сбросить
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={() => onUpdate({ hidden: !isHidden })}
+        className={cn(
+          'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors',
+          isHidden
+            ? 'text-neutral-400 hover:text-neutral-600'
+            : 'text-neutral-400 hover:text-neutral-600',
+        )}
+        title={isHidden ? 'Показать в боте' : 'Скрыть в боте'}
+      >
+        {isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+      </button>
+    </div>
+  )
+}
+
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    maximumFractionDigits: 0,
+  }).format(price)
 }
 
 function readString(value: unknown): string {

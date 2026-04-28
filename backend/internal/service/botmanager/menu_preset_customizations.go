@@ -20,12 +20,20 @@ type menuPresetCustomizations struct {
 }
 
 type menuPresetCategoryCustomization struct {
-	CategoryID        int    `json:"category_id"`
-	Label             string `json:"label,omitempty"`
-	IconImageURL      string `json:"icon_image_url,omitempty"`
-	IconCustomEmojiID string `json:"icon_custom_emoji_id,omitempty"`
-	Style             string `json:"style,omitempty"`
-	EmojiOnly         bool   `json:"emoji_only,omitempty"`
+	CategoryID        int                          `json:"category_id"`
+	Label             string                       `json:"label,omitempty"`
+	IconImageURL      string                       `json:"icon_image_url,omitempty"`
+	IconCustomEmojiID string                       `json:"icon_custom_emoji_id,omitempty"`
+	Style             string                       `json:"style,omitempty"`
+	EmojiOnly         bool                         `json:"emoji_only,omitempty"`
+	ItemOrder         []int                        `json:"item_order,omitempty"`
+	Items             []menuPresetItemCustomization `json:"items,omitempty"`
+}
+
+type menuPresetItemCustomization struct {
+	ItemID int    `json:"item_id"`
+	Label  string `json:"label,omitempty"`
+	Hidden bool   `json:"hidden,omitempty"`
 }
 
 type menuCategoryPresentation struct {
@@ -124,6 +132,8 @@ func (h *handler) presentMenuCategories(ctx context.Context, menu *entity.Menu, 
 			buttonStyle = strings.TrimSpace(custom.TabButtonStyle)
 		}
 
+		category = applyItemCustomizations(category, override)
+
 		presented = append(presented, menuCategoryPresentation{
 			Category:                category,
 			Label:                   displayLabel,
@@ -155,6 +165,58 @@ func (h *handler) syncedEmojiIDsByImageURL(ctx context.Context) map[string]strin
 		byURL[item.ImageURL] = *item.TgCustomEmojiID
 	}
 	return byURL
+}
+
+func applyItemCustomizations(category entity.MenuCategory, override menuPresetCategoryCustomization) entity.MenuCategory {
+	if len(override.ItemOrder) == 0 && len(override.Items) == 0 {
+		return category
+	}
+
+	hiddenIDs := make(map[int]bool, len(override.Items))
+	labelByID := make(map[int]string, len(override.Items))
+	for _, item := range override.Items {
+		if item.Hidden {
+			hiddenIDs[item.ItemID] = true
+		}
+		if item.Label != "" {
+			labelByID[item.ItemID] = item.Label
+		}
+	}
+
+	items := make([]entity.MenuItem, 0, len(category.Items))
+	for _, item := range category.Items {
+		if hiddenIDs[item.ID] {
+			continue
+		}
+		if label, ok := labelByID[item.ID]; ok {
+			item.Name = label
+		}
+		items = append(items, item)
+	}
+
+	if len(override.ItemOrder) > 0 {
+		orderIndex := make(map[int]int, len(override.ItemOrder))
+		for i, id := range override.ItemOrder {
+			orderIndex[id] = i
+		}
+		sort.SliceStable(items, func(i, j int) bool {
+			leftIdx, leftOK := orderIndex[items[i].ID]
+			rightIdx, rightOK := orderIndex[items[j].ID]
+			switch {
+			case leftOK && rightOK:
+				return leftIdx < rightIdx
+			case leftOK:
+				return true
+			case rightOK:
+				return false
+			default:
+				return items[i].SortOrder < items[j].SortOrder
+			}
+		})
+	}
+
+	category.Items = items
+	return category
 }
 
 func menuCategoryItemsText(category entity.MenuCategory) string {

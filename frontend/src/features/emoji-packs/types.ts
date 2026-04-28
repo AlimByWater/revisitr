@@ -13,6 +13,7 @@ export interface EmojiItem {
   pack_id: number
   name: string
   image_url: string
+  emoji?: string
   sort_order: number
   tg_sticker_set?: string
   tg_custom_emoji_id?: string

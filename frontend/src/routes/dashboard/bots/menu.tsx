@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, CircleAlert, CircleCheckBig, LayoutTemplate, ListTree, UtensilsCrossed } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -9,9 +9,17 @@ import { PresetGallery } from '@/features/bots/components/PresetGallery'
 import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 import { ErrorState } from '@/components/common/ErrorState'
 import { InfoHint } from '@/components/common/InfoHint'
-import { useMenusQuery } from '@/features/menus/queries'
+import { useMenusQuery, useMenuQuery, useUpdateMenuMutation } from '@/features/menus/queries'
 import { menusApi } from '@/features/menus/api'
 import type { Menu } from '@/features/menus/types'
+import type { MessageContent } from '@/features/telegram-preview'
+import { campaignsApi } from '@/features/campaigns/api'
+
+const MessageContentEditor = lazy(() =>
+  import('@/features/telegram-preview/components/MessageContentEditor').then((mod) => ({
+    default: mod.MessageContentEditor,
+  })),
+)
 
 function pickBotMenu(menus: Menu[], boundPosIds: number[]): Menu | null {
   if (menus.length === 0) return null
@@ -77,10 +85,22 @@ export default function BotMenuSettingsPage() {
     }
   }, [id])
 
-  const activeMenu = useMemo(
+  const activeMenuStub = useMemo(
     () => pickBotMenu(menus, boundPosIds),
     [boundPosIds, menus],
   )
+
+  const { data: fullMenu, mutate: mutateFullMenu } = useMenuQuery(activeMenuStub?.id ?? 0)
+  const activeMenu = fullMenu ?? activeMenuStub
+  const updateMenu = useUpdateMenuMutation()
+
+  const [introContent, setIntroContent] = useState<MessageContent | null>(null)
+
+  useEffect(() => {
+    if (activeMenu?.intro_content) {
+      setIntroContent(activeMenu.intro_content)
+    }
+  }, [activeMenu?.intro_content])
 
   const normalizedFromServer = useMemo(
     () => normalizeMenuPresetCustomizations(moduleSettings?.customizations, activeMenu),
@@ -147,10 +167,18 @@ export default function BotMenuSettingsPage() {
         await resetPreset.mutateAsync(undefined as never)
       }
 
+      if (activeMenu && introContent) {
+        await updateMenu.mutateAsync({
+          id: activeMenu.id,
+          data: { intro_content: introContent },
+        })
+        await mutateFullMenu()
+      }
+
       await mutateSettings()
       setSaveSuccess(true)
     } catch {
-      setSaveError('Не удалось сохранить пресет меню. Попробуйте ещё раз.')
+      setSaveError('Не удалось сохранить. Попробуйте ещё раз.')
     } finally {
       setIsSaving(false)
     }
@@ -197,13 +225,26 @@ export default function BotMenuSettingsPage() {
                 <span>{selectedPreset?.name || 'Не выбран'}</span>
               </div>
             </div>
-            <div className="rounded-xl bg-neutral-50 px-3 py-2">
-              <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Меню</div>
-              <div className="mt-1 flex items-center gap-2 text-sm font-medium text-neutral-900">
-                <UtensilsCrossed className="h-4 w-4 text-neutral-400" />
-                <span>{activeMenuName}</span>
+            {activeMenu ? (
+              <Link
+                to={`/dashboard/menus/${activeMenu.id}?botId=${id}`}
+                className="rounded-xl bg-neutral-50 px-3 py-2 transition-colors hover:bg-neutral-100"
+              >
+                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Меню</div>
+                <div className="mt-1 flex items-center gap-2 text-sm font-medium text-neutral-900">
+                  <UtensilsCrossed className="h-4 w-4 text-neutral-400" />
+                  <span>{activeMenuName}</span>
+                </div>
+              </Link>
+            ) : (
+              <div className="rounded-xl bg-neutral-50 px-3 py-2">
+                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Меню</div>
+                <div className="mt-1 flex items-center gap-2 text-sm font-medium text-neutral-900">
+                  <UtensilsCrossed className="h-4 w-4 text-neutral-400" />
+                  <span>{activeMenuName}</span>
+                </div>
               </div>
-            </div>
+            )}
             <div className="rounded-xl bg-neutral-50 px-3 py-2">
               <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Категории</div>
               <div className="mt-1 flex items-center gap-2 text-sm font-medium text-neutral-900">
@@ -290,6 +331,17 @@ export default function BotMenuSettingsPage() {
                 <h2 className="text-lg font-semibold text-neutral-900">Настройте тексты, кнопки и категории</h2>
                 <InfoHint content="Здесь можно править подписи, порядок и иконки. Переходы внутри выбранного шаблона останутся прежними." />
               </div>
+              <p className="mt-2 text-sm text-neutral-500">
+                Здесь настраивается как меню выглядит в Telegram-боте. Названия и иконки берутся из{' '}
+                {activeMenu ? (
+                  <Link to={`/dashboard/menus/${activeMenu.id}?botId=${id}`} className="text-accent hover:text-accent/80 font-medium">
+                    редактора меню
+                  </Link>
+                ) : (
+                  <span>редактора меню</span>
+                )}
+                {' '}и могут быть переопределены для бота.
+              </p>
             </div>
 
             <MenuPresetCustomizer
@@ -297,6 +349,26 @@ export default function BotMenuSettingsPage() {
               value={draft}
               onChange={setDraft}
             />
+          </section>
+
+          <section className="rounded-2xl border border-surface-border bg-white p-6">
+            <div className="mb-5 max-w-2xl">
+              <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Шаг 3</div>
+              <div className="mt-1 flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-neutral-900">Приветственное сообщение</h2>
+                <InfoHint content="Текст и медиа, которые бот отправит, когда гость нажмёт кнопку «Меню»." />
+              </div>
+            </div>
+            <div className="rounded-xl border border-surface-border bg-neutral-50/70 p-4">
+              <Suspense fallback={<div className="h-32 rounded border border-neutral-200 bg-neutral-50/60 animate-pulse" />}>
+                <MessageContentEditor
+                  value={introContent ?? { parts: [{ type: 'text', text: '', parse_mode: 'Markdown' }] }}
+                  onChange={setIntroContent}
+                  onUpload={campaignsApi.uploadFile}
+                  maxParts={5}
+                />
+              </Suspense>
+            </div>
           </section>
         </main>
 
@@ -327,10 +399,10 @@ export default function BotMenuSettingsPage() {
               Цены, блюда, фото и привязку к точкам продаж редактируйте отдельно, чтобы не смешивать контент и шаблон показа.
             </p>
             <Link
-              to={`/dashboard/menus?botId=${id}`}
+              to={activeMenu ? `/dashboard/menus/${activeMenu.id}?botId=${id}` : `/dashboard/menus?botId=${id}`}
               className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-accent transition-colors hover:text-accent/80"
             >
-              Открыть управление меню →
+              {activeMenu ? `Редактировать «${activeMenu.name}»` : 'Открыть управление меню'} →
             </Link>
           </section>
         </aside>
