@@ -1,0 +1,179 @@
+/* Telegram iOS Preview — SF Pro + Glassmorphism */
+
+@font-face {
+  font-family: 'SF Pro Text';
+  src: url('../fonts/sf-pro-text-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  src: url('../fonts/sf-pro-text-medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  src: url('../fonts/sf-pro-text-semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Root scope — all preview descendants inherit SF Pro */
+.tg-root {
+  font-family: 'SF Pro Text', -apple-system, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Glass pill base ── */
+.tg-glass {
+  position: relative;
+  border-radius: 296px;
+  box-shadow: 0px 8px 40px rgba(0, 0, 0, 0.12);
+}
+
+.tg-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.65);
+  pointer-events: none;
+}
+
+.tg-glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #ddd;
+  mix-blend-mode: color-burn;
+  pointer-events: none;
+}
+
+/* Third glass layer via extra element */
+.tg-glass-inner {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #f7f7f7;
+  mix-blend-mode: darken;
+  pointer-events: none;
+}
+
+/* ── Action button glass ── */
+.tg-action-glass {
+  position: absolute;
+  inset: 0;
+  border-radius: 7px;
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+/* ── Action button color overlay ── */
+.tg-action-color {
+  position: absolute;
+  inset: 0;
+  border-radius: 7px;
+  opacity: 0.85;
+}
+
+.tg-action-color-primary {
+  background: #0088ff;
+}
+
+.tg-action-color-danger {
+  background: #ff383c;
+}
+
+.tg-action-color-success {
+  background: #34c759;
+}
+
+/* ── Chat background gradients ── */
+.tg-chat-background {
+  background-color: #91c6e7;
+  background-image:
+    radial-gradient(ellipse at 0% 100%, rgba(162, 221, 212, 1) 0%, rgba(162, 221, 212, 0) 50%),
+    radial-gradient(ellipse at 100% 100%, rgba(143, 212, 243, 1) 0%, rgba(143, 212, 243, 0) 50%),
+    radial-gradient(ellipse at 100% 0%, rgba(119, 173, 246, 1) 0%, rgba(119, 173, 246, 0) 50%),
+    radial-gradient(ellipse at 0% 0%, rgba(185, 194, 240, 1) 0%, rgba(185, 194, 240, 0) 50%);
+}
+
+/* ── Bubble tail positioning ── */
+.tg-tail-incoming {
+  position: absolute;
+  bottom: -1px;
+  left: -6px;
+  width: 12px;
+  height: 18px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tg-tail-outgoing {
+  position: absolute;
+  bottom: -1px;
+  right: -6px;
+  width: 12px;
+  height: 18px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Scroll edge blur ── */
+.tg-scroll-edge-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(to bottom, rgba(145, 198, 231, 0.6), transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Timestamp ── */
+.tg-time {
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 12px;
+  opacity: 0.5;
+  color: black;
+}
+
+/* ── URL button arrow ── */
+.tg-url-arrow {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 12px;
+  height: 12px;
+  color: white;
+  opacity: 0.7;
+}
+
+/* ── Tooltip ── */
+.tg-tooltip {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}

@@ -17,6 +17,7 @@ var (
 
 type menusRepo interface {
 	Create(ctx context.Context, m *entity.Menu) error
+	Copy(ctx context.Context, source *entity.Menu, name string) (*entity.Menu, error)
 	GetByID(ctx context.Context, id int) (*entity.Menu, error)
 	GetByOrgID(ctx context.Context, orgID int) ([]entity.Menu, error)
 	Update(ctx context.Context, m *entity.Menu) error
@@ -63,6 +64,30 @@ func (uc *Usecase) Create(ctx context.Context, orgID int, req entity.CreateMenuR
 		return nil, fmt.Errorf("create menu: %w", err)
 	}
 	return m, nil
+}
+
+func (uc *Usecase) Copy(ctx context.Context, orgID, menuID int, req entity.CopyMenuRequest) (*entity.Menu, error) {
+	source, err := uc.repo.GetFullMenu(ctx, menuID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if source.OrgID != orgID {
+		return nil, ErrNotOwner
+	}
+
+	name := req.Name
+	if name == "" {
+		name = source.Name + " (копия)"
+	}
+
+	copied, err := uc.repo.Copy(ctx, source, name)
+	if err != nil {
+		return nil, fmt.Errorf("copy menu: %w", err)
+	}
+	return copied, nil
 }
 
 func (uc *Usecase) Get(ctx context.Context, orgID, menuID int) (*entity.Menu, error) {

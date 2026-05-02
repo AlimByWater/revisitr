@@ -19,6 +19,7 @@ type Service struct {
 
 type Config struct {
 	Token       string
+	APIServer   string
 	BotUsername string // filled after GetMe
 }
 
@@ -41,7 +42,11 @@ func New(cfg Config, deps Deps, logger *slog.Logger) (*Service, error) {
 		return nil, fmt.Errorf("masterbot: MASTER_BOT_TOKEN is not set")
 	}
 
-	tBot, err := telego.NewBot(cfg.Token)
+	var opts []telego.BotOption
+	if cfg.APIServer != "" {
+		opts = append(opts, telego.WithAPIServer(cfg.APIServer))
+	}
+	tBot, err := telego.NewBot(cfg.Token, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("masterbot: create telego bot: %w", err)
 	}

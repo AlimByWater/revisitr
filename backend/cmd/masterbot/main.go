@@ -47,7 +47,7 @@ func main() {
 
 	// Create and start master bot service
 	svc, err := masterbot.New(
-		masterbot.Config{Token: cfg.MasterBot.Token},
+		masterbot.Config{Token: cfg.MasterBot.Token, APIServer: cfg.TelegramAPIURL},
 		masterbot.Deps{
 			AdminLinks:  pgRepo.NewAdminBot(pg),
 			Dashboard:   pgRepo.NewDashboard(pg),

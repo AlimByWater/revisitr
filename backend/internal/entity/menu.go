@@ -56,6 +56,10 @@ type CreateMenuRequest struct {
 	Name string `json:"name" binding:"required"`
 }
 
+type CopyMenuRequest struct {
+	Name string `json:"name,omitempty"`
+}
+
 type UpdateMenuRequest struct {
 	Name         *string                 `json:"name,omitempty"`
 	IntroContent *MessageContent         `json:"intro_content,omitempty"`

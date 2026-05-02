@@ -1,6 +1,6 @@
 import { api } from '@/lib/api'
 import type {
-  Menu, CreateMenuRequest, MenuCategory, CreateMenuCategoryRequest,
+  Menu, CreateMenuRequest, CopyMenuRequest, MenuCategory, CreateMenuCategoryRequest,
   MenuItem, CreateMenuItemRequest, UpdateMenuCategoryRequest, UpdateMenuItemRequest,
   UpdateMenuRequest,
   ClientOrderStats,
@@ -19,6 +19,11 @@ export const menusApi = {
 
   create: async (data: CreateMenuRequest): Promise<Menu> => {
     const response = await api.post<Menu>('/menus', data)
+    return response.data
+  },
+
+  copy: async (id: number, data: CopyMenuRequest = {}): Promise<Menu> => {
+    const response = await api.post<Menu>(`/menus/${id}/copy`, data)
     return response.data
   },
 

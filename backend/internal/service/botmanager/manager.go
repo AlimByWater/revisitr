@@ -234,12 +234,6 @@ func (m *Manager) startBot(parentCtx context.Context, b entity.Bot) error {
 		return fmt.Errorf("create telego bot %q: %w", b.Name, err)
 	}
 
-	// Verify token by getting bot info
-	info, err := tBot.GetMe(parentCtx)
-	if err != nil {
-		return fmt.Errorf("verify bot token %q: %w", b.Name, err)
-	}
-
 	ctx, cancel := context.WithCancel(parentCtx)
 
 	inst := &botInstance{
@@ -261,7 +255,7 @@ func (m *Manager) startBot(parentCtx context.Context, b entity.Bot) error {
 			return
 		}
 
-		m.logger.Info("bot started", "bot_id", b.ID, "name", b.Name, "username", info.Username)
+		m.logger.Info("bot started", "bot_id", b.ID, "name", b.Name, "username", b.Username)
 
 		for {
 			select {

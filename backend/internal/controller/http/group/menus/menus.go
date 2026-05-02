@@ -16,6 +16,7 @@ import (
 
 type menusUsecase interface {
 	Create(ctx context.Context, orgID int, req entity.CreateMenuRequest) (*entity.Menu, error)
+	Copy(ctx context.Context, orgID, menuID int, req entity.CopyMenuRequest) (*entity.Menu, error)
 	Get(ctx context.Context, orgID, menuID int) (*entity.Menu, error)
 	List(ctx context.Context, orgID int) ([]entity.Menu, error)
 	Update(ctx context.Context, orgID, menuID int, req entity.UpdateMenuRequest) error
@@ -49,6 +50,7 @@ func (g *Group) Auth() gin.HandlerFunc {
 func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 	return []func() (string, string, gin.HandlerFunc){
 		g.handleCreate,
+		g.handleCopy,
 		g.handleList,
 		g.handleGet,
 		g.handleUpdate,
@@ -57,6 +59,34 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handleUpdateCategory,
 		g.handleAddItem,
 		g.handleUpdateItem,
+	}
+}
+
+func (g *Group) handleCopy() (string, string, gin.HandlerFunc) {
+	return http.MethodPost, "/:id/copy", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid menu id"})
+			return
+		}
+
+		var req entity.CopyMenuRequest
+		if c.Request.Body != nil {
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+		}
+
+		menu, err := g.uc.Copy(c.Request.Context(), orgID.(int), id, req)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusCreated, menu)
 	}
 }
 

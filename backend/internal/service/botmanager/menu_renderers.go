@@ -130,6 +130,19 @@ func buildCategoryItemRows(categoryID int, items []entity.MenuItem) [][]entity.I
 	return rows
 }
 
+func buildMenuListCategoryRows(categories []menuCategoryPresentation) [][]entity.InlineButton {
+	rows := make([][]entity.InlineButton, 0, len(categories))
+	for _, category := range categories {
+		rows = append(rows, []entity.InlineButton{{
+			Text:              category.ButtonText,
+			Data:              callbackMenuCategoryPref + strconv.Itoa(category.Category.ID) + ":0",
+			Style:             category.ButtonStyle,
+			IconCustomEmojiID: category.ButtonIconCustomEmojiID,
+		}})
+	}
+	return rows
+}
+
 // renderMenuList renders all menu items as a flat grouped list in one message.
 func (h *handler) renderMenuList(ctx context.Context, chatID int64) {
 	menu, _, ok := h.resolveMenuForChat(ctx, chatID)
@@ -155,7 +168,8 @@ func (h *handler) renderMenuList(ctx context.Context, chatID int64) {
 	part = ensureMenuTextPart(part)
 
 	h.sendContentMessage(ctx, chatID, entity.MessageContent{
-		Parts: []entity.MessagePart{part},
+		Parts:   []entity.MessagePart{part},
+		Buttons: buildMenuListCategoryRows(categories),
 	})
 }
 
@@ -267,7 +281,10 @@ func (h *handler) carouselContent(items []carouselItem, index int, custom menuPr
 	}
 
 	content := entity.MessageContent{
-		Buttons: [][]entity.InlineButton{nav},
+		Buttons: [][]entity.InlineButton{
+			nav,
+			{{Text: "Назад к меню", Data: callbackMenuRoot}},
+		},
 	}
 
 	if item.ImageURL != nil && *item.ImageURL != "" {
@@ -453,6 +470,10 @@ func (h *handler) menuItemCardContent(ctx context.Context, chatID int64, itemID 
 	if len(nav) > 0 {
 		rows = append(rows, nav)
 	}
+	rows = append(rows, []entity.InlineButton{{
+		Text: "Назад к категории",
+		Data: callbackMenuTabPref + strconv.Itoa(categoryID),
+	}})
 	rows = append(rows, []entity.InlineButton{{
 		Text: "✕ Закрыть",
 		Data: callbackMenuCardClose,

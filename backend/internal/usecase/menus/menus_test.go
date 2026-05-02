@@ -15,6 +15,7 @@ func ptr[T any](value T) *T { return &value }
 
 type mockMenusRepo struct {
 	createFn              func(ctx context.Context, m *entity.Menu) error
+	copyFn                func(ctx context.Context, source *entity.Menu, name string) (*entity.Menu, error)
 	getByIDFn             func(ctx context.Context, id int) (*entity.Menu, error)
 	getByOrgIDFn          func(ctx context.Context, orgID int) ([]entity.Menu, error)
 	updateFn              func(ctx context.Context, m *entity.Menu) error
@@ -42,6 +43,12 @@ func (m *mockMenusRepo) Create(ctx context.Context, menu *entity.Menu) error {
 		return m.createFn(ctx, menu)
 	}
 	return nil
+}
+func (m *mockMenusRepo) Copy(ctx context.Context, source *entity.Menu, name string) (*entity.Menu, error) {
+	if m.copyFn != nil {
+		return m.copyFn(ctx, source, name)
+	}
+	return nil, nil
 }
 func (m *mockMenusRepo) GetByID(ctx context.Context, id int) (*entity.Menu, error) {
 	if m.getByIDFn != nil {
@@ -194,6 +201,47 @@ func TestCreate(t *testing.T) {
 	}
 	if createdMenu == nil {
 		t.Fatal("expected repo.Create to be called")
+	}
+}
+
+func TestCopy(t *testing.T) {
+	source := &entity.Menu{
+		ID:    1,
+		OrgID: 10,
+		Name:  "Main Menu",
+		Categories: []entity.MenuCategory{{
+			ID:     2,
+			MenuID: 1,
+			Name:   "Drinks",
+			Items:  []entity.MenuItem{{ID: 3, Name: "Coffee", IsAvailable: true}},
+		}},
+		Bindings: []entity.MenuPOSBinding{{POSID: 4, IsActive: true}},
+	}
+	repo := &mockMenusRepo{
+		getFullMenuFn: func(_ context.Context, menuID int) (*entity.Menu, error) {
+			if menuID != 1 {
+				t.Fatalf("expected source menu 1, got %d", menuID)
+			}
+			return source, nil
+		},
+		copyFn: func(_ context.Context, gotSource *entity.Menu, name string) (*entity.Menu, error) {
+			if gotSource != source {
+				t.Fatal("expected full source menu to be copied")
+			}
+			if name != "Main Menu (копия)" {
+				t.Fatalf("expected default copy name, got %q", name)
+			}
+			return &entity.Menu{ID: 9, OrgID: 10, Name: name}, nil
+		},
+	}
+	uc := New(repo)
+
+	result, err := uc.Copy(context.Background(), 10, 1, entity.CopyMenuRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.ID != 9 {
+		t.Fatalf("expected copied menu id 9, got %d", result.ID)
 	}
 }
 

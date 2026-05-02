@@ -741,7 +741,7 @@ export default function CreateCampaignPage() {
               <div className="min-w-0 flex justify-center">
                 <TelegramPreview content={content} botName={
                   bots?.find((b) => b.id === botId)?.name || 'Bot'
-                } />
+                } showFrame />
               </div>
             </div>
           </div>

@@ -52,6 +52,10 @@ export interface CreateMenuRequest {
   name: string
 }
 
+export interface CopyMenuRequest {
+  name?: string
+}
+
 export interface UpdateMenuRequest {
   name?: string
   intro_content?: import('@/features/telegram-preview').MessageContent

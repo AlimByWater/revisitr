@@ -221,7 +221,11 @@ func (h *handler) handleManagedBotUpdated(ctx context.Context, update telego.Upd
 }
 
 func (h *handler) applyBotSettings(ctx context.Context, bot *entity.Bot, token string) {
-	tBot, err := telego.NewBot(token)
+	var opts []telego.BotOption
+	if h.cfg.APIServer != "" {
+		opts = append(opts, telego.WithAPIServer(h.cfg.APIServer))
+	}
+	tBot, err := telego.NewBot(token, opts...)
 	if err != nil {
 		h.logger.Error("create managed bot instance", "error", err)
 		return

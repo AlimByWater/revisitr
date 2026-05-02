@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Smile } from 'lucide-react'
 
 interface StickerMessageProps {
@@ -5,24 +6,25 @@ interface StickerMessageProps {
 }
 
 export function StickerMessage({ mediaUrl }: StickerMessageProps) {
+  const [hasError, setHasError] = useState(false)
+
   return (
     <div className="flex justify-start">
-      <div className="tg-sticker">
-        {mediaUrl ? (
+      <div className="h-[150px] w-[150px]">
+        {mediaUrl && !hasError ? (
           <img
             src={mediaUrl}
             alt="sticker"
             loading="lazy"
             decoding="async"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-              e.currentTarget.nextElementSibling?.classList.remove('hidden')
-            }}
+            className="h-full w-full object-contain"
+            onError={() => setHasError(true)}
           />
-        ) : null}
-        <div className={mediaUrl ? 'hidden' : 'w-full h-full flex items-center justify-center bg-gray-100 rounded-2xl'}>
-          <Smile className="w-16 h-16 text-gray-300" />
-        </div>
+        ) : (
+          <div className="flex h-full w-full items-center justify-center rounded-2xl bg-gray-100">
+            <Smile className="h-16 w-16 text-gray-300" />
+          </div>
+        )}
       </div>
     </div>
   )

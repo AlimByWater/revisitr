@@ -481,7 +481,52 @@ const routes: [RegExp, Handler][] = [
     return store.billingDetails
   }],
 
+  // Module presets / settings
+  [/^\/module-settings\/catalog\/menu$/, () => ([
+    {
+      id: 1,
+      module_key: 'menu',
+      preset_key: 'tabs',
+      name: 'Табы',
+      description: 'Категории в верхнем ряду, ниже список блюд выбранной категории.',
+      sort_order: 1,
+    },
+    {
+      id: 2,
+      module_key: 'menu',
+      preset_key: 'list',
+      name: 'Список',
+      description: 'Каждая категория отдельной кнопкой в столбик.',
+      sort_order: 2,
+    },
+    {
+      id: 3,
+      module_key: 'menu',
+      preset_key: 'carousel',
+      name: 'Карусель',
+      description: 'Карточки блюд с переключением.',
+      sort_order: 3,
+    },
+  ])],
+  [/^\/module-settings\/(\d+)\/menu$/, ({ id }) => ({
+    bot_id: Number(id),
+    module_key: 'menu',
+    preset_id: 1,
+    preset_key: 'tabs',
+    customized: false,
+    customizations: {},
+    config: {},
+    updated_at: now,
+  })],
+  [/^\/module-settings\/(\d+)\/menu\/preset$/, () => ({})],
+  [/^\/module-settings\/(\d+)\/menu\/customizations$/, () => ({})],
+  [/^\/module-settings\/(\d+)\/menu\/reset$/, () => ({})],
+
   // Bots
+  [/^\/bots\/(\d+)\/pos-locations$/, ({ method }) => {
+    if (method === 'put') return {}
+    return { pos_ids: store.pos.map(p => p.id) }
+  }],
   [/^\/bots\/(\d+)\/settings$/, ({ method, id, data }) => {
     const bot = store.bots.find(b => b.id === +id!)
     if (method === 'patch' && bot) Object.assign(bot.settings, data)
@@ -714,9 +759,20 @@ const routes: [RegExp, Handler][] = [
     return []
   }],
   [/^\/menus\/client-order-stats$/, () => ({ total_orders: 12, total_amount: 15600, avg_amount: 1300, last_order_at: ago(3), top_items: [{ name: 'Капучино', order_count: 8, total_qty: 12, total_sum: 4200 }] })],
-  [/^\/menus\/bot-pos-locations$/, ({ method }) => {
-    if (method === 'put') return {}
-    return store.pos.map(p => p.id)
+  [/^\/menus\/(\d+)\/copy$/, ({ method, id, data }) => {
+    const source = store.menus.find(m => m.id === +id!)
+    if (!source || method !== 'post') return {}
+    const copy = {
+      ...JSON.parse(JSON.stringify(source)),
+      id: nextId(),
+      name: (data as { name?: string })?.name || `${source.name} (копия)`,
+      source: 'manual',
+      bindings: [],
+      created_at: now,
+      updated_at: now,
+    }
+    store.menus.push(copy)
+    return copy
   }],
   [/^\/menus\/(\d+)$/, ({ method, id, data }) => {
     const idx = store.menus.findIndex(m => m.id === +id!)

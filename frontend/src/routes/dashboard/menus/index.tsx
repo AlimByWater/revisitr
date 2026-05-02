@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import {
+  useCopyMenuMutation,
   useMenusQuery,
   useCreateMenuMutation,
   useDeleteMenuMutation,
@@ -11,7 +12,7 @@ import { findMenuBindingConflicts } from '@/features/menus/helpers'
 import { usePOSQuery } from '@/features/pos/queries'
 import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 import { ErrorState } from '@/components/common/ErrorState'
-import { AlertTriangle, ArrowLeft, ChevronRight, Plus, Trash2, UtensilsCrossed } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ChevronRight, Copy, Plus, Trash2, UtensilsCrossed } from 'lucide-react'
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('ru-RU', {
@@ -27,10 +28,12 @@ export default function MenusPage() {
   const { data: menus, isLoading, isError, mutate } = useMenusQuery()
   const { data: posLocations = [] } = usePOSQuery()
   const createMenu = useCreateMenuMutation()
+  const copyMenu = useCopyMenuMutation()
   const deleteMenu = useDeleteMenuMutation()
   const updateMenu = useUpdateMenuMutation()
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
+  const [copyNotice, setCopyNotice] = useState<string | null>(null)
 
   const conflicts = useMemo(
     () => findMenuBindingConflicts(menus ?? []),
@@ -54,14 +57,25 @@ export default function MenusPage() {
     mutate()
   }
 
+  const handleCopy = async (id: number, name: string) => {
+    await copyMenu.mutate({ id, data: { name: `${name} (копия)` } })
+    setCopyNotice('Копия создана. Точки продаж не привязаны.')
+    mutate()
+  }
+
   const handleToggleBinding = async (menuId: number, posId: number, nextActive: boolean) => {
     const targetMenu = menus?.find((menu) => menu.id === menuId)
     if (!targetMenu) return
 
-    const bindings = (targetMenu.bindings ?? []).map((binding) => {
+    const existingBindings = targetMenu.bindings ?? []
+    const hasBinding = existingBindings.some((binding) => binding.pos_id === posId)
+    const bindings = existingBindings.map((binding) => {
       if (binding.pos_id !== posId) return binding
       return { pos_id: binding.pos_id, is_active: nextActive }
     })
+    if (!hasBinding) {
+      bindings.push({ pos_id: posId, is_active: nextActive })
+    }
 
     await updateMenu.mutate({
       id: menuId,
@@ -143,6 +157,15 @@ export default function MenusPage() {
         </div>
       )}
 
+      {copyNotice && (
+        <div
+          role="status"
+          className="mb-6 rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+        >
+          {copyNotice}
+        </div>
+      )}
+
       {showCreate && (
         <div className="bg-white rounded border border-neutral-900 p-5 mb-6 animate-in">
           <h3 className="text-sm font-semibold text-neutral-900 mb-3">Новое меню</h3>
@@ -198,6 +221,7 @@ export default function MenusPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {menus.map((menu) => {
             const bindings = menu.bindings ?? []
+            const bindingByPosId = new Map(bindings.map((binding) => [binding.pos_id, binding]))
 
             return (
               <div
@@ -211,56 +235,75 @@ export default function MenusPage() {
                       {menu.source === 'pos_import' ? 'Импорт из POS' : 'Ручное создание'}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      handleDelete(menu.id)
-                    }}
-                    className="p-1.5 rounded text-neutral-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-                    aria-label="Удалить меню"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        handleCopy(menu.id, menu.name)
+                      }}
+                      disabled={copyMenu.isPending}
+                      className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 disabled:opacity-50"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      Создать копию
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        handleDelete(menu.id)
+                      }}
+                      className="p-1.5 rounded text-neutral-500 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                      aria-label="Удалить меню"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="rounded border border-neutral-200 bg-neutral-50/70 p-3 mb-4">
                   <div className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-400 mb-2">
                     Активность по точкам продаж
                   </div>
-                  {bindings.length === 0 ? (
-                    <p className="text-sm text-neutral-500">Меню пока не привязано ни к одной точке продаж.</p>
+                  {posLocations.length === 0 ? (
+                    <p className="text-sm text-neutral-500">Точки продаж пока не созданы.</p>
                   ) : (
                     <div className="space-y-2">
-                      {bindings.map((binding) => (
-                        <div key={`${menu.id}-${binding.pos_id}`} className="flex items-center justify-between gap-3 rounded bg-white px-3 py-2.5">
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium text-neutral-900">
-                              {resolveBindingPosName(binding.pos_id, binding.pos_name)}
+                      {posLocations.map((location) => {
+                        const binding = bindingByPosId.get(location.id)
+                        const isActive = binding?.is_active ?? false
+
+                        return (
+                          <div key={`${menu.id}-${location.id}`} className="flex items-center justify-between gap-3 rounded bg-white px-3 py-2.5">
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-neutral-900">
+                                {resolveBindingPosName(location.id, binding?.pos_name ?? location.name)}
+                              </div>
+                              <div className="text-xs text-neutral-500">
+                                {isActive ? 'Активно сейчас' : 'Не активно'}
+                              </div>
                             </div>
-                            <div className="text-xs text-neutral-500">
-                              {binding.is_active ? 'Активно сейчас' : 'Не активно'}
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={binding.is_active}
-                            onClick={() => handleToggleBinding(menu.id, binding.pos_id, !binding.is_active)}
-                            className={cn(
-                              'relative h-6 w-10 shrink-0 rounded-full transition-colors',
-                              binding.is_active ? 'bg-accent' : 'bg-neutral-300',
-                            )}
-                          >
-                            <span
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={isActive}
+                              onClick={() => handleToggleBinding(menu.id, location.id, !isActive)}
                               className={cn(
-                                'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
-                                binding.is_active && 'translate-x-4',
+                                'relative h-6 w-10 shrink-0 rounded-full transition-colors',
+                                isActive ? 'bg-accent' : 'bg-neutral-300',
                               )}
-                            />
-                          </button>
-                        </div>
-                      ))}
+                            >
+                              <span
+                                className={cn(
+                                  'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
+                                  isActive && 'translate-x-4',
+                                )}
+                              />
+                            </button>
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>

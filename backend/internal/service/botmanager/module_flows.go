@@ -462,7 +462,7 @@ func (h *handler) handleMenuCategoryCallback(ctx context.Context, chatID int64, 
 			buttons = append(buttons, nav)
 		}
 	}
-	buttons = append(buttons, []entity.InlineButton{{Text: "Назад", Data: callbackMenuRoot}})
+	buttons = append(buttons, []entity.InlineButton{{Text: "Назад к меню", Data: callbackMenuRoot}})
 
 	content := entity.MessageContent{
 		Parts: []entity.MessagePart{{
@@ -523,7 +523,7 @@ func (h *handler) handleMenuItemCallback(ctx context.Context, chatID int64, valu
 					ParseMode: "HTML",
 				}},
 				Buttons: [][]entity.InlineButton{{
-					{Text: "Назад", Data: callbackMenuCategoryPref + strconv.Itoa(categoryID) + ":" + strconv.Itoa(page)},
+					{Text: "Назад к категории", Data: callbackMenuCategoryPref + strconv.Itoa(categoryID) + ":" + strconv.Itoa(page)},
 				}},
 			}
 			if item.ImageURL != nil && *item.ImageURL != "" {

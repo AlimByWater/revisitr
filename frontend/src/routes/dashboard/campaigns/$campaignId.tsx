@@ -141,6 +141,7 @@ export default function CampaignDetailPage() {
                       ] }
                 }
                 botName={campaign.name}
+                showFrame
               />
             </div>
           </div>

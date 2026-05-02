@@ -21,6 +21,7 @@ import { usePOSQuery } from '@/features/pos/queries'
 import { ErrorState } from '@/components/common/ErrorState'
 import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 import { campaignsApi } from '@/features/campaigns/api'
+import { MenuDisplaySettingsPanel } from '@/routes/dashboard/bots/menu'
 import {
   ArrowLeft,
   Check,
@@ -53,6 +54,7 @@ export default function MenuDetailPage() {
   const { menuId } = useParams<{ menuId: string }>()
   const [searchParams] = useSearchParams()
   const botId = searchParams.get('botId')
+  const activeTab = searchParams.get('tab') === 'display' ? 'display' : 'content'
   const id = Number(menuId)
   const { data: menu, isLoading, isError, mutate } = useMenuQuery(isNaN(id) ? 0 : id)
   const { data: posLocations = [] } = usePOSQuery()
@@ -98,6 +100,12 @@ export default function MenuDetailPage() {
 
   const backToModulesHref = botId ? `/dashboard/bots/${botId}?tab=modules` : '/dashboard/menus'
   const backToMenusHref = botId ? `/dashboard/menus?botId=${botId}` : '/dashboard/menus'
+  const contentTabHref = botId
+    ? `/dashboard/menus/${id}?botId=${botId}&tab=content`
+    : `/dashboard/menus/${id}?tab=content`
+  const displayTabHref = botId
+    ? `/dashboard/menus/${id}?botId=${botId}&tab=display`
+    : `/dashboard/menus/${id}?tab=display`
 
   const bindingsByPosId = useMemo(() => {
     const current = new Map<number, MenuPOSBindingRequest>()
@@ -171,7 +179,7 @@ export default function MenuDetailPage() {
   const categories = menu.categories ?? []
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className={cn(activeTab === 'display' ? 'max-w-7xl' : 'max-w-4xl', 'space-y-6')}>
       <div className="flex flex-wrap items-center gap-3 animate-in">
         <Link
           to={backToModulesHref}
@@ -194,43 +202,89 @@ export default function MenuDetailPage() {
       {/* Heading extracted outside the white card */}
       <div className="flex flex-wrap items-end justify-between gap-4 animate-in animate-in-delay-1">
         <div className="min-w-0 flex-1">
-          <input
-            type="text"
-            value={draft.name}
-            onChange={(event) =>
-              setDraft((current) => (current ? { ...current, name: event.target.value } : current))
-            }
-            className="w-full text-3xl font-display font-bold text-neutral-900 tracking-tight bg-transparent border-none px-0 py-0 focus:outline-none focus:ring-0 placeholder:text-neutral-300"
-            placeholder="Название меню"
-          />
+          {activeTab === 'content' ? (
+            <input
+              type="text"
+              value={draft.name}
+              onChange={(event) =>
+                setDraft((current) => (current ? { ...current, name: event.target.value } : current))
+              }
+              className="w-full text-3xl font-display font-bold text-neutral-900 tracking-tight bg-transparent border-none px-0 py-0 focus:outline-none focus:ring-0 placeholder:text-neutral-300"
+              placeholder="Название меню"
+            />
+          ) : (
+            <h1 className="font-display text-3xl font-bold tracking-tight text-neutral-900">{draft.name}</h1>
+          )}
           <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
             {draft.source === 'pos_import' ? 'Импорт из POS' : 'Ручное создание'}
             {draft.last_synced_at && ` · Синхронизировано: ${new Date(draft.last_synced_at).toLocaleDateString('ru-RU')}`}
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setShowAddCategory(true)}
-            className={cn(
-              'inline-flex items-center gap-1.5 py-2 px-3 rounded text-sm font-medium',
-              'bg-accent text-white hover:bg-accent-hover transition-all',
-            )}
-          >
-            <Plus className="w-4 h-4" />
-            Категория
-          </button>
-          <button
-            type="button"
-            onClick={handleSaveMenu}
-            className="inline-flex items-center gap-1.5 rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
-          >
-            <Save className="h-4 w-4" />
-            Сохранить
-          </button>
+          {activeTab === 'content' && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowAddCategory(true)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 py-2 px-3 rounded text-sm font-medium',
+                  'bg-accent text-white hover:bg-accent-hover transition-all',
+                )}
+              >
+                <Plus className="w-4 h-4" />
+                Категория
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveMenu}
+                className="inline-flex items-center gap-1.5 rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
+              >
+                <Save className="h-4 w-4" />
+                Сохранить
+              </button>
+            </>
+          )}
         </div>
       </div>
 
+      <div className="flex gap-2 rounded-xl border border-surface-border bg-white p-1">
+        <Link
+          to={contentTabHref}
+          className={cn(
+            'flex-1 rounded-lg px-4 py-2 text-center text-sm font-medium transition-colors',
+            activeTab === 'content'
+              ? 'bg-neutral-900 text-white'
+              : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900',
+          )}
+        >
+          Категории и позиции
+        </Link>
+        <Link
+          to={displayTabHref}
+          className={cn(
+            'flex-1 rounded-lg px-4 py-2 text-center text-sm font-medium transition-colors',
+            activeTab === 'display'
+              ? 'bg-neutral-900 text-white'
+              : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900',
+          )}
+        >
+          Отображение в боте
+        </Link>
+      </div>
+
+      {activeTab === 'display' ? (
+        botId ? (
+          <MenuDisplaySettingsPanel botId={Number(botId)} activeMenuId={id} embedded />
+        ) : (
+          <section className="rounded-xl border border-surface-border bg-white p-6">
+            <h2 className="text-lg font-semibold text-neutral-900">Нужен контекст бота</h2>
+            <p className="mt-2 text-sm text-neutral-500">
+              Настройки отображения сохраняются для конкретного бота. Откройте меню из раздела «Мои боты → Модули».
+            </p>
+          </section>
+        )
+      ) : (
+      <>
         <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 mb-6">
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
@@ -238,8 +292,8 @@ export default function MenuDetailPage() {
               <div className="text-sm font-medium text-blue-900">Шаблон отображения</div>
               <div className="text-sm text-blue-700 mt-1">
                 Настройте как меню будет выглядеть в боте (таб-категории, список или карусель) в{' '}
-                <Link to={`/dashboard/bots/${botId}/menu`} className="underline font-medium hover:text-blue-900">
-                  настройках модуля «Меню»
+                <Link to={displayTabHref} className="underline font-medium hover:text-blue-900">
+                  вкладке «Отображение в боте»
                 </Link>.
               </div>
             </div>
@@ -366,6 +420,8 @@ export default function MenuDetailPage() {
             />
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   )

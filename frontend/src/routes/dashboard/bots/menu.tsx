@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, CircleAlert, CircleCheckBig, LayoutTemplate, ListTree, UtensilsCrossed } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -12,8 +12,17 @@ import { InfoHint } from '@/components/common/InfoHint'
 import { useMenusQuery, useMenuQuery, useUpdateMenuMutation } from '@/features/menus/queries'
 import { menusApi } from '@/features/menus/api'
 import type { Menu } from '@/features/menus/types'
-import type { MessageContent } from '@/features/telegram-preview'
+import type { InlineButton, MessageContent, PreviewScreen } from '@/features/telegram-preview/types'
+import { InteractivePreview } from '@/features/telegram-preview/components/InteractivePreview'
 import { campaignsApi } from '@/features/campaigns/api'
+import {
+  buildCategoryContent,
+  buildMenuInitialContent,
+  buildMenuListContent,
+  buildItemCardContent,
+  buildMenuPreviewState,
+  buildMenuTabsContent,
+} from './menuPreview'
 
 const MessageContentEditor = lazy(() =>
   import('@/features/telegram-preview/components/MessageContentEditor').then((mod) => ({
@@ -34,9 +43,25 @@ function pickBotMenu(menus: Menu[], boundPosIds: number[]): Menu | null {
   return menus.find((menu) => (menu.categories ?? []).length > 0) ?? menus[0]
 }
 
+interface MenuDisplaySettingsPanelProps {
+  botId: number
+  activeMenuId?: number
+  embedded?: boolean
+}
+
 export default function BotMenuSettingsPage() {
   const { botId } = useParams<{ botId: string }>()
   const id = Number(botId)
+
+  return <MenuDisplaySettingsPanel botId={id} />
+}
+
+export function MenuDisplaySettingsPanel({
+  botId,
+  activeMenuId,
+  embedded = false,
+}: MenuDisplaySettingsPanelProps) {
+  const id = botId
 
   const { data: bot, isLoading: botLoading, isError: botError } = useBotQuery(Number.isNaN(id) ? 0 : id)
   const { data: presets = [], isLoading: presetsLoading } = useModulePresetsQuery('menu')
@@ -86,11 +111,11 @@ export default function BotMenuSettingsPage() {
   }, [id])
 
   const activeMenuStub = useMemo(
-    () => pickBotMenu(menus, boundPosIds),
-    [boundPosIds, menus],
+    () => (activeMenuId ? null : pickBotMenu(menus, boundPosIds)),
+    [activeMenuId, boundPosIds, menus],
   )
 
-  const { data: fullMenu, mutate: mutateFullMenu } = useMenuQuery(activeMenuStub?.id ?? 0)
+  const { data: fullMenu, mutate: mutateFullMenu } = useMenuQuery(activeMenuId ?? activeMenuStub?.id ?? 0)
   const activeMenu = fullMenu ?? activeMenuStub
   const updateMenu = useUpdateMenuMutation()
 
@@ -128,6 +153,9 @@ export default function BotMenuSettingsPage() {
 
   const categoryCount = draft.categories?.length ?? activeMenu?.categories?.length ?? 0
   const activeMenuName = activeMenu?.name || 'Меню не выбрано'
+  const menuEditorHref = activeMenu
+    ? `/dashboard/menus/${activeMenu.id}?botId=${id}&tab=content`
+    : `/dashboard/menus?botId=${id}`
 
   if (botLoading || presetsLoading || settingsLoading || menusLoading || !posBindingsLoaded) {
     return <CardSkeleton />
@@ -185,35 +213,37 @@ export default function BotMenuSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 py-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex items-start gap-3">
-          <Link
-            to={`/dashboard/bots/${id}?tab=modules`}
-            className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-surface-border bg-white text-neutral-500 transition-colors hover:text-neutral-700"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
-                Настройки модуля «Меню»
-              </h1>
-              <span
-                className={cn(
-                  'inline-flex min-h-7 items-center rounded-full border px-2.5 text-xs font-medium',
-                  hasDraftChanges
-                    ? 'border-amber-200 bg-amber-50 text-amber-700'
-                    : 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                )}
-              >
-                {hasDraftChanges ? 'Есть несохранённые изменения' : 'Изменения сохранены'}
-              </span>
+    <div className={cn(embedded ? 'space-y-6' : 'mx-auto max-w-7xl space-y-6 py-6')}>
+      {!embedded && (
+        <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-3">
+            <Link
+              to={`/dashboard/bots/${id}?tab=modules`}
+              className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-surface-border bg-white text-neutral-500 transition-colors hover:text-neutral-700"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+                  Настройки модуля «Меню»
+                </h1>
+                <span
+                  className={cn(
+                    'inline-flex min-h-7 items-center rounded-full border px-2.5 text-xs font-medium',
+                    hasDraftChanges
+                      ? 'border-amber-200 bg-amber-50 text-amber-700'
+                      : 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                  )}
+                >
+                  {hasDraftChanges ? 'Есть несохранённые изменения' : 'Изменения сохранены'}
+                </span>
+              </div>
+              <p className="text-sm text-neutral-500">{bot.name}</p>
             </div>
-            <p className="text-sm text-neutral-500">{bot.name}</p>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       <div className="sticky top-4 z-10 rounded-2xl border border-surface-border bg-white/95 p-4 shadow-sm backdrop-blur">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -227,7 +257,7 @@ export default function BotMenuSettingsPage() {
             </div>
             {activeMenu ? (
               <Link
-                to={`/dashboard/menus/${activeMenu.id}?botId=${id}`}
+                to={menuEditorHref}
                 className="rounded-xl bg-neutral-50 px-3 py-2 transition-colors hover:bg-neutral-100"
               >
                 <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Меню</div>
@@ -294,15 +324,14 @@ export default function BotMenuSettingsPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <main className="space-y-6">
           <section className="rounded-2xl border border-surface-border bg-white p-6">
             <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div className="max-w-2xl">
-                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Шаг 1</div>
-                <div className="mt-1 flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-neutral-900">Выберите способ показа меню в боте</h2>
-                  <InfoHint content="Сначала выберите общий формат показа меню. Детали текста, кнопок и категорий настраиваются ниже." />
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-neutral-900">Способ показа меню</h2>
+                  <InfoHint content="Выберите формат: табы, список или карусель. Детали текста и категорий настраиваются ниже." />
                 </div>
               </div>
             </div>
@@ -326,21 +355,19 @@ export default function BotMenuSettingsPage() {
 
           <section className="rounded-2xl border border-surface-border bg-white p-6">
             <div className="mb-5 max-w-2xl">
-              <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Шаг 2</div>
-              <div className="mt-1 flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-neutral-900">Настройте тексты, кнопки и категории</h2>
-                <InfoHint content="Здесь можно править подписи, порядок и иконки. Переходы внутри выбранного шаблона останутся прежними." />
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-neutral-900">Тексты, кнопки и категории</h2>
+                <InfoHint content="Названия и иконки берутся из меню и могут быть переопределены для бота." />
               </div>
               <p className="mt-2 text-sm text-neutral-500">
-                Здесь настраивается как меню выглядит в Telegram-боте. Названия и иконки берутся из{' '}
+                Настройте как меню выглядит в боте. Оригиналы берутся из{' '}
                 {activeMenu ? (
-                  <Link to={`/dashboard/menus/${activeMenu.id}?botId=${id}`} className="text-accent hover:text-accent/80 font-medium">
+                  <Link to={menuEditorHref} className="text-accent hover:text-accent/80 font-medium">
                     редактора меню
                   </Link>
                 ) : (
                   <span>редактора меню</span>
-                )}
-                {' '}и могут быть переопределены для бота.
+                )}.
               </p>
             </div>
 
@@ -353,8 +380,7 @@ export default function BotMenuSettingsPage() {
 
           <section className="rounded-2xl border border-surface-border bg-white p-6">
             <div className="mb-5 max-w-2xl">
-              <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Шаг 3</div>
-              <div className="mt-1 flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold text-neutral-900">Приветственное сообщение</h2>
                 <InfoHint content="Текст и медиа, которые бот отправит, когда гость нажмёт кнопку «Меню»." />
               </div>
@@ -373,34 +399,22 @@ export default function BotMenuSettingsPage() {
         </main>
 
         <aside className="space-y-4 xl:sticky xl:top-28 xl:self-start">
-          <section className="rounded-2xl border border-surface-border bg-white p-5">
-            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Контекст</div>
-            <h3 className="mt-2 text-base font-semibold text-neutral-900">Что вы редактируете сейчас</h3>
-            <dl className="mt-4 space-y-3 text-sm">
-              <div>
-                <dt className="text-neutral-400">Бот</dt>
-                <dd className="mt-1 font-medium text-neutral-900">{bot.name}</dd>
-              </div>
-              <div>
-                <dt className="text-neutral-400">Активное меню</dt>
-                <dd className="mt-1 font-medium text-neutral-900">{activeMenuName}</dd>
-              </div>
-              <div>
-                <dt className="text-neutral-400">Сейчас выбран</dt>
-                <dd className="mt-1 font-medium text-neutral-900">{selectedPreset?.name || 'Шаблон не выбран'}</dd>
-              </div>
-            </dl>
-          </section>
+          <MenuTelegramPreview
+            botName={bot.name}
+            draft={draft}
+            menu={activeMenu}
+            introContent={introContent}
+            selectedPresetKey={selectedPresetKey}
+          />
 
           <section className="rounded-2xl border border-surface-border bg-white p-5">
-            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">Отдельный раздел</div>
-            <h3 className="mt-2 text-base font-semibold text-neutral-900">Управление составом меню</h3>
+            <h3 className="text-sm font-semibold text-neutral-900">Управление составом меню</h3>
             <p className="mt-2 text-sm text-neutral-500">
-              Цены, блюда, фото и привязку к точкам продаж редактируйте отдельно, чтобы не смешивать контент и шаблон показа.
+              Цены, блюда, фото и привязку к точкам продаж редактируйте отдельно.
             </p>
             <Link
-              to={activeMenu ? `/dashboard/menus/${activeMenu.id}?botId=${id}` : `/dashboard/menus?botId=${id}`}
-              className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-accent transition-colors hover:text-accent/80"
+              to={menuEditorHref}
+              className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-accent transition-colors hover:text-accent/80"
             >
               {activeMenu ? `Редактировать «${activeMenu.name}»` : 'Открыть управление меню'} →
             </Link>
@@ -408,5 +422,106 @@ export default function BotMenuSettingsPage() {
         </aside>
       </div>
     </div>
+  )
+}
+
+function MenuTelegramPreview({
+  botName,
+  draft,
+  menu,
+  introContent,
+  selectedPresetKey,
+}: {
+  botName: string
+  draft: MenuPresetCustomizations
+  menu: Menu | null
+  introContent: MessageContent | null
+  selectedPresetKey: string
+}) {
+  const previewState = useMemo(
+    () => buildMenuPreviewState({ introContent, menu, draft, selectedPresetKey }),
+    [draft, introContent, menu, selectedPresetKey],
+  )
+
+  const initialContent = useMemo(
+    () => (previewState.isListPreset ? buildMenuListContent(previewState) : buildMenuInitialContent(previewState)),
+    [previewState],
+  )
+
+  const handleButtonClick = useCallback(
+    (button: InlineButton): PreviewScreen | null => {
+      if (button.data === 'menu:root') {
+        return { content: initialContent, transition: 'replace' }
+      }
+
+      const tabMatch = button.data?.match(/^menu:tab:(\d+)$/)
+      if (tabMatch) {
+        return {
+          content: buildMenuTabsContent(previewState, Number(tabMatch[1])),
+          transition: 'replace',
+        }
+      }
+
+      const categoryMatch = button.data?.match(/^menu:cat:(\d+):\d+$/)
+      if (categoryMatch) {
+        const categoryId = Number(categoryMatch[1])
+        const category = previewState.categories.find((c) => c.id === categoryId)
+        if (!category) return null
+        return {
+          content: buildCategoryContent(category),
+          transition: 'replace',
+        }
+      }
+
+      const itemMatch = button.data?.match(/^menu:item:(\d+):(\d+):\d+$/)
+      if (itemMatch) {
+        const itemId = Number(itemMatch[1])
+        const categoryId = Number(itemMatch[2])
+        const category = previewState.categories.find((c) => c.id === categoryId)
+        if (!category) return null
+        const content = buildItemCardContent(category, itemId)
+        if (!content) return null
+        return {
+          content,
+          transition: 'replace',
+        }
+      }
+
+      const navMatch = button.data?.match(/^menu:cardnav:(\d+):(\d+)$/)
+      if (navMatch) {
+        const itemId = Number(navMatch[1])
+        const categoryId = Number(navMatch[2])
+        const category = previewState.categories.find((c) => c.id === categoryId)
+        if (!category) return null
+        const content = buildItemCardContent(category, itemId)
+        if (!content) return null
+        return {
+          content,
+          transition: 'replace',
+        }
+      }
+
+      if (button.data === 'menu:noop') {
+        return null
+      }
+
+      if (button.data === 'menu:cardclose') {
+        return { content: initialContent, transition: 'replace' }
+      }
+
+      return null
+    },
+    [initialContent, previewState],
+  )
+
+  return (
+    <section className="rounded-2xl border border-surface-border bg-white p-4">
+      <h3 className="mb-3 text-sm font-semibold text-neutral-900">Превью в Telegram</h3>
+      <InteractivePreview
+        initialContent={initialContent}
+        botName={botName}
+        onButtonClick={handleButtonClick}
+      />
+    </section>
   )
 }

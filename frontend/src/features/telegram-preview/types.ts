@@ -29,3 +29,9 @@ export interface MessageContent {
   parts: MessagePart[]
   buttons?: InlineButton[][]
 }
+
+export interface PreviewScreen {
+  content: MessageContent
+  outgoingText?: string
+  transition?: 'push' | 'replace'
+}

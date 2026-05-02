@@ -138,6 +138,7 @@ export default function ScenarioDetailPage() {
             <TelegramPreview
               content={{ parts: [{ type: 'text', text: scenario.message }] }}
               botName={scenario.name}
+              showFrame
             />
           </div>
         ) : (

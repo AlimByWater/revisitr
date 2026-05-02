@@ -1,5 +1,7 @@
 export { TelegramPreview } from './components/TelegramPreview'
 export type { TelegramPreviewProps } from './components/TelegramPreview'
+export { InteractivePreview } from './components/InteractivePreview'
+export type { InteractivePreviewProps } from './components/InteractivePreview'
 export { MessageContentEditor } from './components/MessageContentEditor'
 export type { MessagePlaceholder } from './components/MessageContentEditor'
-export type { MessageContent, MessagePart, InlineButton, MessagePartType } from './types'
+export type { MessageContent, MessagePart, InlineButton, MessagePartType, PreviewScreen } from './types'

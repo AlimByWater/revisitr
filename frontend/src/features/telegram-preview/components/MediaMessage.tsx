@@ -1,50 +1,50 @@
 import { useState } from 'react'
-import { cn } from '@/lib/utils'
 import { ImageIcon, Play } from 'lucide-react'
 import { renderTextWithEmoji } from './renderEmoji'
+import { PREVIEW_MESSAGE_TIME } from './previewConstants'
+import tailIncoming from '../assets/tail-incoming.svg'
 
 interface MediaMessageProps {
   type: 'photo' | 'video' | 'animation'
   mediaUrl?: string
   caption?: string
-  theme?: 'light' | 'dark'
   showTail?: boolean
+  containerClassName?: string
+  mediaClassName?: string
 }
 
 export function MediaMessage({
   type,
   mediaUrl,
   caption,
-  theme = 'light',
   showTail = false,
+  containerClassName,
+  mediaClassName,
 }: MediaMessageProps) {
-  const isDark = theme === 'dark'
   const [hasError, setHasError] = useState(false)
-  const now = new Date()
-  const timestamp = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
 
   const placeholder = (
-    <div
-      className={cn(
-        'w-full h-[180px] flex items-center justify-center',
-        isDark ? 'bg-[#1E2C3A]' : 'bg-gray-100'
-      )}
-    >
-      <ImageIcon className="w-10 h-10 text-gray-400" />
+    <div className="flex h-[180px] w-full items-center justify-center bg-gray-100">
+      <ImageIcon className="h-10 w-10 text-gray-400" />
     </div>
   )
 
   return (
-    <div className="flex justify-start">
+    <div className={`flex justify-start ${containerClassName ?? 'pl-[4px]'}`}>
       <div
-        className={cn(
-          'tg-bubble',
-          isDark && 'tg-bubble-dark',
-          showTail && 'tg-bubble-tail',
-          !caption && 'p-0'
-        )}
+        className={`relative max-w-[312px] overflow-hidden bg-white ${mediaClassName ?? ''}`}
+        style={{
+          borderRadius: caption ? '18px 18px 18px 4px' : '18px',
+          padding: caption ? '1px' : '0',
+        }}
       >
-        <div className={cn('tg-bubble-media', !caption && 'rounded-[14px] !m-0')}>
+        {/* Media area */}
+        <div
+          className="overflow-hidden"
+          style={{
+            borderRadius: caption ? '17px 17px 0 0' : '18px',
+          }}
+        >
           {mediaUrl && !hasError ? (
             type === 'video' ? (
               <div className="relative">
@@ -53,12 +53,12 @@ export function MediaMessage({
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  className="w-full max-h-[280px] object-cover"
+                  className="max-h-[280px] w-full object-cover"
                   onError={() => setHasError(true)}
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-12 h-12 rounded-full bg-black/40 flex items-center justify-center">
-                    <Play className="w-6 h-6 text-white fill-white ml-0.5" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40">
+                    <Play className="ml-0.5 h-6 w-6 fill-white text-white" />
                   </div>
                 </div>
               </div>
@@ -68,7 +68,7 @@ export function MediaMessage({
                 alt=""
                 loading="lazy"
                 decoding="async"
-                className="w-full max-h-[280px] object-cover"
+                className="max-h-[280px] w-full object-cover"
                 onError={() => setHasError(true)}
               />
             )
@@ -76,23 +76,34 @@ export function MediaMessage({
             placeholder
           )}
         </div>
+
+        {/* Caption */}
         {caption && (
-          <div className="tg-bubble-caption">
-            <span className="whitespace-pre-wrap">{renderTextWithEmoji(caption)}</span>
-            <span className={cn('tg-timestamp', isDark && 'tg-timestamp-dark')}>
-              {timestamp}
+          <div className="relative px-[10px] pb-[18px] pt-[6px]">
+            <span className="whitespace-pre-wrap text-[13px] font-normal leading-[15px] tracking-[-0.16px] text-black">
+              {renderTextWithEmoji(caption)}
+            </span>
+            <span className="absolute bottom-[6px] right-[8px] text-[10px] leading-none text-black/40">
+              {PREVIEW_MESSAGE_TIME}
             </span>
           </div>
         )}
+
+        {/* Timestamp overlay on media (no caption) */}
         {!caption && (
-          <span
-            className={cn(
-              'tg-timestamp absolute bottom-2 right-2 bg-black/40 rounded-full px-1.5 text-white/80',
-              'text-[10px]'
-            )}
-          >
-            {timestamp}
+          <span className="absolute bottom-[6px] right-[8px] rounded-full bg-black/40 px-[6px] py-[1px] text-[11px] text-white/80">
+            {PREVIEW_MESSAGE_TIME}
           </span>
+        )}
+
+        {/* Tail */}
+        {showTail && (
+          <img
+            src={tailIncoming}
+            alt=""
+            className="tg-tail-incoming"
+            draggable={false}
+          />
         )}
       </div>
     </div>

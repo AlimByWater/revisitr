@@ -1,6 +1,7 @@
 import { useApiQuery, useApiMutation } from '@/lib/swr'
 import { menusApi } from './api'
 import type {
+  CopyMenuRequest,
   CreateMenuRequest,
   CreateMenuCategoryRequest,
   CreateMenuItemRequest,
@@ -21,6 +22,14 @@ export function useCreateMenuMutation() {
   return useApiMutation(
     'menus/create',
     (data: CreateMenuRequest) => menusApi.create(data),
+    ['menus'],
+  )
+}
+
+export function useCopyMenuMutation() {
+  return useApiMutation(
+    'menus/copy',
+    ({ id, data }: { id: number; data?: CopyMenuRequest }) => menusApi.copy(id, data),
     ['menus'],
   )
 }

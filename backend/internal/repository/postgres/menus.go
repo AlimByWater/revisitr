@@ -27,6 +27,77 @@ func (r *Menus) Create(ctx context.Context, m *entity.Menu) error {
 	).Scan(&m.ID, &m.CreatedAt, &m.UpdatedAt)
 }
 
+func (r *Menus) Copy(ctx context.Context, source *entity.Menu, name string) (*entity.Menu, error) {
+	tx, err := r.pg.DB().BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("menus.Copy begin: %w", err)
+	}
+	defer tx.Rollback()
+
+	var introContent any
+	if source.IntroContent != nil {
+		introContent, err = source.IntroContent.Value()
+		if err != nil {
+			return nil, fmt.Errorf("menus.Copy intro_content: %w", err)
+		}
+	}
+
+	copied := &entity.Menu{
+		OrgID:        source.OrgID,
+		Name:         name,
+		Source:       "manual",
+		IntroContent: source.IntroContent,
+	}
+	if err := tx.QueryRowContext(ctx, `
+		INSERT INTO menus (org_id, name, source, intro_content)
+		VALUES ($1, $2, 'manual', $3)
+		RETURNING id, created_at, updated_at`,
+		source.OrgID, name, introContent,
+	).Scan(&copied.ID, &copied.CreatedAt, &copied.UpdatedAt); err != nil {
+		return nil, fmt.Errorf("menus.Copy create menu: %w", err)
+	}
+
+	for _, category := range source.Categories {
+		var categoryID int
+		if err := tx.QueryRowContext(ctx, `
+			INSERT INTO menu_categories (menu_id, name, icon_emoji, icon_image_url, sort_order)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id`,
+			copied.ID, category.Name, category.IconEmoji, category.IconImageURL, category.SortOrder,
+		).Scan(&categoryID); err != nil {
+			return nil, fmt.Errorf("menus.Copy category %d: %w", category.ID, err)
+		}
+
+		for _, item := range category.Items {
+			tagsVal, err := item.Tags.Value()
+			if err != nil {
+				return nil, fmt.Errorf("menus.Copy item tags %d: %w", item.ID, err)
+			}
+			if _, err := tx.ExecContext(ctx, `
+				INSERT INTO menu_items (
+					category_id, name, description, price, weight, image_url, tags,
+					external_id, is_available, sort_order
+				)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+				categoryID, item.Name, item.Description, item.Price, item.Weight, item.ImageURL,
+				tagsVal, item.ExternalID, item.IsAvailable, item.SortOrder,
+			); err != nil {
+				return nil, fmt.Errorf("menus.Copy item %d: %w", item.ID, err)
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("menus.Copy commit: %w", err)
+	}
+
+	full, err := r.GetFullMenu(ctx, copied.ID)
+	if err != nil {
+		return nil, fmt.Errorf("menus.Copy load copied menu: %w", err)
+	}
+	return full, nil
+}
+
 func (r *Menus) GetByID(ctx context.Context, id int) (*entity.Menu, error) {
 	var m entity.Menu
 	err := r.pg.DB().GetContext(ctx, &m, "SELECT * FROM menus WHERE id = $1", id)

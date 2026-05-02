@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/features/menus/queries', () => ({
   useMenusQuery: vi.fn(),
+  useCopyMenuMutation: vi.fn(),
   useCreateMenuMutation: vi.fn(),
   useDeleteMenuMutation: vi.fn(),
   useUpdateMenuMutation: vi.fn(),
@@ -15,6 +16,7 @@ vi.mock('@/features/pos/queries', () => ({
 
 import {
   useCreateMenuMutation,
+  useCopyMenuMutation,
   useDeleteMenuMutation,
   useMenusQuery,
   useUpdateMenuMutation,
@@ -24,6 +26,7 @@ import MenusPage from './index'
 
 const mockUseMenusQuery = vi.mocked(useMenusQuery)
 const mockUseCreateMenuMutation = vi.mocked(useCreateMenuMutation)
+const mockUseCopyMenuMutation = vi.mocked(useCopyMenuMutation)
 const mockUseDeleteMenuMutation = vi.mocked(useDeleteMenuMutation)
 const mockUseUpdateMenuMutation = vi.mocked(useUpdateMenuMutation)
 const mockUsePOSQuery = vi.mocked(usePOSQuery)
@@ -60,6 +63,10 @@ describe('MenusPage', () => {
     mockUseCreateMenuMutation.mockReturnValue({
       ...mutationStub(),
     } as unknown as ReturnType<typeof useCreateMenuMutation>)
+
+    mockUseCopyMenuMutation.mockReturnValue({
+      ...mutationStub(),
+    } as unknown as ReturnType<typeof useCopyMenuMutation>)
 
     mockUseDeleteMenuMutation.mockReturnValue({
       ...mutationStub(),
@@ -148,5 +155,54 @@ describe('MenusPage', () => {
       screen.getByText(/для точки продаж Маросейка выбрано более одного меню/i),
     ).toBeInTheDocument()
     expect(screen.getByText(/Сейчас показывается: Основное меню/i)).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /Создать копию/i })).toHaveLength(2)
+  })
+
+  it('copies menu composition without POS bindings notice', async () => {
+    const copyMutate = vi.fn().mockResolvedValue(undefined)
+    const refetchMenus = vi.fn()
+    mockUseCopyMenuMutation.mockReturnValue({
+      ...mutationStub(),
+      mutate: copyMutate,
+    } as unknown as ReturnType<typeof useCopyMenuMutation>)
+    mockUseMenusQuery.mockReturnValue({
+      data: [
+        {
+          id: 1,
+          org_id: 1,
+          name: 'Основное меню',
+          source: 'manual',
+          created_at: '2026-04-18T00:00:00Z',
+          updated_at: '2026-04-18T00:00:00Z',
+          categories: [],
+          bindings: [
+            {
+              menu_id: 1,
+              pos_id: 10,
+              pos_name: 'Маросейка',
+              is_active: true,
+              created_at: '2026-04-18T00:00:00Z',
+            },
+          ],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+      mutate: refetchMenus,
+      error: undefined,
+      isValidating: false,
+    } as unknown as ReturnType<typeof useMenusQuery>)
+
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: /Создать копию/i }))
+
+    await waitFor(() => {
+      expect(copyMutate).toHaveBeenCalledWith({
+        id: 1,
+        data: { name: 'Основное меню (копия)' },
+      })
+      expect(refetchMenus).toHaveBeenCalled()
+    })
+    expect(screen.getByRole('status')).toHaveTextContent('Копия создана. Точки продаж не привязаны.')
   })
 })
