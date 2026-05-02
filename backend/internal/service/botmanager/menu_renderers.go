@@ -386,7 +386,10 @@ func (h *handler) handleMenuCardCallback(ctx context.Context, query *telego.Call
 		return
 	}
 
-	_ = h.sendContentMessage(ctx, chatID, content)
+	state := h.currentFlowState(ctx, chatID)
+	state.Flow = "menu"
+	state.FlowMessageID = h.updateMessageByID(ctx, chatID, query.Message.GetMessageID(), content)
+	_ = h.saveFlowState(ctx, chatID, state)
 }
 
 func (h *handler) handleMenuCardNavigationCallback(ctx context.Context, query *telego.CallbackQuery, value string) {
