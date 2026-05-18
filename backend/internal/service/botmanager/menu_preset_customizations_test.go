@@ -107,3 +107,29 @@ func TestPresentMenuCategoriesSupportsEmojiOnlyTabs(t *testing.T) {
 		t.Fatalf("expected emoji-only button text, got %q", got[0].ButtonText)
 	}
 }
+
+func TestMenuListTextModes(t *testing.T) {
+	category := entity.MenuCategory{
+		Name: "Закуски",
+		Items: []entity.MenuItem{
+			{
+				Name:        "Grand Line Bruschetta",
+				Price:       149,
+				Weight:      strPtr("120 г"),
+				Description: strPtr("Хрустящий багет"),
+				IsAvailable: true,
+			},
+		},
+	}
+
+	if got := menuCategoryItemsTextWithDensity(category, menuListDensityCompact); got != "Grand Line Bruschetta — 149 ₽" {
+		t.Fatalf("compact = %q", got)
+	}
+	if got := menuCategoryItemsTextWithDensity(category, menuListDensityDetail); got != "Grand Line Bruschetta — 149 ₽ • 120 г\nХрустящий багет" {
+		t.Fatalf("detailed = %q", got)
+	}
+}
+
+func strPtr(value string) *string {
+	return &value
+}

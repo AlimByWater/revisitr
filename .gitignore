@@ -53,3 +53,5 @@ telegram/results/
 telegram/.venv/
 .omx/
 .codex/*
+architecture.html
+architecture.json

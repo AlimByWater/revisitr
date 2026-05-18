@@ -17,16 +17,26 @@ export interface MenuPreviewCategory {
   label: string
   icon: string
   emojiOnly: boolean
-  style?: InlineButton['style']
+  style?: Exclude<InlineButton['style'], ''>
   items: MenuPreviewItem[]
 }
+
+export interface CarouselEntry {
+  item: MenuPreviewItem
+  categoryHeading: string
+}
+
+export type MenuPresetKind = 'tabs' | 'list' | 'carousel'
 
 export interface MenuPreviewState {
   title: string
   subtitle: string
   intro: string
   categories: MenuPreviewCategory[]
-  isListPreset: boolean
+  presetKey: MenuPresetKind
+  listLayout: 'summary' | 'expanded'
+  listDensity: 'compact' | 'detailed'
+  navButtonStyle: Exclude<InlineButton['style'], ''> | ''
 }
 
 export function buildMenuPreviewState(args: {
@@ -46,7 +56,9 @@ export function buildMenuPreviewState(args: {
     ? args.draft.category_order
     : menuCategories.map((category) => category.id)
 
-  const categories: MenuPreviewCategory[] = categoryOrder
+  const tabFallbackStyle = (args.draft.tab_button_style as Exclude<InlineButton['style'], ''> | undefined) || undefined
+
+  const categories = categoryOrder
     .map((categoryId) => {
       const categoryDraft = categoryDrafts.find((category) => category.category_id === categoryId)
       const menuCategory = menuCategories.find((category) => category.id === categoryId)
@@ -83,13 +95,27 @@ export function buildMenuPreviewState(args: {
         label: categoryDraft?.label?.trim() || menuCategory.name,
         icon: categoryDraft?.icon_image_url || menuCategory.icon_image_url || '',
         emojiOnly: Boolean(categoryDraft?.emoji_only && (categoryDraft?.icon_image_url || menuCategory.icon_image_url)),
-        style: (categoryDraft?.style as InlineButton['style']) || undefined,
+        style: (categoryDraft?.style as Exclude<InlineButton['style'], ''>) || tabFallbackStyle,
         items: orderedItems,
       } satisfies MenuPreviewCategory
     })
-    .filter((category): category is MenuPreviewCategory => category !== null)
+    .filter(Boolean) as MenuPreviewCategory[]
 
-  return { title, subtitle, intro, categories, isListPreset: args.selectedPresetKey === 'list' }
+  return {
+    title,
+    subtitle,
+    intro,
+    categories,
+    presetKey: normalizePresetKey(args.selectedPresetKey),
+    listLayout: args.draft.list_layout === 'expanded' ? 'expanded' : 'summary',
+    listDensity: args.draft.list_density === 'detailed' ? 'detailed' : 'compact',
+    navButtonStyle: (args.draft.nav_button_style as Exclude<InlineButton['style'], ''>) || '',
+  }
+}
+
+function normalizePresetKey(value: string): MenuPresetKind {
+  if (value === 'list' || value === 'carousel') return value
+  return 'tabs'
 }
 
 export function buildMenuInitialContent(state: MenuPreviewState): MessageContent {
@@ -107,16 +133,19 @@ export function buildMenuInitialContent(state: MenuPreviewState): MessageContent
     parts: [{ type: 'text' as const, text }],
     buttons: [
       ...buildCategoryTabRows(state.categories, selected.id),
-      ...buildCategoryItemRows(selected.id, selected.items),
+      ...buildTabItemRows(selected.id, selected.items),
     ],
   }
 }
 
 export function buildMenuListContent(state: MenuPreviewState): MessageContent {
   const sections = [buildListHeaderText(state)]
-
-  for (const category of state.categories) {
-    sections.push(menuSections(categoryHeading(category), menuCategoryItemsText(category.items)))
+  if (state.listLayout === 'expanded') {
+    for (const category of state.categories) {
+      sections.push(menuSections(categoryHeading(category), menuCategoryItemsText(category.items, state.listDensity)))
+    }
+  } else {
+    sections.push('Выберите категорию')
   }
 
   return {
@@ -125,19 +154,45 @@ export function buildMenuListContent(state: MenuPreviewState): MessageContent {
   }
 }
 
-export function buildCategoryContent(category: MenuPreviewCategory): MessageContent {
+export function buildCategoryContent(category: MenuPreviewCategory, density: 'compact' | 'detailed'): MessageContent {
   const buttons: InlineButton[][] = category.items.map((item) => [
     { text: item.label, data: `menu:item:${item.id}:${category.id}:0` },
   ])
   buttons.push([{ text: 'Назад к меню', data: 'menu:root' }])
 
+  const text = `${categoryHeading(category)}\n\n${menuCategoryItemsText(category.items, density)}`
+
+  if (isMediaUrl(category.icon)) {
+    return {
+      parts: [{ type: 'photo', media_url: category.icon, text }],
+      buttons,
+    }
+  }
+
   return {
-    parts: [{ type: 'text' as const, text: `${categoryHeading(category)}\n\nВыберите позицию:` }],
+    parts: [{ type: 'text' as const, text }],
     buttons,
   }
 }
 
-export function buildItemCardContent(category: MenuPreviewCategory, itemID: number): MessageContent | null {
+// List preset card: only "Назад к категории" button — matches backend handleMenuItemCallback.
+export function buildItemSimpleContent(category: MenuPreviewCategory, itemID: number, page = 0): MessageContent | null {
+  const item = category.items.find((entry) => entry.id === itemID)
+  if (!item) return null
+
+  const lines: string[] = [`<b>${item.label}</b>`]
+  if (item.description?.trim()) lines.push(item.description.trim())
+  lines.push(`Цена: ${formatMenuPrice(item.price)}`)
+  if (item.weight?.trim()) lines.push(`Граммаж: ${item.weight.trim()}`)
+
+  return {
+    parts: [{ type: 'text' as const, text: lines.join('\n'), parse_mode: 'HTML' }],
+    buttons: [[{ text: 'Назад к категории', data: `menu:cat:${category.id}:${page}` }]],
+  }
+}
+
+// Tabs preset card: arrows + "Назад к категории" → menu:tab + "✕ Закрыть" — matches backend menuItemCardContent.
+export function buildItemCardContent(category: MenuPreviewCategory, itemID: number, navStyle: InlineButton['style'] = ''): MessageContent | null {
   const index = category.items.findIndex((item) => item.id === itemID)
   if (index === -1) return null
 
@@ -153,17 +208,59 @@ export function buildItemCardContent(category: MenuPreviewCategory, itemID: numb
   const nav: InlineButton[] = []
 
   if (index > 0) {
-    nav.push({ text: '←', data: `menu:cardnav:${category.items[index - 1].id}:${category.id}` })
+    nav.push({ text: '←', data: `menu:cardnav:${category.items[index - 1].id}:${category.id}`, style: navStyle })
   }
-  nav.push({ text: `${index + 1}/${category.items.length}`, data: 'menu:noop' })
+  nav.push({ text: `${index + 1}/${category.items.length}`, data: 'menu:noop', style: navStyle })
   if (index < category.items.length - 1) {
-    nav.push({ text: '→', data: `menu:cardnav:${category.items[index + 1].id}:${category.id}` })
+    nav.push({ text: '→', data: `menu:cardnav:${category.items[index + 1].id}:${category.id}`, style: navStyle })
   }
   if (nav.length > 0) buttons.push(nav)
   buttons.push([{ text: 'Назад к категории', data: `menu:tab:${category.id}` }])
   buttons.push([{ text: '✕ Закрыть', data: 'menu:cardclose' }])
 
   const text = truncateMenuText(menuSections(...sections))
+
+  if (item.imageUrl) {
+    return {
+      parts: [{ type: 'photo', media_url: item.imageUrl, text, parse_mode: 'HTML' }],
+      buttons,
+    }
+  }
+
+  return {
+    parts: [{ type: 'text' as const, text, parse_mode: 'HTML' }],
+    buttons,
+  }
+}
+
+export function flattenCarouselEntries(state: MenuPreviewState): CarouselEntry[] {
+  const entries: CarouselEntry[] = []
+  for (const category of state.categories) {
+    const heading = categoryHeading(category)
+    for (const item of category.items) {
+      entries.push({ item, categoryHeading: heading })
+    }
+  }
+  return entries
+}
+
+// Carousel preset: flat ←/→ navigation across all items + "Назад к меню" — matches backend carouselContent.
+export function buildCarouselContent(entries: CarouselEntry[], index: number, navStyle: InlineButton['style'] = ''): MessageContent | null {
+  if (entries.length === 0 || index < 0 || index >= entries.length) return null
+  const { item, categoryHeading: heading } = entries[index]
+  const text = truncateMenuText(menuSections(
+    heading,
+    `${item.label} — ${formatMenuPrice(item.price)}`,
+    item.weight?.trim() || '',
+    item.description?.trim() || '',
+  ))
+
+  const nav: InlineButton[] = []
+  if (index > 0) nav.push({ text: '←', data: `menu:car:${index - 1}`, style: navStyle })
+  nav.push({ text: `${index + 1}/${entries.length}`, data: 'menu:car:noop', style: navStyle })
+  if (index < entries.length - 1) nav.push({ text: '→', data: `menu:car:${index + 1}`, style: navStyle })
+
+  const buttons: InlineButton[][] = [nav, [{ text: 'Назад к меню', data: 'menu:root' }]]
 
   if (item.imageUrl) {
     return {
@@ -186,7 +283,7 @@ export function buildMenuTabsContent(state: MenuPreviewState, selectedCategoryID
     parts: [{ type: 'text' as const, text: truncateMenuText([buildTabsHeaderText(state), renderMenuASCIIBlock(selected.items)].filter(Boolean).join('\n')) }],
     buttons: [
       ...buildCategoryTabRows(state.categories, selected.id),
-      ...buildCategoryItemRows(selected.id, selected.items),
+      ...buildTabItemRows(selected.id, selected.items),
     ],
   }
 }
@@ -196,14 +293,7 @@ function buildTabsHeaderText(state: MenuPreviewState): string {
 }
 
 function buildListHeaderText(state: MenuPreviewState): string {
-  const inferredSubtitle = !state.subtitle &&
-    state.intro &&
-    state.intro !== 'Выберите категорию:' &&
-    state.intro !== state.title
-    ? state.intro
-    : ''
-
-  return [state.title, state.subtitle || inferredSubtitle].filter(Boolean).join('\n')
+  return [state.title, state.subtitle].filter(Boolean).join('\n')
 }
 
 function buildCategoryTabRows(categories: MenuPreviewCategory[], activeCategoryID: number): InlineButton[][] {
@@ -228,8 +318,9 @@ function buildCategoryTabRows(categories: MenuPreviewCategory[], activeCategoryI
   return rows
 }
 
-function buildCategoryItemRows(categoryID: number, items: MenuPreviewItem[]): InlineButton[][] {
-  return items.map((item) => [{ text: item.label, data: `menu:item:${item.id}:${categoryID}:0` }])
+// Tabs preset opens carousel-style card → callback `menu:card:` (matches backend).
+function buildTabItemRows(categoryID: number, items: MenuPreviewItem[]): InlineButton[][] {
+  return items.map((item) => [{ text: item.label, data: `menu:card:${item.id}:${categoryID}` }])
 }
 
 function buildMenuListCategoryRows(categories: MenuPreviewCategory[]): InlineButton[][] {
@@ -243,17 +334,17 @@ function buildMenuListCategoryRows(categories: MenuPreviewCategory[]): InlineBut
   ])
 }
 
-function menuCategoryItemsText(items: MenuPreviewItem[]): string {
+function menuCategoryItemsText(items: MenuPreviewItem[], density: 'compact' | 'detailed'): string {
   if (items.length === 0) return 'Сейчас в этой категории нет доступных позиций.'
 
   const lines: string[] = []
   for (const item of items) {
     let line = `${item.label} — ${formatMenuPrice(item.price)}`
-    if (item.weight?.trim()) {
+    if (density === 'detailed' && item.weight?.trim()) {
       line += ` • ${item.weight.trim()}`
     }
     lines.push(line)
-    if (item.description?.trim()) lines.push(item.description.trim())
+    if (density === 'detailed' && item.description?.trim()) lines.push(item.description.trim())
   }
   return lines.join('\n')
 }
@@ -273,7 +364,13 @@ function renderMenuASCIIBlock(items: MenuPreviewItem[]): string {
 }
 
 function categoryHeading(category: MenuPreviewCategory): string {
-  return category.icon ? `${category.icon} ${category.label}`.trim() : category.label
+  if (!category.icon || isMediaUrl(category.icon)) return category.label
+  return `${category.icon} ${category.label}`.trim()
+}
+
+function isMediaUrl(value: string | undefined | null): value is string {
+  if (!value) return false
+  return value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://')
 }
 
 function formatMenuPrice(price: number): string {

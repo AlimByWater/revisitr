@@ -464,10 +464,17 @@ func (h *handler) handleMenuCategoryCallback(ctx context.Context, chatID int64, 
 	}
 	buttons = append(buttons, []entity.InlineButton{{Text: "Назад к меню", Data: callbackMenuRoot}})
 
+	custom := h.loadMenuPresetCustomizations(ctx)
+	density := normalizeMenuListDensity(custom.ListDensity)
+	itemText := menuCategoryItemsTextWithDensity(entity.MenuCategory{Items: category.Items[start:end]}, density)
+	if itemText == "" {
+		itemText = "Сейчас в этой категории нет доступных позиций."
+	}
+
 	content := entity.MessageContent{
 		Parts: []entity.MessagePart{{
 			Type: entity.PartText,
-			Text: category.Name + "\n\nВыберите позицию:",
+			Text: category.Name + "\n\n" + itemText,
 		}},
 		Buttons: buttons,
 	}

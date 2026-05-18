@@ -29,7 +29,7 @@ CREATE INDEX idx_bot_module_settings_bot ON bot_module_settings(bot_id);
 -- Seed menu presets
 INSERT INTO module_presets (module_key, preset_key, name, description, definition, sort_order) VALUES
 ('menu', 'tabs', 'Таб-категории', 'Категории как inline-кнопки с переключением через editMessageText.', '{"render_mode": "tabs"}', 0),
-('menu', 'list', 'Список', 'Все позиции меню в одном сообщении, сгруппированы по категориям.', '{"render_mode": "list"}', 1),
+('menu', 'list', 'Список', 'Свернутый индекс категорий с компактным раскрытием по нажатию.', '{"render_mode": "list"}', 1),
 ('menu', 'carousel', 'Карусель', 'Фото + описание с навигацией ←/→ по позициям.', '{"render_mode": "carousel"}', 2);
 
 -- Migrate existing bots with menu module to tabs preset (current behavior)

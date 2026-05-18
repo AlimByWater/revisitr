@@ -496,7 +496,7 @@ const routes: [RegExp, Handler][] = [
       module_key: 'menu',
       preset_key: 'list',
       name: 'Список',
-      description: 'Каждая категория отдельной кнопкой в столбик.',
+      description: 'Свернутый индекс категорий с компактным раскрытием по нажатию.',
       sort_order: 2,
     },
     {

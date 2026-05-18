@@ -122,11 +122,23 @@ function PresetThumbnail({ presetKey }: { presetKey: string }) {
 
   return (
     <div className="w-full rounded-xl border border-surface-border bg-neutral-50 p-3">
+      <div className="mb-3 space-y-1">
+        <div className="h-2.5 w-2/3 rounded bg-neutral-300" />
+        <div className="h-2.5 w-1/2 rounded bg-neutral-200" />
+      </div>
       <div className="space-y-1.5">
-        <div className="h-2.5 rounded bg-neutral-300" />
-        <div className="h-2.5 rounded bg-neutral-200" />
-        <div className="h-2.5 rounded bg-neutral-200" />
-        <div className="h-2.5 w-5/6 rounded bg-neutral-200" />
+        <div className="flex items-center justify-between rounded-lg border border-surface-border bg-white px-2 py-1.5">
+          <span className="text-[10px] font-medium text-neutral-500">Закуски</span>
+          <span className="text-[10px] text-neutral-400">3</span>
+        </div>
+        <div className="flex items-center justify-between rounded-lg border border-surface-border bg-white px-2 py-1.5">
+          <span className="text-[10px] font-medium text-neutral-500">Основные блюда</span>
+          <span className="text-[10px] text-neutral-400">4</span>
+        </div>
+        <div className="flex items-center justify-between rounded-lg border border-surface-border bg-white px-2 py-1.5">
+          <span className="text-[10px] font-medium text-neutral-500">Десерты</span>
+          <span className="text-[10px] text-neutral-400">3</span>
+        </div>
       </div>
     </div>
   )

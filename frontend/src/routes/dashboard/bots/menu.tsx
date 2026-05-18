@@ -16,12 +16,15 @@ import type { InlineButton, MessageContent, PreviewScreen } from '@/features/tel
 import { InteractivePreview } from '@/features/telegram-preview/components/InteractivePreview'
 import { campaignsApi } from '@/features/campaigns/api'
 import {
+  buildCarouselContent,
   buildCategoryContent,
+  buildItemCardContent,
+  buildItemSimpleContent,
   buildMenuInitialContent,
   buildMenuListContent,
-  buildItemCardContent,
   buildMenuPreviewState,
   buildMenuTabsContent,
+  flattenCarouselEntries,
 } from './menuPreview'
 
 const MessageContentEditor = lazy(() =>
@@ -375,6 +378,7 @@ export function MenuDisplaySettingsPanel({
               menu={activeMenu}
               value={draft}
               onChange={setDraft}
+              selectedPresetKey={selectedPresetKey}
             />
           </section>
 
@@ -443,15 +447,24 @@ function MenuTelegramPreview({
     [draft, introContent, menu, selectedPresetKey],
   )
 
-  const initialContent = useMemo(
-    () => (previewState.isListPreset ? buildMenuListContent(previewState) : buildMenuInitialContent(previewState)),
-    [previewState],
-  )
+  const carouselEntries = useMemo(() => flattenCarouselEntries(previewState), [previewState])
+
+  const initialContent = useMemo(() => {
+    if (previewState.presetKey === 'list') return buildMenuListContent(previewState)
+    if (previewState.presetKey === 'carousel') {
+      return buildCarouselContent(carouselEntries, 0, previewState.navButtonStyle) ?? buildMenuInitialContent(previewState)
+    }
+    return buildMenuInitialContent(previewState)
+  }, [carouselEntries, previewState])
 
   const handleButtonClick = useCallback(
     (button: InlineButton): PreviewScreen | null => {
       if (button.data === 'menu:root') {
         return { content: initialContent, transition: 'replace' }
+      }
+
+      if (button.data === 'menu:noop' || button.data === 'menu:car:noop') {
+        return null
       }
 
       const tabMatch = button.data?.match(/^menu:tab:(\d+)$/)
@@ -462,29 +475,40 @@ function MenuTelegramPreview({
         }
       }
 
-      const categoryMatch = button.data?.match(/^menu:cat:(\d+):\d+$/)
+      const categoryMatch = button.data?.match(/^menu:cat:(\d+):(\d+)$/)
       if (categoryMatch) {
         const categoryId = Number(categoryMatch[1])
         const category = previewState.categories.find((c) => c.id === categoryId)
         if (!category) return null
         return {
-          content: buildCategoryContent(category),
+          content: buildCategoryContent(category, previewState.listDensity),
           transition: 'replace',
         }
       }
 
-      const itemMatch = button.data?.match(/^menu:item:(\d+):(\d+):\d+$/)
+      // List preset: simple item card (only "Назад к категории").
+      const itemMatch = button.data?.match(/^menu:item:(\d+):(\d+):(\d+)$/)
       if (itemMatch) {
         const itemId = Number(itemMatch[1])
         const categoryId = Number(itemMatch[2])
+        const page = Number(itemMatch[3])
         const category = previewState.categories.find((c) => c.id === categoryId)
         if (!category) return null
-        const content = buildItemCardContent(category, itemId)
+        const content = buildItemSimpleContent(category, itemId, page)
         if (!content) return null
-        return {
-          content,
-          transition: 'replace',
-        }
+        return { content, transition: 'replace' }
+      }
+
+      // Tabs preset: carousel-style item card (arrows + back + close).
+      const cardMatch = button.data?.match(/^menu:card:(\d+):(\d+)$/)
+      if (cardMatch) {
+        const itemId = Number(cardMatch[1])
+        const categoryId = Number(cardMatch[2])
+        const category = previewState.categories.find((c) => c.id === categoryId)
+        if (!category) return null
+        const content = buildItemCardContent(category, itemId, previewState.navButtonStyle)
+        if (!content) return null
+        return { content, transition: 'replace' }
       }
 
       const navMatch = button.data?.match(/^menu:cardnav:(\d+):(\d+)$/)
@@ -493,16 +517,17 @@ function MenuTelegramPreview({
         const categoryId = Number(navMatch[2])
         const category = previewState.categories.find((c) => c.id === categoryId)
         if (!category) return null
-        const content = buildItemCardContent(category, itemId)
+        const content = buildItemCardContent(category, itemId, previewState.navButtonStyle)
         if (!content) return null
-        return {
-          content,
-          transition: 'replace',
-        }
+        return { content, transition: 'replace' }
       }
 
-      if (button.data === 'menu:noop') {
-        return null
+      // Carousel preset: flat ←/→ across all items.
+      const carMatch = button.data?.match(/^menu:car:(\d+)$/)
+      if (carMatch) {
+        const content = buildCarouselContent(carouselEntries, Number(carMatch[1]), previewState.navButtonStyle)
+        if (!content) return null
+        return { content, transition: 'replace' }
       }
 
       if (button.data === 'menu:cardclose') {
@@ -511,7 +536,7 @@ function MenuTelegramPreview({
 
       return null
     },
-    [initialContent, previewState],
+    [carouselEntries, initialContent, previewState],
   )
 
   return (

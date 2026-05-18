@@ -40,6 +40,7 @@ interface MenuPresetCustomizerProps {
   menu: Menu | null
   value: MenuPresetCustomizations
   onChange: (value: MenuPresetCustomizations) => void
+  selectedPresetKey: string
 }
 
 export function createDefaultMenuPresetCustomizations(menu: Menu | null): MenuPresetCustomizations {
@@ -61,6 +62,8 @@ export function createDefaultMenuPresetCustomizations(menu: Menu | null): MenuPr
     categories,
     tab_button_style: '',
     nav_button_style: '',
+    list_layout: 'summary',
+    list_density: 'compact',
   }
 }
 
@@ -145,6 +148,8 @@ export function normalizeMenuPresetCustomizations(
     categories,
     tab_button_style: readStyle(raw?.tab_button_style) || '',
     nav_button_style: readStyle(raw?.nav_button_style) || '',
+    list_layout: readListLayout(raw?.list_layout) || 'summary',
+    list_density: readListDensity(raw?.list_density) || 'compact',
   }
 }
 
@@ -173,6 +178,12 @@ export function sanitizeMenuPresetCustomizations(
   }
   if ((value.nav_button_style ?? '') !== '') {
     result.nav_button_style = value.nav_button_style
+  }
+  if ((value.list_layout ?? 'summary') !== 'summary') {
+    result.list_layout = value.list_layout ?? 'summary'
+  }
+  if ((value.list_density ?? 'compact') !== 'compact') {
+    result.list_density = value.list_density ?? 'compact'
   }
 
   const currentOrder = value.category_order ?? []
@@ -240,6 +251,7 @@ export function MenuPresetCustomizer({
   menu,
   value,
   onChange,
+  selectedPresetKey,
 }: MenuPresetCustomizerProps) {
   const categories = value.categories ?? []
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<number[]>([])
@@ -368,6 +380,55 @@ export function MenuPresetCustomizer({
           </div>
         </div>
       </section>
+
+      {selectedPresetKey === 'list' && (
+        <section className="rounded-2xl border border-surface-border bg-white p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-neutral-900">Настройки списка</h4>
+            <InfoHint content="Список можно сделать либо спокойным и компактным, либо подробным. По умолчанию он открывается как короткий индекс категорий." />
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ChoicePanel
+              label="Структура списка"
+              hint="Как выглядит первый экран списка в боте."
+              value={value.list_layout ?? 'summary'}
+              options={[
+                {
+                  value: 'summary',
+                  title: 'Свернутый',
+                  description: 'Категории идут коротким индексом. Позиции открываются по нажатию на категорию.',
+                },
+                {
+                  value: 'expanded',
+                  title: 'Развернутый',
+                  description: 'Все категории и позиции видны сразу. Подходит для маленьких меню.',
+                },
+              ]}
+              onChange={(next) => update({ list_layout: next as 'summary' | 'expanded' })}
+            />
+
+            <ChoicePanel
+              label="Плотность позиций"
+              hint="Сколько текста показывать внутри категории."
+              value={value.list_density ?? 'compact'}
+              options={[
+                {
+                  value: 'compact',
+                  title: 'Компактно',
+                  description: 'Только название и цена. Без лишних описаний в самом списке.',
+                },
+                {
+                  value: 'detailed',
+                  title: 'Подробно',
+                  description: 'Показывать вес и описание блюда, если они заполнены.',
+                },
+              ]}
+              onChange={(next) => update({ list_density: next as 'compact' | 'detailed' })}
+            />
+          </div>
+        </section>
+      )}
 
       <section className="space-y-4">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
@@ -852,9 +913,68 @@ function readStyle(value: unknown): PresetButtonStyle {
   return ''
 }
 
+function readListLayout(value: unknown): 'summary' | 'expanded' | '' {
+  if (value === 'summary' || value === 'expanded') return value
+  return ''
+}
+
+function readListDensity(value: unknown): 'compact' | 'detailed' | '' {
+  if (value === 'compact' || value === 'detailed') return value
+  return ''
+}
+
 function styleIndicatorClass(style: PresetButtonStyle): string {
   if (style === 'primary') return 'bg-blue-500'
   if (style === 'success') return 'bg-green-500'
   if (style === 'danger') return 'bg-red-500'
   return 'bg-neutral-300'
+}
+
+function ChoicePanel({
+  label,
+  hint,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  hint: string
+  value: string
+  options: Array<{
+    value: string
+    title: string
+    description: string
+  }>
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="rounded-2xl border border-surface-border bg-neutral-50/60 p-4">
+      <div className="mb-3">
+        <div className="text-sm font-medium text-neutral-900">{label}</div>
+        <div className="mt-1 text-sm text-neutral-500">{hint}</div>
+      </div>
+
+      <div className="grid gap-2">
+        {options.map((option) => {
+          const active = option.value === value
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+              className={cn(
+                'rounded-xl border px-4 py-3 text-left transition-colors',
+                active
+                  ? 'border-accent bg-accent/5'
+                  : 'border-surface-border bg-white hover:border-neutral-300',
+              )}
+            >
+              <div className="text-sm font-medium text-neutral-900">{option.title}</div>
+              <div className="mt-1 text-sm leading-relaxed text-neutral-500">{option.description}</div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 }

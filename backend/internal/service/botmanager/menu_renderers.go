@@ -158,9 +158,16 @@ func (h *handler) renderMenuList(ctx context.Context, chatID int64) {
 		return
 	}
 
+	layout := normalizeMenuListLayout(custom.ListLayout)
+	density := normalizeMenuListDensity(custom.ListDensity)
+
 	sections := []string{h.buildMenuHeader(menu, custom)}
-	for _, category := range categories {
-		sections = append(sections, menuSections(category.Heading, menuCategoryItemsText(category.Category)))
+	if layout == menuListLayoutExpanded {
+		for _, category := range categories {
+			sections = append(sections, menuSections(category.Heading, menuCategoryItemsTextWithDensity(category.Category, density)))
+		}
+	} else {
+		sections = append(sections, "Выберите категорию")
 	}
 
 	part := h.menuBasePart(menu)

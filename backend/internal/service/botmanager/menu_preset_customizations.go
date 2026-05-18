@@ -17,6 +17,8 @@ type menuPresetCustomizations struct {
 	Categories     []menuPresetCategoryCustomization `json:"categories,omitempty"`
 	TabButtonStyle string                            `json:"tab_button_style,omitempty"`
 	NavButtonStyle string                            `json:"nav_button_style,omitempty"`
+	ListLayout     string                            `json:"list_layout,omitempty"`
+	ListDensity    string                            `json:"list_density,omitempty"`
 }
 
 type menuPresetCategoryCustomization struct {
@@ -45,6 +47,13 @@ type menuCategoryPresentation struct {
 	ButtonIconCustomEmojiID string
 }
 
+const (
+	menuListLayoutSummary  = "summary"
+	menuListLayoutExpanded = "expanded"
+	menuListDensityCompact = "compact"
+	menuListDensityDetail  = "detailed"
+)
+
 func (h *handler) loadMenuPresetCustomizations(ctx context.Context) menuPresetCustomizations {
 	if h.mgr.moduleSettingsRepo == nil {
 		return menuPresetCustomizations{}
@@ -59,7 +68,27 @@ func (h *handler) loadMenuPresetCustomizations(ctx context.Context) menuPresetCu
 		h.logger.Error("decode menu preset customizations", "error", err, "bot_id", h.info.ID)
 		return menuPresetCustomizations{}
 	}
+	custom.ListLayout = normalizeMenuListLayout(custom.ListLayout)
+	custom.ListDensity = normalizeMenuListDensity(custom.ListDensity)
 	return custom
+}
+
+func normalizeMenuListLayout(value string) string {
+	switch strings.TrimSpace(value) {
+	case menuListLayoutExpanded:
+		return menuListLayoutExpanded
+	default:
+		return menuListLayoutSummary
+	}
+}
+
+func normalizeMenuListDensity(value string) string {
+	switch strings.TrimSpace(value) {
+	case menuListDensityDetail:
+		return menuListDensityDetail
+	default:
+		return menuListDensityCompact
+	}
 }
 
 func (h *handler) presentMenuCategories(ctx context.Context, menu *entity.Menu, custom menuPresetCustomizations) []menuCategoryPresentation {
@@ -220,6 +249,10 @@ func applyItemCustomizations(category entity.MenuCategory, override menuPresetCa
 }
 
 func menuCategoryItemsText(category entity.MenuCategory) string {
+	return menuCategoryItemsTextWithDensity(category, menuListDensityDetail)
+}
+
+func menuCategoryItemsTextWithDensity(category entity.MenuCategory, density string) string {
 	lines := make([]string, 0, len(category.Items))
 	for _, item := range category.Items {
 		if !item.IsAvailable {
@@ -227,12 +260,12 @@ func menuCategoryItemsText(category entity.MenuCategory) string {
 		}
 
 		line := item.Name + " — " + strings.TrimSpace(formatMenuPrice(item.Price))
-		if item.Weight != nil && *item.Weight != "" {
+		if strings.TrimSpace(density) != menuListDensityCompact && item.Weight != nil && *item.Weight != "" {
 			line += " • " + strings.TrimSpace(*item.Weight)
 		}
 		lines = append(lines, line)
 
-		if item.Description != nil && *item.Description != "" {
+		if strings.TrimSpace(density) != menuListDensityCompact && item.Description != nil && *item.Description != "" {
 			lines = append(lines, strings.TrimSpace(*item.Description))
 		}
 	}
@@ -265,19 +298,5 @@ func (h *handler) buildMenuHeader(menu *entity.Menu, custom menuPresetCustomizat
 	}
 
 	subtitle := strings.TrimSpace(custom.Subtitle)
-	if subtitle == "" {
-		intro := h.menuIntroContent(menu)
-		if len(intro.Parts) > 0 {
-			base := strings.TrimSpace(intro.Parts[0].Text)
-			fallback := "Выберите категорию:"
-			if menu != nil && menu.Name != "" {
-				fallback = strings.TrimSpace(menu.Name + "\n\nВыберите категорию:")
-			}
-			if base != "" && base != "Выберите категорию:" && base != fallback && base != title {
-				subtitle = base
-			}
-		}
-	}
-
 	return menuSections(title, subtitle)
 }

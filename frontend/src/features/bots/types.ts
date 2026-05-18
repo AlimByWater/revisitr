@@ -103,6 +103,8 @@ export interface MenuPresetCustomizations {
   categories?: MenuPresetCategoryCustomization[]
   tab_button_style?: PresetButtonStyle
   nav_button_style?: PresetButtonStyle
+  list_layout?: 'summary' | 'expanded'
+  list_density?: 'compact' | 'detailed'
 }
 
 export interface BookingTimeSlot {
