@@ -186,17 +186,6 @@ function buttonValueFromContent(
   return fallback;
 }
 
-function welcomeMessageFromContent(
-  content?: MessageContent,
-  fallback = "",
-): string {
-  if (!content || !content.parts?.length) return fallback;
-
-  const firstTextLike = content.parts.find((part) => part.text?.trim());
-  if (firstTextLike?.text) return firstTextLike.text;
-
-  return fallback;
-}
 
 function buttonSummary(
   content?: MessageContent,
@@ -1086,7 +1075,6 @@ const GeneralTab = memo(function GeneralTab({
 
   const { isSaving, saveError, saveSuccess, save } = useSaveAction(botId, () =>
     botsApi.updateSettings(botId, {
-      welcome_message: settings.welcome_message,
       welcome_content: settings.welcome_content,
       buttons: settings.buttons.map((button) => ({
         ...button,
@@ -1270,21 +1258,13 @@ const GeneralTab = memo(function GeneralTab({
     settings.welcome_content && settings.welcome_content.parts?.length > 0
       ? settings.welcome_content
       : {
-          parts: settings.welcome_message
-            ? [
-                {
-                  type: "text" as const,
-                  text: settings.welcome_message,
-                  parse_mode: "Markdown" as const,
-                },
-              ]
-            : [
-                {
-                  type: "text" as const,
-                  text: "",
-                  parse_mode: "Markdown" as const,
-                },
-              ],
+          parts: [
+            {
+              type: "text" as const,
+              text: "",
+              parse_mode: "Markdown" as const,
+            },
+          ],
         };
 
   return (
@@ -1292,7 +1272,7 @@ const GeneralTab = memo(function GeneralTab({
         <SectionBlock
           eyebrow="Старт"
           title="Приветственное сообщение"
-          description="Это первое сообщение, которое увидит гость после /start. Здесь можно собрать текст, медиа и inline-кнопки."
+          description="Это первое сообщение, которое увидит гость после /start. Здесь можно собрать текст и медиа."
         >
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)] gap-6 xl:gap-8 items-start">
             <div className="space-y-4">
@@ -1306,10 +1286,6 @@ const GeneralTab = memo(function GeneralTab({
                           ? {
                               ...s,
                               welcome_content: content,
-                              welcome_message: welcomeMessageFromContent(
-                                content,
-                                s.welcome_message,
-                              ),
                             }
                           : s,
                       );

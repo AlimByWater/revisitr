@@ -85,7 +85,7 @@ export default function CreateBotPage() {
         name: name.trim(),
         username: username.trim(),
         description: description.trim(),
-        welcome_message: welcomeMessage.trim() || undefined,
+        welcome_content: welcomeMessage.trim() ? { parts: [{ type: 'text' as const, text: welcomeMessage.trim() }] } : undefined,
         registration_form: formFields,
         modules,
       }

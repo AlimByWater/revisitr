@@ -85,9 +85,6 @@ func TestManagedAdapter_CreatePendingBot_PreservesWizardPayload(t *testing.T) {
 
 	repo := &mockBotsRepo{
 		createFn: func(_ context.Context, bot *entity.Bot) error {
-			if bot.Settings.WelcomeMessage != "Привет" {
-				t.Fatalf("expected welcome message, got %q", bot.Settings.WelcomeMessage)
-			}
 			if bot.Settings.WelcomeContent == nil || len(bot.Settings.WelcomeContent.Parts) != 1 {
 				t.Fatalf("expected welcome content, got %#v", bot.Settings.WelcomeContent)
 			}
@@ -105,7 +102,6 @@ func TestManagedAdapter_CreatePendingBot_PreservesWizardPayload(t *testing.T) {
 	_, err := adapter.CreatePendingBot(context.Background(), 5, &entity.CreateManagedBotRequest{
 		Name:             "Managed",
 		Username:         "managedbot",
-		WelcomeMessage:   "Привет",
 		WelcomeContent:   welcome,
 		RegistrationForm: fields,
 		Modules:          modules,

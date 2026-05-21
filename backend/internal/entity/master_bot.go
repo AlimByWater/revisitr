@@ -23,7 +23,6 @@ type CreateManagedBotRequest struct {
 	Name             string          `json:"name"`
 	Username         string          `json:"username"`
 	Description      string          `json:"description"`
-	WelcomeMessage   string          `json:"welcome_message,omitempty"`
 	WelcomeContent   *MessageContent `json:"welcome_content,omitempty"`
 	RegistrationForm []FormField     `json:"registration_form,omitempty"`
 	Modules          []string        `json:"modules,omitempty"`

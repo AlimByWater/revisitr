@@ -60,7 +60,6 @@ const botFixture = {
     modules: ['booking'],
     buttons: [],
     registration_form: [{ name: 'first_name', label: 'Как вас зовут?', type: 'text', required: true }],
-    welcome_message: '',
     module_configs: {
       booking: {
         date_from_days: 1,

@@ -102,6 +102,14 @@ func utf16Len(s string) int {
 	return len(utf16.Encode([]rune(s)))
 }
 
+// SendContentOpts controls optional behavior when sending composite messages.
+type SendContentOpts struct {
+	// ReplyKeyboard attaches a reply keyboard to the last message part.
+	// When set, inline buttons from MessageContent.Buttons are ignored
+	// (Telegram API accepts only one reply_markup per message).
+	ReplyKeyboard *telego.ReplyKeyboardMarkup
+}
+
 // SendContent sends a composite message (all parts sequentially).
 func (s *Sender) SendContent(ctx context.Context, bot *telego.Bot, chatID int64, content entity.MessageContent) error {
 	_, _, err := s.SendContentWithCache(ctx, bot, chatID, content)
@@ -111,16 +119,22 @@ func (s *Sender) SendContent(ctx context.Context, bot *telego.Bot, chatID int64,
 // SendContentForOrg sends with emoji resolution for the given org.
 func (s *Sender) SendContentForOrg(ctx context.Context, bot *telego.Bot, chatID int64, content entity.MessageContent, orgID int) (entity.MessageContent, bool, error) {
 	emojiMap := s.resolveEmoji(ctx, orgID)
-	return s.sendContentInternal(ctx, bot, chatID, content, emojiMap)
+	return s.sendContentInternal(ctx, bot, chatID, content, emojiMap, nil)
+}
+
+// SendContentForOrgWithOpts sends with emoji resolution and additional options (e.g. reply keyboard).
+func (s *Sender) SendContentForOrgWithOpts(ctx context.Context, bot *telego.Bot, chatID int64, content entity.MessageContent, orgID int, opts *SendContentOpts) (entity.MessageContent, bool, error) {
+	emojiMap := s.resolveEmoji(ctx, orgID)
+	return s.sendContentInternal(ctx, bot, chatID, content, emojiMap, opts)
 }
 
 // SendContentWithCache sends a composite message and returns updated content
 // with resolved Telegram media_id values when they were learned during send.
 func (s *Sender) SendContentWithCache(ctx context.Context, bot *telego.Bot, chatID int64, content entity.MessageContent) (entity.MessageContent, bool, error) {
-	return s.sendContentInternal(ctx, bot, chatID, content, nil)
+	return s.sendContentInternal(ctx, bot, chatID, content, nil, nil)
 }
 
-func (s *Sender) sendContentInternal(ctx context.Context, bot *telego.Bot, chatID int64, content entity.MessageContent, emojiMap map[string]string) (entity.MessageContent, bool, error) {
+func (s *Sender) sendContentInternal(ctx context.Context, bot *telego.Bot, chatID int64, content entity.MessageContent, emojiMap map[string]string, opts *SendContentOpts) (entity.MessageContent, bool, error) {
 	updated := content
 	changed := false
 
@@ -129,13 +143,18 @@ func (s *Sender) sendContentInternal(ctx context.Context, bot *telego.Bot, chatI
 			return updated, changed, ctx.Err()
 		}
 
-		// Buttons attach only to the last part
-		var markup *telego.InlineKeyboardMarkup
-		if i == len(updated.Parts)-1 && len(updated.Buttons) > 0 {
-			markup = s.buildInlineKeyboard(updated.Buttons)
+		// Determine markup for the last part only.
+		// Reply keyboard takes priority (mutually exclusive with inline buttons in Telegram API).
+		var lastPartMarkup telego.ReplyMarkup
+		if i == len(updated.Parts)-1 {
+			if opts != nil && opts.ReplyKeyboard != nil {
+				lastPartMarkup = opts.ReplyKeyboard
+			} else if len(updated.Buttons) > 0 {
+				lastPartMarkup = s.buildInlineKeyboard(updated.Buttons)
+			}
 		}
 
-		mediaID, err := s.sendPart(ctx, bot, chatID, part, markup, emojiMap)
+		mediaID, err := s.sendPart(ctx, bot, chatID, part, lastPartMarkup, emojiMap)
 		if err != nil {
 			return updated, changed, fmt.Errorf("send part %d (%s): %w", i, part.Type, err)
 		}
@@ -156,7 +175,7 @@ func (s *Sender) sendPart(
 	bot *telego.Bot,
 	chatID int64,
 	part entity.MessagePart,
-	markup *telego.InlineKeyboardMarkup,
+	markup telego.ReplyMarkup,
 	emojiMap map[string]string,
 ) (string, error) {
 	switch part.Type {
@@ -241,6 +260,9 @@ func (s *Sender) sendPart(
 			return "", err
 		}
 		sticker := tu.Sticker(tu.ID(chatID), media)
+		if markup != nil {
+			sticker = sticker.WithReplyMarkup(markup)
+		}
 		message, err := bot.SendSticker(ctx, sticker)
 		return s.extractMediaID(message, part.Type), err
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"net/url"
 	"sync"
 
 	"revisitr/internal/entity"
@@ -72,6 +74,7 @@ type Manager struct {
 	tgSender      *tgService.Sender
 	logger        *slog.Logger
 	apiServer     string // custom Telegram Bot API server URL (empty = default)
+	proxyURL      string // HTTP proxy URL for Telegram API (empty = direct)
 	adminBotToken string
 	adminBot      *telego.Bot
 
@@ -87,6 +90,10 @@ func WithTelegramSender(ts *tgService.Sender) ManagerOption {
 
 func WithAPIServer(url string) ManagerOption {
 	return func(m *Manager) { m.apiServer = url }
+}
+
+func WithProxy(url string) ManagerOption {
+	return func(m *Manager) { m.proxyURL = url }
 }
 
 func WithMenus(repo menusRepository) ManagerOption {
@@ -107,6 +114,23 @@ func WithModuleSettings(repo moduleSettingsRepository) ManagerOption {
 
 func WithAdminBotToken(token string) ManagerOption {
 	return func(m *Manager) { m.adminBotToken = token }
+}
+
+// botOpts returns telego options configured with API server and proxy.
+func (m *Manager) botOpts() []telego.BotOption {
+	var opts []telego.BotOption
+	if m.apiServer != "" {
+		opts = append(opts, telego.WithAPIServer(m.apiServer))
+	}
+	if m.proxyURL != "" {
+		proxyParsed, err := url.Parse(m.proxyURL)
+		if err == nil {
+			opts = append(opts, telego.WithHTTPClient(&http.Client{
+				Transport: &http.Transport{Proxy: http.ProxyURL(proxyParsed)},
+			}))
+		}
+	}
+	return opts
 }
 
 func New(
@@ -133,11 +157,7 @@ func New(
 
 func (m *Manager) Start(ctx context.Context) error {
 	if m.adminBot == nil && m.adminBotToken != "" {
-		var opts []telego.BotOption
-		if m.apiServer != "" {
-			opts = append(opts, telego.WithAPIServer(m.apiServer))
-		}
-		adminBot, err := telego.NewBot(m.adminBotToken, opts...)
+		adminBot, err := telego.NewBot(m.adminBotToken, m.botOpts()...)
 		if err != nil {
 			return fmt.Errorf("botmanager: create admin bot: %w", err)
 		}
@@ -225,11 +245,7 @@ func (m *Manager) Shutdown() {
 }
 
 func (m *Manager) startBot(parentCtx context.Context, b entity.Bot) error {
-	var opts []telego.BotOption
-	if m.apiServer != "" {
-		opts = append(opts, telego.WithAPIServer(m.apiServer))
-	}
-	tBot, err := telego.NewBot(b.Token, opts...)
+	tBot, err := telego.NewBot(b.Token, m.botOpts()...)
 	if err != nil {
 		return fmt.Errorf("create telego bot %q: %w", b.Name, err)
 	}

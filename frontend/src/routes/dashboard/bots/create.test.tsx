@@ -80,7 +80,6 @@ describe('CreateBotPage', () => {
         modules: [],
         buttons: [],
         registration_form: [],
-        welcome_message: '',
       },
       created_at: '2026-04-14T00:00:00Z',
       updated_at: '2026-04-14T00:00:00Z',
@@ -150,7 +149,7 @@ describe('CreateBotPage', () => {
         name: 'Baratie',
         username: 'baratiebot',
         description: 'Лучший бот для гостей',
-        welcome_message: 'Добро пожаловать!',
+        welcome_content: { parts: [{ type: 'text', text: 'Добро пожаловать!' }] },
         registration_form: [
           { name: 'first_name', label: 'Как вас зовут?', type: 'text', required: true },
           { name: 'phone', label: 'Ваш номер телефона?', type: 'phone', required: true },

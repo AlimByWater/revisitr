@@ -25,6 +25,10 @@ type FlowState struct {
 	AwaitingFeedback bool   `json:"awaiting_feedback,omitempty"`
 	CarouselIndex    int    `json:"carousel_index,omitempty"`
 	CarouselTotal    int    `json:"carousel_total,omitempty"`
+
+	// Registration flow
+	RegistrationField string            `json:"registration_field,omitempty"` // current field name being collected
+	RegistrationData  map[string]string `json:"registration_data,omitempty"` // collected field values
 }
 
 func (s FlowState) resetFlow() FlowState {

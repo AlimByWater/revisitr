@@ -32,7 +32,6 @@ const botFixture = {
     modules: ['feedback'],
     buttons: [],
     registration_form: [],
-    welcome_message: '',
     module_configs: {
       feedback: {
         prompt_message: 'Напишите ваш вопрос:',

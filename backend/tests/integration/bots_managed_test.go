@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"revisitr/internal/entity"
 	redisRepo "revisitr/internal/repository/redis"
 )
 
@@ -30,9 +31,9 @@ type botStatusResp struct {
 }
 
 type botSettingsResp struct {
-	Modules          []string        `json:"modules"`
-	WelcomeMessage   string          `json:"welcome_message"`
-	RegistrationForm []formFieldResp `json:"registration_form"`
+	Modules          []string             `json:"modules"`
+	WelcomeContent   *entity.MessageContent `json:"welcome_content"`
+	RegistrationForm []formFieldResp      `json:"registration_form"`
 }
 
 type formFieldResp struct {
@@ -124,7 +125,7 @@ func TestManagedBots_CreateManaged_EndToEndFlow(t *testing.T) {
 		"name":            "ManagedLaunchBot",
 		"username":        "@managedlaunchbot",
 		"modules":         []string{"loyalty", "campaigns"},
-		"welcome_message": "Welcome to managed bot",
+		"welcome_content": map[string]any{"parts": []map[string]any{{"type": "text", "text": "Welcome to managed bot"}}},
 		"registration_form": []map[string]any{
 			{"name": "phone", "label": "Phone", "type": "phone", "required": true},
 		},
@@ -188,8 +189,8 @@ func TestManagedBots_CreateManaged_EndToEndFlow(t *testing.T) {
 	if len(settingsBody.Modules) != 2 {
 		t.Fatalf("modules len = %d, want 2", len(settingsBody.Modules))
 	}
-	if settingsBody.WelcomeMessage != "Welcome to managed bot" {
-		t.Fatalf("welcome_message = %q, want %q", settingsBody.WelcomeMessage, "Welcome to managed bot")
+	if settingsBody.WelcomeContent == nil || len(settingsBody.WelcomeContent.Parts) == 0 {
+		t.Fatal("welcome_content should not be empty")
 	}
 	if len(settingsBody.RegistrationForm) != 1 || settingsBody.RegistrationForm[0].Name != "phone" {
 		t.Fatalf("registration_form = %#v, want single phone field", settingsBody.RegistrationForm)

@@ -76,6 +76,10 @@ func main() {
 		logger.Info("using custom Telegram API server", "url", cfg.TelegramAPIURL)
 		mgrOpts = append(mgrOpts, botmanager.WithAPIServer(cfg.TelegramAPIURL))
 	}
+	if cfg.TelegramProxyURL != "" {
+		logger.Info("using Telegram proxy", "url", cfg.TelegramProxyURL)
+		mgrOpts = append(mgrOpts, botmanager.WithProxy(cfg.TelegramProxyURL))
+	}
 	mgr := botmanager.New(botsRepo, botClientsRepo, loyaltyRepo, posRepo, logger, mgrOpts...)
 
 	if err := mgr.Start(ctx); err != nil {

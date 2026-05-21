@@ -231,9 +231,9 @@ func (h *handler) applyBotSettings(ctx context.Context, bot *entity.Bot, token s
 		return
 	}
 
-	if bot.Settings.WelcomeMessage != "" {
+	if desc := extractWelcomeText(bot.Settings); desc != "" {
 		_ = tBot.SetMyDescription(ctx, &telego.SetMyDescriptionParams{
-			Description: bot.Settings.WelcomeMessage,
+			Description: desc,
 		})
 	}
 
@@ -562,4 +562,17 @@ func (h *handler) sendWithKeyboard(chatID int64, text string, kb *telego.ReplyKe
 	if _, err := h.bot.SendMessage(context.Background(), msg); err != nil {
 		h.logger.Error("send message with keyboard", "error", err, "chat_id", chatID)
 	}
+}
+
+// extractWelcomeText returns the first non-empty text from WelcomeContent.
+func extractWelcomeText(settings entity.BotSettings) string {
+	if settings.WelcomeContent == nil {
+		return ""
+	}
+	for _, part := range settings.WelcomeContent.Parts {
+		if strings.TrimSpace(part.Text) != "" {
+			return part.Text
+		}
+	}
+	return ""
 }

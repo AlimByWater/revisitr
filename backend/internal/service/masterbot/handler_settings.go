@@ -54,7 +54,7 @@ func (h *handler) handleSettings(ctx context.Context, msg *telego.Message) {
 }
 
 func (h *handler) sendBotSettings(_ context.Context, chatID int64, bot *entity.Bot) {
-	welcome := bot.Settings.WelcomeMessage
+	welcome := extractWelcomeText(bot.Settings)
 	if welcome == "" {
 		welcome = "(не задано)"
 	}

@@ -56,6 +56,12 @@ func (h *handler) Handle(ctx context.Context, update telego.Update) {
 	text := strings.TrimSpace(msg.Text)
 	state, _ := h.loadFlowState(ctx, chatID)
 
+	// Registration form flow: intercept text input when awaiting a registration field.
+	if state != nil && state.RegistrationField != "" && text != "" && !strings.HasPrefix(text, "/") {
+		h.handleRegistrationInput(ctx, msg, text, *state)
+		return
+	}
+
 	if state != nil && state.AwaitingFeedback && text != "" && !strings.HasPrefix(text, "/") {
 		h.handleFeedbackResponse(ctx, msg, text, *state)
 		return
@@ -86,6 +92,10 @@ func (h *handler) Handle(ctx context.Context, update telego.Update) {
 	}
 }
 
+// handleStart is the /start entry point.
+// Returning user → one message: welcome content + reply keyboard.
+// New user with registration form → welcome content, then registration flow.
+// New user without form → auto-register, then welcome + reply keyboard.
 func (h *handler) handleStart(ctx context.Context, msg *telego.Message) {
 	chatID := msg.Chat.ID
 	telegramID := msg.From.ID
@@ -107,60 +117,227 @@ func (h *handler) handleStart(ctx context.Context, msg *telego.Message) {
 	}
 
 	if client != nil {
-		// Already registered — show synced welcome content if configured
-		if h.hasWelcomeContent() {
-			h.sendWelcomeContent(ctx, chatID, client, msg.From)
-			h.sendMainMenu(ctx, chatID, h.returningMenuText(client.FirstName))
-			return
-		}
-
-		welcome := h.info.Settings.WelcomeMessage
-		if welcome == "" {
-			welcome = fmt.Sprintf("С возвращением, %s! 👋", client.FirstName)
-		}
-		h.sendMainMenu(ctx, chatID, personalizeText(welcome, templateValues(client, msg.From)))
+		// Already registered — single message: welcome + reply keyboard
+		h.sendWelcomeWithMenu(ctx, chatID, client, msg.From)
 		return
 	}
 
-	// New user — send welcome content first, then handle registration
-	h.sendWelcomeContent(ctx, chatID, nil, msg.From)
+	// New user — check if registration form has fields
+	if len(h.info.Settings.RegistrationForm) > 0 {
+		// Send welcome content without keyboard (registration comes next)
+		h.sendWelcomeContent(ctx, chatID, nil, msg.From)
+		h.startRegistrationFlow(ctx, chatID, msg)
+		return
+	}
 
-	// If registration form requires phone, ask for it
-	needsPhone := false
-	for _, field := range h.info.Settings.RegistrationForm {
-		if field.Name == "phone" && field.Required {
-			needsPhone = true
+	// No registration form — auto-register and show welcome with menu
+	h.autoRegister(ctx, msg)
+}
+
+// sendWelcomeWithMenu sends a single welcome message with the main reply keyboard attached.
+// This is the primary message for returning users and post-registration.
+func (h *handler) sendWelcomeWithMenu(ctx context.Context, chatID int64, client *entity.BotClient, user *telego.User) {
+	settings := h.info.Settings
+	values := templateValues(client, user)
+	replyKB := buildMainMenu(settings)
+
+	// Composite welcome content — send with reply keyboard on last part
+	if h.tgSender != nil && h.hasWelcomeContent() {
+		content := personalizeMessageContent(*settings.WelcomeContent, values)
+		opts := &tgService.SendContentOpts{ReplyKeyboard: replyKB}
+		if updated, changed, err := h.tgSender.SendContentForOrgWithOpts(ctx, h.bot, chatID, content, h.info.OrgID, opts); err != nil {
+			h.logger.Error("send welcome with menu", "error", err, "chat_id", chatID)
+			// Fallback: send default text with keyboard
+			h.sendWithKeyboard(chatID, h.defaultWelcomeText(values), replyKB)
+		} else if changed {
+			cacheable := mergeMediaIDs(*settings.WelcomeContent, updated)
+			h.info.Settings.WelcomeContent = &cacheable
+			h.persistSettingsCache(ctx)
+		}
+		return
+	}
+
+	// No welcome content configured — send default welcome with keyboard
+	h.sendWithKeyboard(chatID, h.defaultWelcomeText(values), replyKB)
+}
+
+// sendWelcomeContent sends welcome content without a reply keyboard.
+// Used before registration flow (keyboard will come from the registration step).
+func (h *handler) sendWelcomeContent(ctx context.Context, chatID int64, client *entity.BotClient, user *telego.User) {
+	settings := h.info.Settings
+	values := templateValues(client, user)
+
+	if h.tgSender != nil && h.hasWelcomeContent() {
+		content := personalizeMessageContent(*settings.WelcomeContent, values)
+		if updated, changed, err := h.tgSender.SendContentForOrg(ctx, h.bot, chatID, content, h.info.OrgID); err != nil {
+			h.logger.Error("send welcome content", "error", err, "chat_id", chatID)
+		} else if changed {
+			cacheable := mergeMediaIDs(*settings.WelcomeContent, updated)
+			h.info.Settings.WelcomeContent = &cacheable
+			h.persistSettingsCache(ctx)
+		}
+		return
+	}
+
+	// No welcome content configured — send default
+	h.sendText(chatID, h.defaultWelcomeText(values))
+}
+
+// defaultWelcomeText returns a simple text welcome when no WelcomeContent is configured.
+func (h *handler) defaultWelcomeText(values map[string]string) string {
+	if h.isBaratieDemo() {
+		return "⋆｡°✩ ⚓︎ Добро пожаловать на борт Baratie ⚓︎ ✩°｡⋆"
+	}
+	text := fmt.Sprintf("Добро пожаловать в %s! 🎉", h.info.Name)
+	return personalizeText(text, values)
+}
+
+// startRegistrationFlow begins the multi-field registration form.
+// Sends the first field prompt and saves flow state.
+func (h *handler) startRegistrationFlow(ctx context.Context, chatID int64, msg *telego.Message) {
+	fields := h.info.Settings.RegistrationForm
+	if len(fields) == 0 {
+		h.autoRegister(ctx, msg)
+		return
+	}
+
+	// Save initial registration state
+	state := FlowState{
+		Flow:              "registration",
+		RegistrationField: fields[0].Name,
+		RegistrationData:  map[string]string{},
+	}
+
+	// Pre-fill first_name from Telegram profile if field exists and matches
+	if fields[0].Name == "first_name" && msg.From.FirstName != "" {
+		state.RegistrationData["first_name"] = msg.From.FirstName
+		// Skip to next field
+		if len(fields) > 1 {
+			state.RegistrationField = fields[1].Name
+		} else {
+			// Only first_name was required — auto-register
+			h.completeRegistration(ctx, chatID, msg, state.RegistrationData)
+			return
+		}
+	}
+
+	_ = h.saveFlowState(ctx, chatID, state)
+	h.sendRegistrationFieldPrompt(ctx, chatID, state.RegistrationField)
+}
+
+// handleRegistrationInput processes text input during the registration flow.
+func (h *handler) handleRegistrationInput(ctx context.Context, msg *telego.Message, text string, state FlowState) {
+	chatID := msg.Chat.ID
+	fieldName := state.RegistrationField
+	fields := h.info.Settings.RegistrationForm
+
+	// Validate input based on field type
+	field := h.findFormField(fieldName)
+	if field == nil {
+		h.logger.Error("registration field not found", "field", fieldName)
+		h.sendText(chatID, "Произошла ошибка. Отправьте /start чтобы начать заново.")
+		return
+	}
+
+	validated, err := validateRegistrationInput(text, *field)
+	if err != nil {
+		h.sendText(chatID, err.Error())
+		return
+	}
+
+	// Save the answer
+	if state.RegistrationData == nil {
+		state.RegistrationData = map[string]string{}
+	}
+	state.RegistrationData[fieldName] = validated
+
+	// Find the next field
+	nextField := ""
+	foundCurrent := false
+	for _, f := range fields {
+		if f.Name == fieldName {
+			foundCurrent = true
+			continue
+		}
+		if foundCurrent {
+			// Skip first_name if already pre-filled
+			if f.Name == "first_name" && state.RegistrationData["first_name"] != "" {
+				continue
+			}
+			nextField = f.Name
 			break
 		}
 	}
 
-	if needsPhone {
-		h.sendWithKeyboard(chatID, h.registrationPrompt(), buildContactRequest())
-	} else {
-		// Auto-register from Telegram profile
-		h.autoRegister(ctx, msg)
+	if nextField == "" {
+		// All fields collected — complete registration
+		h.completeRegistration(ctx, chatID, msg, state.RegistrationData)
+		return
 	}
+
+	// Move to next field
+	state.RegistrationField = nextField
+	_ = h.saveFlowState(ctx, chatID, state)
+	h.sendRegistrationFieldPrompt(ctx, chatID, nextField)
 }
 
+// handleContact processes the shared contact during registration.
 func (h *handler) handleContact(ctx context.Context, msg *telego.Message) {
 	chatID := msg.Chat.ID
 	telegramID := msg.From.ID
-	contact := msg.Contact
 
 	// Check not already registered
 	existing, _ := h.mgr.clientsRepo.GetByTelegramID(ctx, h.info.ID, telegramID)
 	if existing != nil {
-		h.sendMainMenu(ctx, chatID, h.alreadyRegisteredText())
+		h.sendWelcomeWithMenu(ctx, chatID, existing, msg.From)
 		return
 	}
 
+	// Load registration state
+	state, _ := h.loadFlowState(ctx, chatID)
+	if state != nil && state.Flow == "registration" {
+		if state.RegistrationData == nil {
+			state.RegistrationData = map[string]string{}
+		}
+		state.RegistrationData["phone"] = msg.Contact.PhoneNumber
+
+		// Find next field after phone
+		fields := h.info.Settings.RegistrationForm
+		nextField := ""
+		foundPhone := false
+		for _, f := range fields {
+			if f.Name == "phone" {
+				foundPhone = true
+				continue
+			}
+			if foundPhone {
+				if f.Name == "first_name" && state.RegistrationData["first_name"] != "" {
+					continue
+				}
+				nextField = f.Name
+				break
+			}
+		}
+
+		if nextField == "" {
+			h.completeRegistration(ctx, chatID, msg, state.RegistrationData)
+			return
+		}
+
+		state.RegistrationField = nextField
+		_ = h.saveFlowState(ctx, chatID, *state)
+		h.sendRegistrationFieldPrompt(ctx, chatID, nextField)
+		return
+	}
+
+	// Legacy path: direct contact without registration flow
 	client := &entity.BotClient{
 		BotID:      h.info.ID,
 		TelegramID: telegramID,
 		Username:   msg.From.Username,
 		FirstName:  msg.From.FirstName,
 		LastName:   msg.From.LastName,
-		Phone:      contact.PhoneNumber,
+		Phone:      msg.Contact.PhoneNumber,
 	}
 
 	if err := h.mgr.clientsRepo.Create(ctx, client); err != nil {
@@ -170,11 +347,102 @@ func (h *handler) handleContact(ctx context.Context, msg *telego.Message) {
 	}
 
 	h.logger.Info("client registered", "client_id", client.ID, "telegram_id", telegramID)
-
-	// Award welcome bonus if loyalty program exists
 	h.awardWelcomeBonus(ctx, client)
+	h.sendWelcomeWithMenu(ctx, chatID, client, msg.From)
+}
 
-	h.sendMainMenu(ctx, chatID, h.registeredWelcomeText(client.FirstName))
+// completeRegistration creates the client record from collected registration data.
+func (h *handler) completeRegistration(ctx context.Context, chatID int64, msg *telego.Message, data map[string]string) {
+	telegramID := msg.From.ID
+
+	firstName := data["first_name"]
+	if firstName == "" {
+		firstName = msg.From.FirstName
+	}
+
+	client := &entity.BotClient{
+		BotID:      h.info.ID,
+		TelegramID: telegramID,
+		Username:   msg.From.Username,
+		FirstName:  firstName,
+		LastName:   msg.From.LastName,
+		Phone:      data["phone"],
+	}
+
+	if bday, ok := data["birthday"]; ok && bday != "" {
+		if t, err := parseBirthday(bday); err == nil {
+			client.BirthDate = &t
+		}
+	}
+	if city, ok := data["city"]; ok && city != "" {
+		client.City = &city
+	}
+	if gender, ok := data["gender"]; ok && gender != "" {
+		client.Gender = &gender
+	}
+
+	// Store extra fields (email, etc.) in Data JSONB
+	extra := map[string]string{}
+	for k, v := range data {
+		switch k {
+		case "first_name", "phone", "birthday", "city", "gender":
+			continue // already mapped to columns
+		default:
+			extra[k] = v
+		}
+	}
+	if len(extra) > 0 {
+		if raw, err := json.Marshal(extra); err == nil {
+			client.Data = raw
+		}
+	}
+
+	if err := h.mgr.clientsRepo.Create(ctx, client); err != nil {
+		h.logger.Error("complete registration", "error", err, "telegram_id", telegramID)
+		h.sendText(chatID, "Ошибка регистрации. Попробуйте позже.")
+		return
+	}
+
+	h.logger.Info("client registered", "client_id", client.ID, "telegram_id", telegramID, "fields", len(data))
+	_ = h.clearFlowState(ctx, chatID)
+	h.awardWelcomeBonus(ctx, client)
+	h.sendWelcomeWithMenu(ctx, chatID, client, msg.From)
+}
+
+// sendRegistrationFieldPrompt sends the prompt for a specific registration field.
+func (h *handler) sendRegistrationFieldPrompt(_ context.Context, chatID int64, fieldName string) {
+	field := h.findFormField(fieldName)
+	if field == nil {
+		return
+	}
+
+	prompt := field.Label
+	if prompt == "" {
+		prompt = fieldName
+	}
+
+	switch field.Type {
+	case "phone":
+		h.sendWithKeyboard(chatID, prompt, buildContactRequest())
+	case "choice":
+		if len(field.Options) > 0 {
+			h.sendWithKeyboard(chatID, prompt, buildChoiceKeyboard(field.Options))
+		} else {
+			h.sendText(chatID, prompt)
+		}
+	default:
+		// text, email, date — plain text input, show back button
+		h.sendWithKeyboard(chatID, prompt, buildBackButton())
+	}
+}
+
+func (h *handler) findFormField(name string) *entity.FormField {
+	for _, f := range h.info.Settings.RegistrationForm {
+		if f.Name == name {
+			return &f
+		}
+	}
+	return nil
 }
 
 func (h *handler) autoRegister(ctx context.Context, msg *telego.Message) {
@@ -199,7 +467,7 @@ func (h *handler) autoRegister(ctx context.Context, msg *telego.Message) {
 
 	h.awardWelcomeBonus(ctx, client)
 
-	h.sendMainMenu(ctx, chatID, h.registeredWelcomeText(client.FirstName))
+	h.sendWelcomeWithMenu(ctx, chatID, client, msg.From)
 }
 
 func (h *handler) handleBalance(ctx context.Context, msg *telego.Message) {
@@ -402,36 +670,6 @@ func (h *handler) sendMainMenu(_ context.Context, chatID int64, text string) {
 	h.sendWithKeyboard(chatID, text, buildMainMenu(h.info.Settings))
 }
 
-// sendWelcomeContent sends the composite welcome message if available.
-func (h *handler) sendWelcomeContent(ctx context.Context, chatID int64, client *entity.BotClient, user *telego.User) {
-	settings := h.info.Settings
-	values := templateValues(client, user)
-
-	// Priority: new format → legacy → default
-	if h.tgSender != nil && h.hasWelcomeContent() {
-		content := personalizeMessageContent(*settings.WelcomeContent, values)
-		if updated, changed, err := h.tgSender.SendContentForOrg(ctx, h.bot, chatID, content, h.info.OrgID); err != nil {
-			h.logger.Error("send welcome content", "error", err, "chat_id", chatID)
-		} else if changed {
-			cacheable := mergeMediaIDs(*settings.WelcomeContent, updated)
-			h.info.Settings.WelcomeContent = &cacheable
-			h.persistSettingsCache(ctx)
-		}
-		return
-	}
-
-	// Legacy text welcome
-	welcome := settings.WelcomeMessage
-	if welcome == "" {
-		if h.isBaratieDemo() {
-			welcome = "⋆｡°✩ ⚓︎ Добро пожаловать на борт Baratie ⚓︎ ✩°｡⋆"
-		} else {
-			welcome = fmt.Sprintf("Добро пожаловать в %s! 🎉", h.info.Name)
-		}
-	}
-	h.sendText(chatID, personalizeText(welcome, values))
-}
-
 func personalizeMessageContent(content entity.MessageContent, values map[string]string) entity.MessageContent {
 	content.Parts = append([]entity.MessagePart(nil), content.Parts...)
 	for i := range content.Parts {
@@ -540,32 +778,11 @@ func (h *handler) isBaratieDemo() bool {
 	return h.info.Username == "baratie_demo_bot"
 }
 
-func (h *handler) registrationPrompt() string {
-	if h.isBaratieDemo() {
-		return "╭──────༺🪸༻──────╮\nПоделитесь номером телефона,\nи мы впишем вас в список гостей Baratie.\n╰──────༺🦈༻──────╯"
-	}
-	return "Для регистрации поделитесь номером телефона:"
-}
-
 func (h *handler) alreadyRegisteredText() string {
 	if h.isBaratieDemo() {
 		return "⚓ Вы уже в списке гостей Baratie. Добро пожаловать на борт!"
 	}
 	return "Вы уже зарегистрированы! 👍"
-}
-
-func (h *handler) registeredWelcomeText(firstName string) string {
-	if h.isBaratieDemo() {
-		return fmt.Sprintf("⚓ %s, вы успешно поднялись на борт Baratie!\n\nОткройте меню, проверьте дублоны и выберите свой курс.", firstName)
-	}
-	return fmt.Sprintf("Добро пожаловать, %s! Вы успешно зарегистрированы. 🎉", firstName)
-}
-
-func (h *handler) returningMenuText(firstName string) string {
-	if h.isBaratieDemo() {
-		return fmt.Sprintf("⚓ %s, экипаж Baratie к вашим услугам. Выберите курс в меню ниже.", firstName)
-	}
-	return "Главное меню"
 }
 
 func (h *handler) balanceNeedsRegistrationText() string {

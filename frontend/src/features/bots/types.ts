@@ -19,7 +19,6 @@ export interface BotSettings {
   modules: string[]
   buttons: BotButton[]
   registration_form: FormField[]
-  welcome_message: string
   welcome_content?: import('@/features/telegram-preview').MessageContent
   module_configs?: ModuleConfigs
   pos_selector_enabled?: boolean
@@ -136,7 +135,7 @@ export interface CreateManagedBotRequest {
   name: string
   username: string
   description: string
-  welcome_message?: string
+  welcome_content?: import('@/features/telegram-preview').MessageContent
   registration_form?: FormField[]
   modules?: string[]
 }

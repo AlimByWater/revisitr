@@ -1,12 +1,12 @@
-import { useState } from 'react'
-import { Smile } from 'lucide-react'
+import { useState } from "react";
+import { Smile } from "lucide-react";
 
 interface StickerMessageProps {
-  mediaUrl?: string
+  mediaUrl?: string;
 }
 
 export function StickerMessage({ mediaUrl }: StickerMessageProps) {
-  const [hasError, setHasError] = useState(false)
+  const [hasError, setHasError] = useState(false);
 
   return (
     <div className="flex justify-start">
@@ -27,5 +27,5 @@ export function StickerMessage({ mediaUrl }: StickerMessageProps) {
         )}
       </div>
     </div>
-  )
+  );
 }

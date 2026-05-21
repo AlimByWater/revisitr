@@ -275,39 +275,24 @@ func (h *handler) sendWelcomeAndMenuAfterStart(ctx context.Context, chatID int64
 	}
 
 	if client != nil {
-		if h.hasWelcomeContent() {
-			h.sendWelcomeContent(ctx, chatID, client, user)
-			h.sendMainMenu(ctx, chatID, h.returningMenuText(client.FirstName))
-			return
-		}
-
-		welcome := h.info.Settings.WelcomeMessage
-		if welcome == "" {
-			welcome = fmt.Sprintf("С возвращением, %s! 👋", client.FirstName)
-		}
-		h.sendMainMenu(ctx, chatID, personalizeText(welcome, templateValues(client, user)))
+		h.sendWelcomeWithMenu(ctx, chatID, client, user)
 		return
 	}
 
-	h.sendWelcomeContent(ctx, chatID, nil, user)
-
-	needsPhone := false
-	for _, field := range h.info.Settings.RegistrationForm {
-		if field.Name == "phone" && field.Required {
-			needsPhone = true
-			break
+	// New user
+	if len(h.info.Settings.RegistrationForm) > 0 {
+		h.sendWelcomeContent(ctx, chatID, nil, user)
+		msg := &telego.Message{
+			Chat: telego.Chat{ID: chatID},
+			From: user,
 		}
-	}
-
-	if needsPhone {
-		h.sendWithKeyboard(chatID, h.registrationPrompt(), buildContactRequest())
+		h.startRegistrationFlow(ctx, chatID, msg)
 		return
 	}
 
 	msg := &telego.Message{
-		Chat:      telego.Chat{ID: chatID},
-		From:      user,
-		MessageID: 0,
+		Chat: telego.Chat{ID: chatID},
+		From: user,
 	}
 	h.autoRegister(ctx, msg)
 }

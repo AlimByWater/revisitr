@@ -214,7 +214,6 @@ export function normalizeBotSettings(
       is_system: button.is_system ?? Boolean(button.managed_by_module),
     })), settings?.modules ?? []),
     registration_form: settings?.registration_form ?? [],
-    welcome_message: settings?.welcome_message ?? '',
     welcome_content: settings?.welcome_content,
     module_configs: normalizeModuleConfigs(settings?.module_configs),
     pos_selector_enabled: settings?.pos_selector_enabled ?? false,
@@ -298,9 +297,8 @@ export function deriveBotRequirements(args: {
     })
   }
 
-  const welcomeHasText = Boolean(settings.welcome_message?.trim())
-  const welcomeHasContent = Boolean(settings.welcome_content?.parts?.length)
-  if (!welcomeHasText && !welcomeHasContent) {
+  const welcomeHasContent = Boolean(settings.welcome_content?.parts?.some(p => p.text?.trim() || p.media_url || p.media_id))
+  if (!welcomeHasContent) {
     requirements.push({
       id: 'welcome',
       label: 'Заполните приветственное сообщение',

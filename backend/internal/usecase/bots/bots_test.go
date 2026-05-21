@@ -76,7 +76,7 @@ func testBot(id, orgID int) *entity.Bot {
 			Modules:          []string{"loyalty"},
 			Buttons:          []entity.BotButton{{Label: "Menu", Type: "url", Value: "https://example.com"}},
 			RegistrationForm: []entity.FormField{},
-			WelcomeMessage:   "Hello!",
+			WelcomeContent:   &entity.MessageContent{Parts: []entity.MessagePart{{Type: entity.PartText, Text: "Hello!"}}},
 		},
 	}
 }
@@ -449,8 +449,8 @@ func TestGetSettings_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if settings.WelcomeMessage != "Hello!" {
-		t.Errorf("got WelcomeMessage %q, want %q", settings.WelcomeMessage, "Hello!")
+	if settings.WelcomeContent == nil || len(settings.WelcomeContent.Parts) == 0 || settings.WelcomeContent.Parts[0].Text != "Hello!" {
+		t.Errorf("WelcomeContent not preserved correctly")
 	}
 }
 
@@ -509,13 +509,13 @@ func TestUpdateSettings_Modules(t *testing.T) {
 	if len(savedSettings.Modules) != 2 {
 		t.Errorf("got %d modules, want 2", len(savedSettings.Modules))
 	}
-	// WelcomeMessage should be preserved from original
-	if savedSettings.WelcomeMessage != "Hello!" {
-		t.Errorf("WelcomeMessage changed to %q, should be preserved", savedSettings.WelcomeMessage)
+	// WelcomeContent should be preserved from original
+	if savedSettings.WelcomeContent == nil || savedSettings.WelcomeContent.Parts[0].Text != "Hello!" {
+		t.Error("WelcomeContent changed, should be preserved")
 	}
 }
 
-func TestUpdateSettings_WelcomeMessage(t *testing.T) {
+func TestUpdateSettings_WelcomeContent(t *testing.T) {
 	bot := testBot(1, 10)
 	var savedSettings entity.BotSettings
 	repo := &mockBotsRepo{
@@ -529,14 +529,15 @@ func TestUpdateSettings_WelcomeMessage(t *testing.T) {
 	}
 	uc := newUC(repo, &mockBotClientsRepo{})
 
+	newContent := &entity.MessageContent{Parts: []entity.MessagePart{{Type: entity.PartText, Text: "Welcome!"}}}
 	err := uc.UpdateSettings(context.Background(), 1, 10, &entity.UpdateBotSettingsRequest{
-		WelcomeMessage: ptr("Welcome!"),
+		WelcomeContent: newContent,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if savedSettings.WelcomeMessage != "Welcome!" {
-		t.Errorf("got WelcomeMessage %q, want %q", savedSettings.WelcomeMessage, "Welcome!")
+	if savedSettings.WelcomeContent == nil || savedSettings.WelcomeContent.Parts[0].Text != "Welcome!" {
+		t.Error("WelcomeContent not updated correctly")
 	}
 	// Modules should be preserved
 	if len(savedSettings.Modules) != 1 {
@@ -552,8 +553,9 @@ func TestUpdateSettings_NotFound(t *testing.T) {
 	}
 	uc := newUC(repo, &mockBotClientsRepo{})
 
+	dummyContent := &entity.MessageContent{Parts: []entity.MessagePart{{Type: entity.PartText, Text: "x"}}}
 	err := uc.UpdateSettings(context.Background(), 999, 10, &entity.UpdateBotSettingsRequest{
-		WelcomeMessage: ptr("x"),
+		WelcomeContent: dummyContent,
 	})
 	if !errors.Is(err, ErrBotNotFound) {
 		t.Errorf("got %v, want ErrBotNotFound", err)
@@ -569,8 +571,9 @@ func TestUpdateSettings_WrongOrg(t *testing.T) {
 	}
 	uc := newUC(repo, &mockBotClientsRepo{})
 
+	dummyContent := &entity.MessageContent{Parts: []entity.MessagePart{{Type: entity.PartText, Text: "x"}}}
 	err := uc.UpdateSettings(context.Background(), 1, 999, &entity.UpdateBotSettingsRequest{
-		WelcomeMessage: ptr("x"),
+		WelcomeContent: dummyContent,
 	})
 	if !errors.Is(err, ErrNotBotOwner) {
 		t.Errorf("got %v, want ErrNotBotOwner", err)
@@ -589,8 +592,9 @@ func TestUpdateSettings_RepoError(t *testing.T) {
 	}
 	uc := newUC(repo, &mockBotClientsRepo{})
 
+	dummyContent := &entity.MessageContent{Parts: []entity.MessagePart{{Type: entity.PartText, Text: "x"}}}
 	err := uc.UpdateSettings(context.Background(), 1, 10, &entity.UpdateBotSettingsRequest{
-		WelcomeMessage: ptr("x"),
+		WelcomeContent: dummyContent,
 	})
 	if err == nil {
 		t.Fatal("expected error, got nil")

@@ -55,7 +55,8 @@ type Module struct {
 	MasterBot MasterBot
 	MinIO    MinIO
 	BaseURL        string // Public base URL for media files (e.g., "https://elysium.fm")
-	TelegramAPIURL string // Custom Telegram Bot API server URL (empty = default api.telegram.org)
+	TelegramAPIURL   string // Custom Telegram Bot API server URL (empty = default api.telegram.org)
+	TelegramProxyURL string // HTTP proxy for Telegram API connections (empty = direct)
 }
 
 func (m *Module) GetBaseURL() string {
@@ -100,6 +101,7 @@ func NewFromEnv() *Module {
 			Bucket:    env.GetString("MINIO_BUCKET", "revisitr"),
 		},
 		BaseURL:        env.GetString("BASE_URL", "https://elysium.fm"),
-		TelegramAPIURL: env.GetString("TELEGRAM_API_URL", ""),
+		TelegramAPIURL:   env.GetString("TELEGRAM_API_URL", ""),
+		TelegramProxyURL: env.GetString("TELEGRAM_PROXY_URL", ""),
 	}
 }

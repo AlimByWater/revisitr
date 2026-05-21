@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"revisitr/internal/entity"
 )
@@ -209,17 +208,11 @@ func (uc *Usecase) UpdateSettings(ctx context.Context, id, orgID int, req *entit
 	if req.RegistrationForm != nil {
 		settings.RegistrationForm = *req.RegistrationForm
 	}
-	if req.WelcomeMessage != nil {
-		settings.WelcomeMessage = *req.WelcomeMessage
-	}
 	if req.WelcomeContent != nil {
 		if err := req.WelcomeContent.Validate(); err != nil {
 			return fmt.Errorf("invalid welcome content: %w", err)
 		}
 		settings.WelcomeContent = req.WelcomeContent
-		if derived := deriveWelcomeMessage(req.WelcomeContent, settings.WelcomeMessage); derived != "" {
-			settings.WelcomeMessage = derived
-		}
 	}
 	if req.ModuleConfigs != nil {
 		if req.ModuleConfigs.Booking.IntroContent != nil {
@@ -244,7 +237,7 @@ func (uc *Usecase) UpdateSettings(ctx context.Context, id, orgID int, req *entit
 	if uc.eventBus != nil {
 		field := ""
 		switch {
-		case req.WelcomeMessage != nil || req.WelcomeContent != nil:
+		case req.WelcomeContent != nil:
 			field = "welcome"
 		case req.Buttons != nil:
 			field = "buttons"
@@ -259,16 +252,3 @@ func (uc *Usecase) UpdateSettings(ctx context.Context, id, orgID int, req *entit
 	return nil
 }
 
-func deriveWelcomeMessage(content *entity.MessageContent, fallback string) string {
-	if content == nil || len(content.Parts) == 0 {
-		return fallback
-	}
-
-	for _, part := range content.Parts {
-		if strings.TrimSpace(part.Text) != "" {
-			return part.Text
-		}
-	}
-
-	return fallback
-}

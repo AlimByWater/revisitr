@@ -35,7 +35,6 @@ func (a *ManagedBotAdapter) CreatePendingBot(ctx context.Context, orgID int, req
 		Settings: entity.BotSettings{
 			Modules:          req.Modules,
 			RegistrationForm: req.RegistrationForm,
-			WelcomeMessage:   req.WelcomeMessage,
 			WelcomeContent:   req.WelcomeContent,
 			Buttons:          []entity.BotButton{},
 		},

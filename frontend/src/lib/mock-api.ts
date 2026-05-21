@@ -298,13 +298,13 @@ const store = {
     {
       id: 1, org_id: 1, name: 'Кофейня на Маросейке', username: 'marosejka_bot',
       token_masked: '7281***:AAH***', status: 'active' as const,
-      settings: { modules: ['loyalty', 'campaigns'], buttons: [{ label: 'Меню', type: 'text', value: 'Показываем меню в сообщении' }], registration_form: [{ name: 'phone', label: 'Телефон', type: 'phone', required: true }], welcome_message: 'Привет! Добро пожаловать в нашу кофейню.' },
+      settings: { modules: ['loyalty', 'campaigns'], buttons: [{ label: 'Меню', type: 'text', value: 'Показываем меню в сообщении' }], registration_form: [{ name: 'phone', label: 'Телефон', type: 'phone', required: true }], welcome_content: { parts: [{ type: 'text', text: 'Привет! Добро пожаловать в нашу кофейню.' }] } },
       created_at: ago(90), updated_at: ago(2), client_count: 210, program_id: 1,
     },
     {
       id: 2, org_id: 1, name: 'Бар «Хмель»', username: 'hmel_bar_bot',
       token_masked: '6543***:BBX***', status: 'active' as const,
-      settings: { modules: ['loyalty'], buttons: [], registration_form: [], welcome_message: 'Добро пожаловать!' },
+      settings: { modules: ['loyalty'], buttons: [], registration_form: [], welcome_content: { parts: [{ type: 'text', text: 'Добро пожаловать!' }] } },
       created_at: ago(45), updated_at: ago(5), client_count: 150, program_id: 2,
     },
   ] as any[],
@@ -540,7 +540,7 @@ const routes: [RegExp, Handler][] = [
   }],
   [/^\/bots$/, ({ method, data }) => {
     if (method === 'post') {
-      const bot = { id: nextId(), org_id: 1, status: 'active', settings: { modules: [], buttons: [], registration_form: [], welcome_message: '' }, created_at: now, updated_at: now, client_count: 0, ...data }
+      const bot = { id: nextId(), org_id: 1, status: 'active', settings: { modules: [], buttons: [], registration_form: [] }, created_at: now, updated_at: now, client_count: 0, ...data }
       store.bots.push(bot)
       return bot
     }
@@ -554,7 +554,7 @@ const routes: [RegExp, Handler][] = [
   }],
   [/^\/bots\/create-managed$/, ({ method, data }) => {
     if (method === 'post') {
-      const bot = { id: nextId(), org_id: 1, name: (data as Record<string, string>).name, username: (data as Record<string, string>).username, status: 'pending', is_managed: true, settings: { modules: (data as Record<string, string[]>).modules || [], buttons: [], registration_form: (data as Record<string, unknown[]>).registration_form || [], welcome_message: (data as Record<string, string>).welcome_message || '' }, created_at: now, updated_at: now, client_count: 0 }
+      const bot = { id: nextId(), org_id: 1, name: (data as Record<string, string>).name, username: (data as Record<string, string>).username, status: 'pending', is_managed: true, settings: { modules: (data as Record<string, string[]>).modules || [], buttons: [], registration_form: (data as Record<string, unknown[]>).registration_form || [], welcome_content: (data as Record<string, unknown>).welcome_content }, created_at: now, updated_at: now, client_count: 0 }
       store.bots.push(bot)
       return { bot_id: bot.id, deep_link: `https://t.me/newbot/revisitrbot/${(data as Record<string, string>).username}?name=${(data as Record<string, string>).name}`, status: 'pending' }
     }

@@ -11,8 +11,7 @@ type BotSettings struct {
 	Modules            []string        `json:"modules"`
 	Buttons            []BotButton     `json:"buttons"`
 	RegistrationForm   []FormField     `json:"registration_form"`
-	WelcomeMessage     string          `json:"welcome_message"`           // Legacy
-	WelcomeContent     *MessageContent `json:"welcome_content,omitempty"` // New: composite welcome
+	WelcomeContent     *MessageContent `json:"welcome_content,omitempty"`
 	ModuleConfigs      ModuleConfigs   `json:"module_configs,omitempty"`
 	PosSelectorEnabled bool            `json:"pos_selector_enabled,omitempty"`
 	ContactsPOSIDs     []int           `json:"contacts_pos_ids,omitempty"`
@@ -135,7 +134,6 @@ type UpdateBotSettingsRequest struct {
 	Modules            *[]string       `json:"modules,omitempty"`
 	Buttons            *[]BotButton    `json:"buttons,omitempty"`
 	RegistrationForm   *[]FormField    `json:"registration_form,omitempty"`
-	WelcomeMessage     *string         `json:"welcome_message,omitempty"`
 	WelcomeContent     *MessageContent `json:"welcome_content,omitempty"`
 	ModuleConfigs      *ModuleConfigs  `json:"module_configs,omitempty"`
 	PosSelectorEnabled *bool           `json:"pos_selector_enabled,omitempty"`

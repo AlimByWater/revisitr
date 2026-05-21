@@ -87,7 +87,6 @@ const botFixture = {
       { name: 'phone', label: 'Телефон', type: 'phone', required: true },
       { name: 'favorite_drink', label: 'Любимый напиток', type: 'text', required: false },
     ],
-    welcome_message: '',
     module_configs: {
       feedback: {
         prompt_message: 'Напишите ваш вопрос:',
