@@ -381,29 +381,36 @@ func (h *handler) renderMenuRoot(ctx context.Context, chatID int64) {
 }
 
 func (h *handler) handleMenuTabCallback(ctx context.Context, chatID int64, value string) {
+	h.logger.Info("handleMenuTabCallback", "chat_id", chatID, "value", value)
 	categoryID, err := strconv.Atoi(value)
 	if err != nil {
+		h.logger.Warn("handleMenuTabCallback: invalid category id", "chat_id", chatID, "value", value, "error", err)
 		return
 	}
 	h.renderMenuTabs(ctx, chatID, categoryID)
 }
 
 func (h *handler) handleMenuCategoryCallback(ctx context.Context, chatID int64, value string) {
+	h.logger.Info("handleMenuCategoryCallback", "chat_id", chatID, "value", value)
 	parts := strings.Split(value, ":")
 	if len(parts) != 2 {
+		h.logger.Warn("handleMenuCategoryCallback: invalid value format", "chat_id", chatID, "value", value, "parts_count", len(parts))
 		return
 	}
 	categoryID, err := strconv.Atoi(parts[0])
 	if err != nil {
+		h.logger.Warn("handleMenuCategoryCallback: invalid category id", "chat_id", chatID, "parts", parts, "error", err)
 		return
 	}
 	page, _ := strconv.Atoi(parts[1])
 
 	menu, _, ok := h.resolveMenuForChat(ctx, chatID)
 	if !ok || menu == nil {
+		h.logger.Warn("handleMenuCategoryCallback: no menu resolved", "chat_id", chatID, "category_id", categoryID)
 		h.sendText(chatID, h.menuUnavailableMessage())
 		return
 	}
+	h.logger.Info("handleMenuCategoryCallback: menu resolved", "chat_id", chatID, "menu_id", menu.ID, "category_id", categoryID)
 
 	custom := h.loadMenuPresetCustomizations(ctx)
 	categories := h.presentMenuCategories(ctx, menu, custom)
