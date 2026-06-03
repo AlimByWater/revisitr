@@ -46,10 +46,11 @@ type POSOrder struct {
 }
 
 type POSOrderItem struct {
-	Name     string  `json:"name"`
-	Quantity int     `json:"quantity"`
-	Price    float64 `json:"price"`
-	Category string  `json:"category,omitempty"`
+	ExternalID string  `json:"external_id,omitempty"`
+	Name       string  `json:"name"`
+	Quantity   int     `json:"quantity"`
+	Price      float64 `json:"price"`
+	Category   string  `json:"category,omitempty"`
 }
 
 type POSMenu struct {
