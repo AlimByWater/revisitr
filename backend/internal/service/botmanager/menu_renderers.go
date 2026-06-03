@@ -16,14 +16,19 @@ const menuTabsPerRow = 4
 const menuItemButtonsPerRow = 1
 
 func (h *handler) renderMenuTabs(ctx context.Context, chatID int64, selectedCategoryID int) {
+	h.logger.Info("renderMenuTabs called", "chat_id", chatID, "selected_category_id", selectedCategoryID)
+
 	menu, _, ok := h.resolveMenuForChat(ctx, chatID)
 	if !ok || menu == nil {
+		h.logger.Warn("renderMenuTabs: no menu resolved for chat", "chat_id", chatID)
 		h.sendText(chatID, h.menuUnavailableMessage())
 		return
 	}
+	h.logger.Info("renderMenuTabs: menu resolved", "chat_id", chatID, "menu_id", menu.ID, "menu_name", menu.Name)
 
 	custom := h.loadMenuPresetCustomizations(ctx)
 	categories := h.presentMenuCategories(ctx, menu, custom)
+	h.logger.Info("renderMenuTabs: categories presented", "chat_id", chatID, "category_count", len(categories))
 	if len(categories) == 0 {
 		h.sendText(chatID, h.menuUnavailableMessage())
 		return
@@ -36,6 +41,7 @@ func (h *handler) renderMenuTabs(ctx context.Context, chatID int64, selectedCate
 			break
 		}
 	}
+	h.logger.Info("renderMenuTabs: selected category", "chat_id", chatID, "category_id", selected.Category.ID, "category_name", selected.Category.Name, "item_count", len(selected.Category.Items))
 
 	part := h.menuBasePart(menu)
 	part.Text = truncateMenuText(menuSections(
@@ -380,18 +386,24 @@ func ensureMenuTextPart(part entity.MessagePart) entity.MessagePart {
 
 func (h *handler) handleMenuCardCallback(ctx context.Context, query *telego.CallbackQuery, value string) {
 	if query == nil || query.Message == nil {
+		h.logger.Warn("handleMenuCardCallback: nil query or message")
 		return
 	}
+	h.logger.Info("handleMenuCardCallback", "chat_id", query.Message.GetChat().ID, "value", value)
 	itemID, categoryID, ok := parseMenuCardValue(value)
 	if !ok {
+		h.logger.Warn("handleMenuCardCallback: failed to parse value", "value", value)
 		return
 	}
+	h.logger.Info("handleMenuCardCallback: parsed", "item_id", itemID, "category_id", categoryID)
 
 	chatID := query.Message.GetChat().ID
 	content, ok := h.menuItemCardContent(ctx, chatID, itemID, categoryID)
 	if !ok {
+		h.logger.Warn("handleMenuCardCallback: menuItemCardContent returned false", "chat_id", chatID, "item_id", itemID, "category_id", categoryID)
 		return
 	}
+	h.logger.Info("handleMenuCardCallback: content ready, message_id", "chat_id", chatID, "msg_id", query.Message.GetMessageID())
 
 	state := h.currentFlowState(ctx, chatID)
 	state.Flow = "menu"
@@ -436,17 +448,25 @@ func parseMenuCardValue(value string) (itemID int, categoryID int, ok bool) {
 }
 
 func (h *handler) menuItemCardContent(ctx context.Context, chatID int64, itemID int, categoryID int) (entity.MessageContent, bool) {
+	h.logger.Info("menuItemCardContent", "chat_id", chatID, "item_id", itemID, "category_id", categoryID)
+
 	menu, _, ok := h.resolveMenuForChat(ctx, chatID)
 	if !ok || menu == nil {
+		h.logger.Warn("menuItemCardContent: no menu resolved", "chat_id", chatID)
 		return entity.MessageContent{}, false
 	}
+	h.logger.Info("menuItemCardContent: menu resolved", "chat_id", chatID, "menu_id", menu.ID)
 
 	custom := h.loadMenuPresetCustomizations(ctx)
 	categories := h.presentMenuCategories(ctx, menu, custom)
+	h.logger.Info("menuItemCardContent: categories presented", "chat_id", chatID, "category_count", len(categories))
+
 	category, index, items, ok := findCategoryItem(categories, categoryID, itemID)
 	if !ok {
+		h.logger.Warn("menuItemCardContent: findCategoryItem failed", "chat_id", chatID, "category_id", categoryID, "item_id", itemID)
 		return entity.MessageContent{}, false
 	}
+	h.logger.Info("menuItemCardContent: item found", "chat_id", chatID, "category_name", category.Category.Name, "item_index", index, "total_items", len(items))
 
 	item := items[index]
 	text := menuSections(
