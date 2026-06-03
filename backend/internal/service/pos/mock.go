@@ -216,17 +216,18 @@ func (p *MockProvider) seedData() {
 			mi := cat.Items[itemJ]
 			qty := 1 + r.Intn(3)
 			items[j] = POSOrderItem{
-				Name:     mi.Name,
-				Quantity: qty,
-				Price:    mi.Price,
-				Category: cat.Name,
+				ExternalID: mi.ExternalID,
+				Name:       mi.Name,
+				Quantity:   qty,
+				Price:      mi.Price,
+				Category:   cat.Name,
 			}
 			total += mi.Price * float64(qty)
 		}
 
 		discount := 0.0
 		if r.Intn(5) == 0 {
-			discount = float64(r.Intn(int(total/5))) // up to 20%
+			discount = float64(r.Intn(int(total / 5))) // up to 20%
 		}
 
 		o := POSOrder{

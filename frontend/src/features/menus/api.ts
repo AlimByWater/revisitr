@@ -55,6 +55,10 @@ export const menusApi = {
     return response.data
   },
 
+  deleteItem: async (itemId: number): Promise<void> => {
+    await api.delete(`/menus/items/${itemId}`)
+  },
+
   getClientOrderStats: async (clientId: number): Promise<ClientOrderStats> => {
     const response = await api.get<ClientOrderStats>(`/clients/${clientId}/order-stats`)
     return response.data

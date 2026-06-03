@@ -242,9 +242,11 @@ func toEntityItems(items []POSOrderItem) entity.OrderItems {
 	result := make(entity.OrderItems, len(items))
 	for i, it := range items {
 		result[i] = entity.OrderItem{
-			Name:     it.Name,
-			Quantity: it.Quantity,
-			Price:    it.Price,
+			ExternalID: it.ExternalID,
+			Name:       it.Name,
+			Quantity:   it.Quantity,
+			Price:      it.Price,
+			Category:   it.Category,
 		}
 	}
 	return result

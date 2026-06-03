@@ -25,6 +25,7 @@ type menusUsecase interface {
 	UpdateCategory(ctx context.Context, orgID, categoryID int, req entity.UpdateMenuCategoryRequest) (*entity.MenuCategory, error)
 	AddItem(ctx context.Context, orgID, menuID, categoryID int, req entity.CreateMenuItemRequest) (*entity.MenuItem, error)
 	UpdateItem(ctx context.Context, orgID, itemID int, req entity.UpdateMenuItemRequest) (*entity.MenuItem, error)
+	DeleteItem(ctx context.Context, orgID, itemID int) error
 	GetClientOrderStats(ctx context.Context, clientID int) (*entity.ClientOrderStats, error)
 	SetBotPOSLocations(ctx context.Context, botID int, posIDs []int) error
 	GetBotPOSLocations(ctx context.Context, botID int) ([]int, error)
@@ -59,6 +60,7 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handleUpdateCategory,
 		g.handleAddItem,
 		g.handleUpdateItem,
+		g.handleDeleteItem,
 	}
 }
 
@@ -294,6 +296,24 @@ func (g *Group) handleUpdateItem() (string, string, gin.HandlerFunc) {
 		}
 
 		c.JSON(http.StatusOK, item)
+	}
+}
+
+func (g *Group) handleDeleteItem() (string, string, gin.HandlerFunc) {
+	return http.MethodDelete, "/items/:id", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item id"})
+			return
+		}
+
+		if err := g.uc.DeleteItem(c.Request.Context(), orgID.(int), id); err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "item deleted"})
 	}
 }
 

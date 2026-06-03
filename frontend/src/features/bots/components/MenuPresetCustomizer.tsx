@@ -663,8 +663,8 @@ function SortableCategoryRow({
                     </button>
                   </div>
                 ) : (
-                  <div className="text-xs text-neutral-400">
-                    Используется название из меню. Если оставить пустым — в табе останется только иконка.
+                  <div className="text-xs text-neutral-500">
+                    Этот текст показывается при клике на категорию в боте. Оставьте пустым — будет использоваться название из меню.
                   </div>
                 )}
               </div>

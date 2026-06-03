@@ -318,6 +318,34 @@ func (uc *Usecase) GetActiveMenuForPOS(ctx context.Context, orgID, posID int) (*
 	return uc.repo.GetActiveMenuForPOS(ctx, orgID, posID)
 }
 
+func (uc *Usecase) DeleteItem(ctx context.Context, orgID, itemID int) error {
+	item, err := uc.repo.GetItem(ctx, itemID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	category, err := uc.repo.GetCategory(ctx, item.CategoryID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	menu, err := uc.repo.GetByID(ctx, category.MenuID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	if menu.OrgID != orgID {
+		return ErrNotOwner
+	}
+	return uc.repo.DeleteItem(ctx, itemID)
+}
+
 func emptyStringPtr(value string) *string {
 	if value == "" {
 		return nil

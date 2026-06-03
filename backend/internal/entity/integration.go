@@ -12,7 +12,8 @@ type IntegrationConfig struct {
 	APIKey string `json:"api_key,omitempty"`
 
 	// iiko-specific
-	OrgID string `json:"org_id,omitempty"`
+	OrgID          string `json:"org_id,omitempty"`
+	ExternalMenuID string `json:"external_menu_id,omitempty"`
 
 	// r-keeper-specific
 	Username string `json:"username,omitempty"`
@@ -67,9 +68,11 @@ type UpdateIntegrationRequest struct {
 
 // OrderItem — a single line item in an external order.
 type OrderItem struct {
-	Name     string  `json:"name"`
-	Quantity int     `json:"quantity"`
-	Price    float64 `json:"price"`
+	ExternalID string  `json:"external_id,omitempty"`
+	Name       string  `json:"name"`
+	Quantity   int     `json:"quantity"`
+	Price      float64 `json:"price"`
+	Category   string  `json:"category,omitempty"`
 }
 
 type OrderItems []OrderItem
@@ -97,10 +100,10 @@ func (items *OrderItems) Scan(src interface{}) error {
 }
 
 type IntegrationStats struct {
-	TotalOrders      int     `json:"total_orders" db:"total_orders"`
-	TotalRevenue     float64 `json:"total_revenue" db:"total_revenue"`
-	MatchedClients   int     `json:"matched_clients" db:"matched_clients"`
-	UnmatchedOrders  int     `json:"unmatched_orders" db:"unmatched_orders"`
+	TotalOrders     int     `json:"total_orders" db:"total_orders"`
+	TotalRevenue    float64 `json:"total_revenue" db:"total_revenue"`
+	MatchedClients  int     `json:"matched_clients" db:"matched_clients"`
+	UnmatchedOrders int     `json:"unmatched_orders" db:"unmatched_orders"`
 }
 
 type IntegrationAggregate struct {

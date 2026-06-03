@@ -83,6 +83,14 @@ export function useUpdateItemMutation() {
   )
 }
 
+export function useDeleteItemMutation() {
+  return useApiMutation(
+    'menus/delete-item',
+    (itemId: number) => menusApi.deleteItem(itemId),
+    ['menus'],
+  )
+}
+
 export function useClientOrderStatsQuery(clientId: number) {
   return useApiQuery(
     clientId ? `client-order-stats-${clientId}` : null,
