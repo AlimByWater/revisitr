@@ -405,10 +405,13 @@ func (h *handler) handleMenuCategoryCallback(ctx context.Context, chatID int64, 
 		return
 	}
 
-	var category *entity.MenuCategory
-	for i := range menu.Categories {
-		if menu.Categories[i].ID == categoryID {
-			category = &menu.Categories[i]
+	custom := h.loadMenuPresetCustomizations(ctx)
+	categories := h.presentMenuCategories(ctx, menu, custom)
+
+	var category *menuCategoryPresentation
+	for i := range categories {
+		if categories[i].Category.ID == categoryID {
+			category = &categories[i]
 			break
 		}
 	}
@@ -418,30 +421,30 @@ func (h *handler) handleMenuCategoryCallback(ctx context.Context, chatID int64, 
 
 	pageSize := 9
 	start := page * pageSize
-	if start > len(category.Items) {
+	if start > len(category.Category.Items) {
 		start = 0
 		page = 0
 	}
 	end := start + pageSize
-	if end > len(category.Items) {
-		end = len(category.Items)
+	if end > len(category.Category.Items) {
+		end = len(category.Category.Items)
 	}
 
 	var buttons [][]entity.InlineButton
-	for _, item := range category.Items[start:end] {
+	for _, item := range category.Category.Items[start:end] {
 		buttons = append(buttons, []entity.InlineButton{{
 			Text: item.Name,
-			Data: callbackMenuItemPref + strconv.Itoa(item.ID) + ":" + strconv.Itoa(category.ID) + ":" + strconv.Itoa(page),
+			Data: callbackMenuItemPref + strconv.Itoa(item.ID) + ":" + strconv.Itoa(categoryID) + ":" + strconv.Itoa(page),
 		}})
 	}
 
-	if len(category.Items) > pageSize {
+	if len(category.Category.Items) > pageSize {
 		var nav []entity.InlineButton
 		if page > 0 {
-			nav = append(nav, entity.InlineButton{Text: "←", Data: callbackMenuCategoryPref + strconv.Itoa(category.ID) + ":" + strconv.Itoa(page-1)})
+			nav = append(nav, entity.InlineButton{Text: "←", Data: callbackMenuCategoryPref + strconv.Itoa(categoryID) + ":" + strconv.Itoa(page-1)})
 		}
-		if end < len(category.Items) {
-			nav = append(nav, entity.InlineButton{Text: "→", Data: callbackMenuCategoryPref + strconv.Itoa(category.ID) + ":" + strconv.Itoa(page+1)})
+		if end < len(category.Category.Items) {
+			nav = append(nav, entity.InlineButton{Text: "→", Data: callbackMenuCategoryPref + strconv.Itoa(categoryID) + ":" + strconv.Itoa(page+1)})
 		}
 		if len(nav) > 0 {
 			buttons = append(buttons, nav)
@@ -449,9 +452,8 @@ func (h *handler) handleMenuCategoryCallback(ctx context.Context, chatID int64, 
 	}
 	buttons = append(buttons, []entity.InlineButton{{Text: "Назад к меню", Data: callbackMenuRoot}})
 
-	custom := h.loadMenuPresetCustomizations(ctx)
 	density := normalizeMenuListDensity(custom.ListDensity)
-	itemText := menuCategoryItemsTextWithDensity(entity.MenuCategory{Items: category.Items[start:end]}, density)
+	itemText := menuCategoryItemsTextWithDensity(entity.MenuCategory{Items: category.Category.Items[start:end]}, density)
 	if itemText == "" {
 		itemText = "Сейчас в этой категории нет доступных позиций."
 	}
@@ -459,7 +461,7 @@ func (h *handler) handleMenuCategoryCallback(ctx context.Context, chatID int64, 
 	content := entity.MessageContent{
 		Parts: []entity.MessagePart{{
 			Type: entity.PartText,
-			Text: category.Name + "\n\n" + itemText,
+			Text: category.Category.Name + "\n\n" + itemText,
 		}},
 		Buttons: buttons,
 	}
@@ -490,11 +492,14 @@ func (h *handler) handleMenuItemCallback(ctx context.Context, chatID int64, valu
 		return
 	}
 
-	for _, category := range menu.Categories {
-		if category.ID != categoryID {
+	custom := h.loadMenuPresetCustomizations(ctx)
+	categories := h.presentMenuCategories(ctx, menu, custom)
+
+	for _, catPres := range categories {
+		if catPres.Category.ID != categoryID {
 			continue
 		}
-		for _, item := range category.Items {
+		for _, item := range catPres.Category.Items {
 			if item.ID != itemID {
 				continue
 			}

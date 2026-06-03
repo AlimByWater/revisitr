@@ -1,14 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import {
-  useAddCategoryMutation,
-  useAddItemMutation,
-  useMenuQuery,
-  useUpdateCategoryMutation,
-  useUpdateItemMutation,
-  useUpdateMenuMutation,
-} from '@/features/menus/queries'
+import { useAddCategoryMutation, useAddItemMutation, useDeleteItemMutation, useMenuQuery, useUpdateCategoryMutation, useUpdateItemMutation, useUpdateMenuMutation } from '@/features/menus/queries'
 import { menusApi } from '@/features/menus/api'
 import type {
   CreateMenuItemRequest,
@@ -32,6 +25,7 @@ import {
   Package,
   Plus,
   Save,
+  Trash2,
   X,
 } from 'lucide-react'
 
@@ -562,9 +556,14 @@ function CategorySection({
                     className={inputClassName}
                   />
                   <input
-                    type="number"
-                    value={newItem.price || ''}
-                    onChange={(event) => setNewItem((current) => ({ ...current, price: Number(event.target.value) }))}
+                    type="text"
+                    inputMode="decimal"
+                    value={newItem.price === 0 ? '' : String(newItem.price)}
+                    onChange={(event) => {
+                      const raw = event.target.value.replace(/[^\d]/g, '')
+                      const num = raw === '' ? 0 : parseInt(raw, 10)
+                      setNewItem((current) => ({ ...current, price: num }))
+                    }}
                     placeholder="Цена"
                     className={inputClassName}
                   />
@@ -657,6 +656,8 @@ function MenuItemRow({ item, onUpdate }: { item: MenuItem; onUpdate: () => void 
     is_available: item.is_available,
   })
   const updateItem = useUpdateItemMutation()
+  const deleteItem = useDeleteItemMutation()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
     setDraft({
@@ -691,6 +692,11 @@ function MenuItemRow({ item, onUpdate }: { item: MenuItem; onUpdate: () => void 
     setDraft((current) => ({ ...current, image_url: uploaded }))
   }
 
+  const handleDelete = async () => {
+    await deleteItem.mutate(item.id)
+    onUpdate()
+  }
+
   return (
     <div className="rounded border border-neutral-200 bg-neutral-50/60 p-4">
       {editing ? (
@@ -704,9 +710,14 @@ function MenuItemRow({ item, onUpdate }: { item: MenuItem; onUpdate: () => void 
               placeholder="Название"
             />
             <input
-              type="number"
-              value={draft.price}
-              onChange={(event) => setDraft((current) => ({ ...current, price: Number(event.target.value) }))}
+              type="text"
+              inputMode="decimal"
+              value={draft.price === 0 ? '' : String(draft.price)}
+              onChange={(event) => {
+                const raw = event.target.value.replace(/[^\d]/g, '')
+                const num = raw === '' ? 0 : parseInt(raw, 10)
+                setDraft((current) => ({ ...current, price: num }))
+              }}
               className={inputClassName}
               placeholder="Цена"
             />
@@ -770,28 +781,75 @@ function MenuItemRow({ item, onUpdate }: { item: MenuItem; onUpdate: () => void 
           </div>
         </div>
       ) : (
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          {item.image_url ? (
+            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
+              <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+            </div>
+          ) : (
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-300">
+              <Package className="h-6 w-6" />
+            </div>
+          )}
           <div className="min-w-0 flex-1">
-            <div className={cn('text-sm font-medium text-neutral-900', !item.is_available && 'line-through opacity-50')}>
-              {item.name}
+            <div className="flex items-baseline gap-2">
+              <span className={cn('text-sm font-medium text-neutral-900', !item.is_available && 'line-through opacity-50')}>
+                {item.name}
+              </span>
+              <span className="text-sm font-semibold text-neutral-900 shrink-0">
+                {new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(item.price)}
+              </span>
             </div>
             {item.description && (
-              <div className="text-xs text-neutral-500 mt-1">{item.description}</div>
+              <div className="mt-1 text-xs text-neutral-500 line-clamp-2">{item.description}</div>
             )}
-            <div className="mt-2 flex flex-wrap gap-3 text-xs text-neutral-500">
-              <span>{new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(item.price)}</span>
-              {item.weight ? <span>{item.weight}</span> : null}
-              {item.image_url ? <span>Есть фото</span> : null}
-              {!item.is_available ? <span>Не активно</span> : null}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {item.weight && (
+                <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600">{item.weight}</span>
+              )}
+              {!item.is_available && (
+                <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-700">Не активно</span>
+              )}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-neutral-400 hover:bg-white hover:text-neutral-700"
-          >
-            <Edit3 className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            {showDeleteConfirm ? (
+              <div className="flex items-center gap-2 animate-in">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="inline-flex items-center gap-1 rounded bg-red-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-600"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Удалить
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="inline-flex items-center justify-center rounded px-2 py-1.5 text-xs text-neutral-500 hover:bg-neutral-100"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-neutral-400 hover:bg-red-50 hover:text-red-500"
+                title="Удалить позицию"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-neutral-400 hover:bg-white hover:text-neutral-700"
+              title="Редактировать позицию"
+            >
+              <Edit3 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
     </div>
