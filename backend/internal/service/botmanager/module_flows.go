@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"html"
+	"io"
+	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
@@ -1119,7 +1121,21 @@ func (h *handler) sendContentMessage(ctx context.Context, chatID int64, content 
 		}
 		message, err := h.bot.SendPhoto(ctx, photo)
 		if err != nil {
-			h.logger.Error("send flow photo", "error", err, "chat_id", chatID)
+			h.logger.Error("send flow photo failed, falling back to text", "error", err, "chat_id", chatID)
+			// Fallback: send as text message without photo
+			msg := tu.Message(tu.ID(chatID), part.Text)
+			if part.ParseMode != "" && len(emojiEntities) == 0 {
+				msg = msg.WithParseMode(part.ParseMode)
+			}
+			if len(emojiEntities) > 0 {
+				msg = msg.WithEntities(emojiEntities...)
+			}
+			if markup != nil {
+				msg = msg.WithReplyMarkup(markup)
+			}
+			if msg2, err2 := h.bot.SendMessage(ctx, msg); err2 == nil {
+				return msg2.MessageID
+			}
 			return 0
 		}
 		return message.MessageID
@@ -1151,10 +1167,41 @@ func (h *handler) inputFile(part entity.MessagePart) telego.InputFile {
 	if mediaURL == "" {
 		return tu.FileFromURL("https://elysium.fm")
 	}
-	if strings.HasPrefix(mediaURL, "http") {
+	if !strings.HasPrefix(mediaURL, "http") {
+		mediaURL = "https://elysium.fm" + mediaURL
+	}
+
+	// Download file and upload — telegram-bot-api (local mode) often fails
+	// to fetch external URLs, so we fetch ourselves and send as upload.
+	data, err := h.downloadFile(mediaURL)
+	if err != nil {
+		h.logger.Warn("download media failed, falling back to URL", "error", err, "url", mediaURL)
 		return tu.FileFromURL(mediaURL)
 	}
-	return tu.FileFromURL("https://elysium.fm" + mediaURL)
+	filename := "photo.png"
+	if strings.HasSuffix(mediaURL, ".jpg") || strings.HasSuffix(mediaURL, ".jpeg") {
+		filename = "photo.jpg"
+	}
+	return tu.FileFromBytes(data, filename)
+}
+
+func (h *handler) downloadFile(url string) ([]byte, error) {
+	resp, err := http.Get(url) //nolint:gosec // URL is constructed from known base
+	if err != nil {
+		return nil, fmt.Errorf("http get: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("http status %d", resp.StatusCode)
+	}
+
+	// Limit download size to 10 MB
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
+	if err != nil {
+		return nil, fmt.Errorf("read body: %w", err)
+	}
+	return data, nil
 }
 
 func (h *handler) inlineKeyboard(rows [][]entity.InlineButton) *telego.InlineKeyboardMarkup {
