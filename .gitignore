@@ -58,3 +58,5 @@ architecture.json
 claudedocs/
 backend/.env.bak
 .claude/scheduled_tasks.lock
+backend/graphify-out/
+.playwright-mcp/
