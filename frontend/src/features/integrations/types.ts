@@ -2,6 +2,7 @@ export interface IntegrationConfig {
   api_url?: string
   api_key?: string
   org_id?: string
+  external_menu_id?: string
   username?: string
   password?: string
   sync_interval?: number
@@ -21,6 +22,21 @@ export interface Integration {
 export interface CreateIntegrationRequest {
   type: string
   config: IntegrationConfig
+}
+
+export interface POSOrganization {
+  id: string
+  name: string
+}
+
+export interface POSExternalMenu {
+  id: string
+  name: string
+}
+
+export interface POSDiscovery {
+  organizations: POSOrganization[]
+  external_menus: POSExternalMenu[]
 }
 
 export interface UpdateIntegrationRequest {

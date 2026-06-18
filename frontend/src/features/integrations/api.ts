@@ -9,6 +9,7 @@ import type {
   IntegrationStats,
   POSCustomer,
   POSMenu,
+  POSDiscovery,
   PaginatedResponse,
 } from './types'
 
@@ -25,6 +26,14 @@ export const integrationsApi = {
 
   create: async (data: CreateIntegrationRequest): Promise<Integration> => {
     const response = await api.post<Integration>('/integrations', data)
+    return response.data
+  },
+
+  discover: async (data: CreateIntegrationRequest): Promise<POSDiscovery> => {
+    const response = await api.post<POSDiscovery>(
+      '/integrations/discover',
+      data,
+    )
     return response.data
   },
 

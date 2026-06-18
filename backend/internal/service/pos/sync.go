@@ -67,6 +67,52 @@ func (s *SyncService) TestConnection(ctx context.Context, integration *entity.In
 	return provider.TestConnection(ctx)
 }
 
+// discoveryProvider is implemented by providers that can list selectable
+// resources (organizations, menus) before an integration is fully configured.
+type discoveryProvider interface {
+	ListOrganizations(ctx context.Context) ([]POSOrganization, error)
+	ListExternalMenus(ctx context.Context) ([]POSExternalMenu, error)
+}
+
+// Discover fetches selectable resources (organizations + external menus) for a
+// not-yet-saved integration, so onboarding can offer pick-lists. Only the API
+// credentials in cfg are required; org_id is what the user is choosing.
+func (s *SyncService) Discover(ctx context.Context, integrationType string, cfg entity.IntegrationConfig) (*POSDiscovery, error) {
+	provider, err := newDiscoveryProvider(integrationType, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	orgs, err := provider.ListOrganizations(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list organizations: %w", err)
+	}
+
+	menus, err := provider.ListExternalMenus(ctx)
+	if err != nil {
+		// Menu listing is optional; surface orgs even if menus are unavailable.
+		s.logger.Warn("list external menus", "error", err)
+		menus = nil
+	}
+
+	return &POSDiscovery{Organizations: orgs, ExternalMenus: menus}, nil
+}
+
+// newDiscoveryProvider builds a provider for discovery, where org_id is not yet
+// known. cfg gets a placeholder org_id so construction validation passes; the
+// discovery calls themselves do not use org_id.
+func newDiscoveryProvider(integrationType string, cfg entity.IntegrationConfig) (discoveryProvider, error) {
+	switch integrationType {
+	case "iiko":
+		if cfg.OrgID == "" {
+			cfg.OrgID = "discovery"
+		}
+		return NewIikoProvider(cfg)
+	default:
+		return nil, fmt.Errorf("discovery not supported for integration type: %s", integrationType)
+	}
+}
+
 // GetCustomers returns customers from the POS provider.
 func (s *SyncService) GetCustomers(ctx context.Context, integration *entity.Integration, opts CustomerListOpts) ([]POSCustomer, error) {
 	provider, err := NewProvider(integration)
@@ -233,6 +279,10 @@ func (s *SyncService) SyncAll(ctx context.Context) error {
 	for i := range intgs {
 		if err := s.Sync(ctx, &intgs[i]); err != nil {
 			s.logger.Error("sync failed", "integration_id", intgs[i].ID, "type", intgs[i].Type, "error", err)
+			continue
+		}
+		if err := s.SyncAggregates(ctx, &intgs[i]); err != nil {
+			s.logger.Error("aggregate sync failed", "integration_id", intgs[i].ID, "type", intgs[i].Type, "error", err)
 		}
 	}
 	return nil

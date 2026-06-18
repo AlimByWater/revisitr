@@ -18,6 +18,7 @@ import (
 
 type integrationsUsecase interface {
 	Create(ctx context.Context, orgID int, req *entity.CreateIntegrationRequest) (*entity.Integration, error)
+	Discover(ctx context.Context, integrationType string, cfg entity.IntegrationConfig) (*posService.POSDiscovery, error)
 	List(ctx context.Context, orgID int) ([]entity.Integration, error)
 	GetByID(ctx context.Context, id, orgID int) (*entity.Integration, error)
 	Update(ctx context.Context, id, orgID int, req *entity.UpdateIntegrationRequest) (*entity.Integration, error)
@@ -70,6 +71,7 @@ func (g *Group) Auth() gin.HandlerFunc {
 func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 	return []func() (string, string, gin.HandlerFunc){
 		g.handleCreate,
+		g.handleDiscover,
 		g.handleList,
 		g.handleGet,
 		g.handleUpdate,
@@ -102,6 +104,25 @@ func (g *Group) handleCreate() (string, string, gin.HandlerFunc) {
 		}
 
 		c.JSON(http.StatusCreated, intg)
+	}
+}
+
+func (g *Group) handleDiscover() (string, string, gin.HandlerFunc) {
+	return http.MethodPost, "/discover", func(c *gin.Context) {
+		var req entity.CreateIntegrationRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		discovery, err := g.uc.Discover(c.Request.Context(), req.Type, req.Config)
+		if err != nil {
+			slog.Error("discover integration", "error", err, "type", req.Type)
+			c.JSON(http.StatusBadGateway, gin.H{"error": "could not reach POS provider with these credentials"})
+			return
+		}
+
+		c.JSON(http.StatusOK, discovery)
 	}
 }
 

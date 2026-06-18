@@ -265,11 +265,193 @@ func (p *IikoProvider) TestConnection(ctx context.Context) error {
 	return fmt.Errorf("iiko: organization %s not found", p.orgID)
 }
 
-func (p *IikoProvider) GetCustomers(_ context.Context, _ CustomerListOpts) ([]POSCustomer, error) {
-	return nil, fmt.Errorf("iiko: GetCustomers not yet implemented (Phase 4)")
+// ListOrganizations returns all organizations available to this apiLogin, used
+// during onboarding so the user can pick org_id instead of pasting a UUID.
+func (p *IikoProvider) ListOrganizations(ctx context.Context) ([]POSOrganization, error) {
+	var out iikoOrganizationsResponse
+	if err := p.doRequest(ctx, "/organizations", map[string]any{
+		"organizationIds":      nil,
+		"returnAdditionalInfo": true,
+	}, &out); err != nil {
+		return nil, err
+	}
+	orgs := make([]POSOrganization, 0, len(out.Organizations))
+	for _, org := range out.Organizations {
+		if org.IsDeleted || org.ID == "" {
+			continue
+		}
+		orgs = append(orgs, POSOrganization{ID: org.ID, Name: org.Name})
+	}
+	return orgs, nil
 }
 
+// ListExternalMenus returns the external menus available to this apiLogin so the
+// user can optionally pick one during onboarding. Returns nil (not an error) when
+// the menu listing is not permitted for this apiLogin/tariff.
+func (p *IikoProvider) ListExternalMenus(ctx context.Context) ([]POSExternalMenu, error) {
+	var out iikoExternalMenuListResponse
+	if err := p.doRequest(ctx, "/api/2/menu", map[string]any{}, &out); err != nil {
+		if iikoLoyaltyUnavailable(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	menus := make([]POSExternalMenu, 0, len(out.ExternalMenus))
+	for _, m := range out.ExternalMenus {
+		if m.ID == "" {
+			continue
+		}
+		menus = append(menus, POSExternalMenu{ID: m.ID, Name: m.Name})
+	}
+	return menus, nil
+}
+
+type iikoExternalMenuListResponse struct {
+	ExternalMenus []iikoExternalMenuListItem `json:"externalMenus"`
+}
+
+type iikoExternalMenuListItem struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// GetCustomers looks up a loyalty customer by phone via iiko's loyalty API.
+//
+// iiko Cloud's Transport API has no bulk "list customers" endpoint; customers
+// are resolved one at a time by phone or card. So GetCustomers treats opts.Search
+// as a phone number and returns the matching customer (if any). When the loyalty
+// (iikoCard) module is not enabled for the organization, iiko answers 400/401 —
+// this is treated as "no loyalty data available" and returns an empty slice
+// rather than an error, so order/aggregate sync still succeeds.
+func (p *IikoProvider) GetCustomers(ctx context.Context, opts CustomerListOpts) ([]POSCustomer, error) {
+	phone := strings.TrimSpace(opts.Search)
+	if phone == "" {
+		return nil, nil
+	}
+
+	var out iikoCustomerInfo
+	err := p.doRequest(ctx, "/loyalty/iiko/customer/info", map[string]any{
+		"organizationId": p.orgID,
+		"type":           "phone",
+		"phone":          phone,
+	}, &out)
+	if err != nil {
+		if iikoLoyaltyUnavailable(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if out.ID == "" {
+		return nil, nil
+	}
+	return []POSCustomer{mapIikoCustomer(out)}, nil
+}
+
+// iikoLoyaltyUnavailable reports whether the error means the loyalty/iikoCard
+// module is simply not available (not bound, wrong CRM, no rights), as opposed to
+// a transient failure. Such cases degrade to "no data" instead of failing sync.
+func iikoLoyaltyUnavailable(err error) bool {
+	var apiErr *IikoAPIError
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	switch apiErr.Status {
+	case http.StatusBadRequest, http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound:
+		return true
+	}
+	return false
+}
+
+type iikoCustomerInfo struct {
+	ID             string               `json:"id"`
+	Name           string               `json:"name"`
+	Surname        string               `json:"surname"`
+	Phone          string               `json:"phone"`
+	Email          string               `json:"email"`
+	Birthday       string               `json:"birthday"`
+	Cards          []iikoCustomerCard   `json:"cards"`
+	WalletBalances []iikoCustomerWallet `json:"walletBalances"`
+}
+
+type iikoCustomerCard struct {
+	Number string `json:"number"`
+}
+
+type iikoCustomerWallet struct {
+	Balance float64 `json:"balance"`
+}
+
+func mapIikoCustomer(in iikoCustomerInfo) POSCustomer {
+	name := strings.TrimSpace(in.Name + " " + in.Surname)
+
+	var balance float64
+	for _, w := range in.WalletBalances {
+		balance += w.Balance
+	}
+
+	var card string
+	if len(in.Cards) > 0 {
+		card = in.Cards[0].Number
+	}
+
+	c := POSCustomer{
+		ExternalID: in.ID,
+		Phone:      in.Phone,
+		Name:       name,
+		Email:      in.Email,
+		Balance:    balance,
+		CardNumber: card,
+	}
+	if bday := parseIikoTime(in.Birthday); !bday.IsZero() {
+		c.Birthday = &bday
+	}
+	return c
+}
+
+// iikoDeliveriesWindow is the max span per /deliveries request. iiko rejects
+// wide windows with 422 TOO_MANY_DATA_REQUESTED, so the range is chunked.
+const iikoDeliveriesWindow = 24 * time.Hour
+
 func (p *IikoProvider) GetOrders(ctx context.Context, from, to time.Time) ([]POSOrder, error) {
+	deliveries, err := p.fetchDeliveriesChunked(ctx, from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	orders := make([]POSOrder, 0, len(deliveries))
+	for _, orderInfo := range deliveries {
+		if order, ok := mapIikoDeliveryOrder(orderInfo); ok {
+			orders = append(orders, order)
+		}
+	}
+	return orders, nil
+}
+
+// fetchDeliveriesChunked splits [from, to] into windows no wider than
+// iikoDeliveriesWindow and concatenates the deliveries from each request,
+// avoiding the iiko 422 TOO_MANY_DATA_REQUESTED limit on wide ranges.
+func (p *IikoProvider) fetchDeliveriesChunked(ctx context.Context, from, to time.Time) ([]iikoDeliveryOrder, error) {
+	if !to.After(from) {
+		return p.fetchDeliveries(ctx, from, to)
+	}
+
+	var all []iikoDeliveryOrder
+	for start := from; start.Before(to); start = start.Add(iikoDeliveriesWindow) {
+		end := start.Add(iikoDeliveriesWindow)
+		if end.After(to) {
+			end = to
+		}
+		chunk, err := p.fetchDeliveries(ctx, start, end)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, chunk...)
+	}
+	return all, nil
+}
+
+// fetchDeliveries performs a single /deliveries request for the given window.
+func (p *IikoProvider) fetchDeliveries(ctx context.Context, from, to time.Time) ([]iikoDeliveryOrder, error) {
 	var out iikoDeliveriesResponse
 	err := p.doRequest(ctx, "/deliveries/by_delivery_date_and_status", map[string]any{
 		"organizationIds":  []string{p.orgID},
@@ -281,14 +463,9 @@ func (p *IikoProvider) GetOrders(ctx context.Context, from, to time.Time) ([]POS
 		return nil, err
 	}
 
-	orders := make([]POSOrder, 0)
+	var orders []iikoDeliveryOrder
 	for _, orgOrders := range out.OrdersByOrganizations {
-		for _, orderInfo := range orgOrders.Orders {
-			order, ok := mapIikoDeliveryOrder(orderInfo)
-			if ok {
-				orders = append(orders, order)
-			}
-		}
+		orders = append(orders, orgOrders.Orders...)
 	}
 	return orders, nil
 }
@@ -661,6 +838,65 @@ func parseIikoTime(s string) time.Time {
 	return time.Time{}
 }
 
-func (p *IikoProvider) GetDailyAggregates(_ context.Context, _, _ time.Time) ([]POSDailyAggregate, error) {
-	return nil, fmt.Errorf("iiko: GetDailyAggregates not yet implemented (Phase 6)")
+// GetDailyAggregates computes per-day revenue, average check, transaction count,
+// guest count and customer phones from closed/delivered orders. iiko Cloud OLAP
+// reports are not available via the Transport API for most tariffs, so aggregates
+// are derived from the same /deliveries data used by GetOrders.
+func (p *IikoProvider) GetDailyAggregates(ctx context.Context, from, to time.Time) ([]POSDailyAggregate, error) {
+	deliveries, err := p.fetchDeliveriesChunked(ctx, from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	type dayAgg struct {
+		revenue float64
+		txCount int
+		phones  map[string]struct{}
+	}
+	byDay := make(map[string]*dayAgg)
+	dayOrder := make([]string, 0)
+
+	for _, orderInfo := range deliveries {
+		order, ok := mapIikoDeliveryOrder(orderInfo)
+		if !ok {
+			continue
+		}
+		key := order.OrderedAt.Format("2006-01-02")
+		agg := byDay[key]
+		if agg == nil {
+			agg = &dayAgg{phones: make(map[string]struct{})}
+			byDay[key] = agg
+			dayOrder = append(dayOrder, key)
+		}
+		agg.revenue += order.Total
+		agg.txCount++
+		if order.CustomerPhone != "" {
+			agg.phones[order.CustomerPhone] = struct{}{}
+		}
+	}
+
+	sort.Strings(dayOrder)
+	result := make([]POSDailyAggregate, 0, len(dayOrder))
+	for _, key := range dayOrder {
+		agg := byDay[key]
+		date, _ := time.Parse("2006-01-02", key)
+		var avgCheck float64
+		if agg.txCount > 0 {
+			avgCheck = agg.revenue / float64(agg.txCount)
+		}
+		phones := make([]string, 0, len(agg.phones))
+		for phone := range agg.phones {
+			phones = append(phones, phone)
+		}
+		sort.Strings(phones)
+		result = append(result, POSDailyAggregate{
+			Date:       date,
+			Revenue:    agg.revenue,
+			AvgCheck:   avgCheck,
+			TxCount:    agg.txCount,
+			GuestCount: len(phones),
+			Phones:     phones,
+		})
+	}
+	return result, nil
 }

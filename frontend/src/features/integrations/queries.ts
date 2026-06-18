@@ -56,6 +56,14 @@ export function useCreateIntegrationMutation() {
   )
 }
 
+export function useDiscoverIntegrationMutation() {
+  return useApiMutation(
+    'integrations/discover',
+    (data: CreateIntegrationRequest) => integrationsApi.discover(data),
+    [],
+  )
+}
+
 export function useUpdateIntegrationMutation() {
   return useApiMutation(
     'integrations/update',

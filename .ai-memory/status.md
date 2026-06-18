@@ -1,23 +1,26 @@
 # Development Status
 
-Last updated: 2026-04-05
+Last updated: 2026-06-17
 
 ## What's Deployed to Production
 
 - Phases 1-4 (Foundation -> Expansion): all deployed
-- Migrations 00001-00029: applied to prod
+- All migrations applied to prod through goose version **45** (verified via `goose_db_version`)
 - Frontend with mock API enabled (`VITE_MOCK_API=true`)
 - Admin bot CI/CD workflow active
+- Everything previously listed as "pending deploy" (RFM v2, Backlog v2, PDF
+  corrections, campaigns restructuring, Bot Architecture v2, Frontend Redesign
+  v2) is now on prod.
 
-## Committed to Main (Not Yet Deployed)
+## Recent Work (on main)
 
-- **RFM v2**: migration 00030 (templates), 5 phases complete, 75 frontend unit tests
-- **Backlog v2**: Phases A-E complete (frontend only, backend endpoints needed)
-- **PDF Corrections**: 5 phases complete
-- **Campaigns Restructuring**: MessageContentEditor + TelegramPreview replaces textarea+file
-- **Bot Architecture v2**: all 5 phases complete (event bus, composite messages, Telegram sender, bug fixes, UI integration)
-- **Frontend Redesign v2**: merged 2026-04-02, design system overhaul (75 files changed)
-- Migrations 00030-00032: pending deploy
+- **Bot menu module**: menu editor UX overhaul, preset customization, preview
+  geometry aligned with iOS/Figma, callbacks kept on edited-message path
+- **Bot registration**: refactored into sequential multi-field flow
+- **iiko Cloud**: read-sync foundation built
+- **Bot media**: download media files and upload to telegram-bot-api instead of
+  passing URL (commit 95ab67c)
+- **Bot debug logging**: menu rendering + callbacks (commit 9743f60)
 
 ## Known Incomplete / Stubs
 
@@ -34,6 +37,17 @@ Last updated: 2026-04-05
 - Custom segments CRUD
 - Bot settings persistence (new button type, form options)
 
-## Migration Count
+## Migrations — Two Directories
 
-32 migrations total (00001-00032). 00001-00029 on prod, 00030-00032 pending.
+goose runs over **two** migration sets (see `infra/scripts/migrate.sh`):
+
+- `backend/migrations/` → baked into image as `/migrations` (00001-00032,
+  00041-00045). Core schema.
+- `migrations/` (repo root) → mounted as `/extra-migrations` (00033-00040).
+  master_bot, post_codes, and the `baratie_*` demo content/templates.
+
+Both are git-tracked and both applied on prod. Note `157571d` renamed
+`backend/migrations/00033_bot_modules_menu_booking.sql` -> `00041_...` to avoid
+colliding with the root 33-40 series.
+
+Latest version on prod: **45**.
