@@ -217,6 +217,48 @@ func TestIiko_GetCustomers_NoSearch(t *testing.T) {
 	}
 }
 
+// TestIiko_GetOrders_SkipsDegenerateTrailingWindow reproduces the prod bug where
+// a 30-day window produced a sub-millisecond trailing chunk whose from/to render
+// to the same instant → iiko 500 "deliveryDateFrom must be less than deliveryDateTo".
+// The chunker must skip such windows instead of requesting them.
+func TestIiko_GetOrders_SkipsDegenerateTrailingWindow(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/access_token":
+			_ = json.NewEncoder(w).Encode(iikoTokenResponse{Token: "tok"})
+		case "/deliveries/by_delivery_date_and_status":
+			body, _ := io.ReadAll(r.Body)
+			var req struct {
+				From string `json:"deliveryDateFrom"`
+				To   string `json:"deliveryDateTo"`
+			}
+			_ = json.Unmarshal(body, &req)
+			if req.From == req.To {
+				// This is exactly what iiko rejects; the chunker must never send it.
+				t.Errorf("degenerate window requested: from==to==%q", req.From)
+				http.Error(w, `{"errorDescription":"deliveryDateFrom must be less than deliveryDateTo"}`, http.StatusInternalServerError)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(iikoDeliveriesResponse{})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	p := newIikoTestProvider(t, srv)
+	// 30 days minus a few hundred microseconds — mimics from=now-30d, to=now
+	// computed on adjacent lines, so the final chunk is sub-millisecond.
+	from := time.Date(2026, 5, 19, 10, 0, 0, 0, time.UTC)
+	to := from.Add(30 * 24 * time.Hour).Add(400 * time.Microsecond)
+
+	if _, err := p.GetOrders(context.Background(), from, to); err != nil {
+		t.Fatalf("GetOrders: %v", err)
+	}
+}
+
 // TestIiko_Discovery_ListsOrgsAndMenus verifies onboarding discovery: list
 // organizations and external menus from credentials alone (no org_id yet).
 func TestIiko_Discovery_ListsOrgsAndMenus(t *testing.T) {
