@@ -725,6 +725,10 @@ const routes: [RegExp, Handler][] = [
   }],
 
   // Integrations
+  [/^\/integrations\/discover$/, () => ({
+    organizations: [{ id: 'mock-org-1', name: 'Демо ресторан' }],
+    external_menus: [{ id: 'mock-menu-1', name: 'Демо меню' }],
+  })],
   [/^\/integrations\/(\d+)\/sync$/, () => ({})],
   [/^\/integrations\/(\d+)\/test$/, () => ({ success: true })],
   [/^\/integrations\/(\d+)\/orders$/, () => []],

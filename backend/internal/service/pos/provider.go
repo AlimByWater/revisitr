@@ -74,3 +74,21 @@ type CustomerListOpts struct {
 	Offset int    `json:"offset"`
 	Search string `json:"search,omitempty"`
 }
+
+// POSDiscovery is the set of selectable resources fetched from a POS provider
+// before an integration is saved, so onboarding can offer pick-lists instead of
+// asking the user to paste opaque IDs.
+type POSDiscovery struct {
+	Organizations []POSOrganization `json:"organizations"`
+	ExternalMenus []POSExternalMenu `json:"external_menus"`
+}
+
+type POSOrganization struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type POSExternalMenu struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}

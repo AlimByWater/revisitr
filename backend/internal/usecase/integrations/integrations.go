@@ -29,6 +29,7 @@ type integrationsRepo interface {
 type syncService interface {
 	Sync(ctx context.Context, integration *entity.Integration) error
 	TestConnection(ctx context.Context, integration *entity.Integration) error
+	Discover(ctx context.Context, integrationType string, cfg entity.IntegrationConfig) (*posService.POSDiscovery, error)
 	GetCustomers(ctx context.Context, integration *entity.Integration, opts posService.CustomerListOpts) ([]posService.POSCustomer, error)
 	GetMenu(ctx context.Context, integration *entity.Integration) (*posService.POSMenu, error)
 }
@@ -69,6 +70,13 @@ func (uc *Usecase) List(ctx context.Context, orgID int) ([]entity.Integration, e
 		return nil, fmt.Errorf("list integrations: %w", err)
 	}
 	return intgs, nil
+}
+
+// Discover fetches selectable resources (organizations, external menus) for a
+// given integration type + credentials, before any integration is saved. Used
+// by onboarding so the user picks org_id from a list instead of pasting a UUID.
+func (uc *Usecase) Discover(ctx context.Context, integrationType string, cfg entity.IntegrationConfig) (*posService.POSDiscovery, error) {
+	return uc.syncSvc.Discover(ctx, integrationType, cfg)
 }
 
 func (uc *Usecase) GetByID(ctx context.Context, id, orgID int) (*entity.Integration, error) {

@@ -67,6 +67,9 @@ func (m *mockSyncService) Sync(ctx context.Context, integration *entity.Integrat
 func (m *mockSyncService) TestConnection(_ context.Context, _ *entity.Integration) error {
 	return nil
 }
+func (m *mockSyncService) Discover(_ context.Context, _ string, _ entity.IntegrationConfig) (*posService.POSDiscovery, error) {
+	return &posService.POSDiscovery{}, nil
+}
 func (m *mockSyncService) GetCustomers(_ context.Context, _ *entity.Integration, _ posService.CustomerListOpts) ([]posService.POSCustomer, error) {
 	return nil, nil
 }
