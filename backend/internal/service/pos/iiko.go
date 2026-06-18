@@ -431,15 +431,18 @@ func (p *IikoProvider) GetOrders(ctx context.Context, from, to time.Time) ([]POS
 // iikoDeliveriesWindow and concatenates the deliveries from each request,
 // avoiding the iiko 422 TOO_MANY_DATA_REQUESTED limit on wide ranges.
 func (p *IikoProvider) fetchDeliveriesChunked(ctx context.Context, from, to time.Time) ([]iikoDeliveryOrder, error) {
-	if !to.After(from) {
-		return p.fetchDeliveries(ctx, from, to)
-	}
-
 	var all []iikoDeliveryOrder
 	for start := from; start.Before(to); start = start.Add(iikoDeliveriesWindow) {
 		end := start.Add(iikoDeliveriesWindow)
 		if end.After(to) {
 			end = to
+		}
+		// iiko compares dates at millisecond precision and rejects a window
+		// whose ends render to the same instant ("deliveryDateFrom must be less
+		// than deliveryDateTo"). Skip such a degenerate trailing window — it can
+		// hold no orders anyway.
+		if iikoDateTime(start) == iikoDateTime(end) {
+			continue
 		}
 		chunk, err := p.fetchDeliveries(ctx, start, end)
 		if err != nil {
