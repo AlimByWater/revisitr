@@ -16,6 +16,10 @@ services:
   bot:
     image: ghcr.io/${GITHUB_REPO:-alimbywater/revisitr}/bot:${BOT_TAG:-latest}
     env_file: .env.prod
+    # This host's provider blocks most Telegram IP subnets; pin api.telegram.org
+    # to a reachable Telegram DC IP. Override via TELEGRAM_API_IP in .env.prod.
+    extra_hosts:
+      - "api.telegram.org:${TELEGRAM_API_IP:-149.154.167.220}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -28,6 +32,8 @@ services:
   admin-bot:
     image: ghcr.io/${GITHUB_REPO:-alimbywater/revisitr}/admin-bot:${ADMIN_BOT_TAG:-latest}
     env_file: .env.prod
+    extra_hosts:
+      - "api.telegram.org:${TELEGRAM_API_IP:-149.154.167.220}"
     depends_on:
       postgres:
         condition: service_healthy
