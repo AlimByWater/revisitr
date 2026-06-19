@@ -182,7 +182,7 @@ export default function PredictionsPage() {
                   <tr
                     key={p.id}
                     className="hover:bg-neutral-50/50 transition-colors cursor-pointer"
-                    onClick={() => window.open(`/revisitr/dashboard/clients/${p.client_id}`, '_blank')}
+                    onClick={() => window.open(`/dashboard/clients/${p.client_id}`, '_blank')}
                   >
                     <td className="py-3 px-4 text-center font-medium text-neutral-900">#{p.client_id}</td>
                     <td className="py-3 px-4 text-center">

@@ -653,7 +653,7 @@ const routes: [RegExp, Handler][] = [
   }],
 
   // File upload
-  [/^\/files\/upload$/, () => ({ url: '/revisitr/storage/mock-file-' + Date.now() + '.jpg' })],
+  [/^\/files\/upload$/, () => ({ url: '/storage/mock-file-' + Date.now() + '.jpg' })],
 
   // Campaigns
   [/^\/campaigns\/scenarios\/templates$/, () => []],
