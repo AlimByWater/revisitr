@@ -76,17 +76,66 @@ func TestIiko_GetOrders_ChunksWindow(t *testing.T) {
 
 	p := newIikoTestProvider(t, srv)
 	from := time.Date(2026, 5, 28, 0, 0, 0, 0, time.UTC)
-	to := from.Add(3 * 24 * time.Hour) // 3-day window → 3 chunks
+	to := from.Add(3 * 24 * time.Hour) // 3-day window, padded ±24h → 5 daily chunks
 
 	orders, err := p.GetOrders(context.Background(), from, to)
 	if err != nil {
 		t.Fatalf("GetOrders: %v", err)
 	}
-	if got := atomic.LoadInt32(&deliveryCalls); got != 3 {
-		t.Fatalf("expected 3 chunked delivery calls, got %d", got)
+	if got := atomic.LoadInt32(&deliveryCalls); got != 5 {
+		t.Fatalf("expected 5 chunked delivery calls (3-day window + ±24h timezone pad), got %d", got)
 	}
 	if len(orders) != 1 || orders[0].ExternalID != "order-1" {
 		t.Fatalf("orders=%+v", orders)
+	}
+}
+
+// TestIiko_GetOrders_PadsWindowForTimezone verifies the deliveries window is
+// widened ±24h before being sent to iiko. iiko filters by each order's delivery
+// date in the org's local timezone while we pass UTC, so without the pad orders
+// from the last few hours fall past the bounds and are skipped. See
+// iikoOrderWindowPad.
+func TestIiko_GetOrders_PadsWindowForTimezone(t *testing.T) {
+	t.Parallel()
+
+	// fetchDeliveriesChunked requests chunks sequentially, so no locking needed.
+	var minFrom, maxTo string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/access_token":
+			_ = json.NewEncoder(w).Encode(iikoTokenResponse{Token: "tok"})
+		case "/deliveries/by_delivery_date_and_status":
+			var req struct {
+				From string `json:"deliveryDateFrom"`
+				To   string `json:"deliveryDateTo"`
+			}
+			body, _ := io.ReadAll(r.Body)
+			_ = json.Unmarshal(body, &req)
+			if minFrom == "" || req.From < minFrom {
+				minFrom = req.From
+			}
+			if req.To > maxTo {
+				maxTo = req.To
+			}
+			_ = json.NewEncoder(w).Encode(iikoDeliveriesResponse{})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	p := newIikoTestProvider(t, srv)
+	from := time.Date(2026, 5, 28, 0, 0, 0, 0, time.UTC)
+	to := from.Add(24 * time.Hour)
+	if _, err := p.GetOrders(context.Background(), from, to); err != nil {
+		t.Fatalf("GetOrders: %v", err)
+	}
+
+	if want := iikoDateTime(from.Add(-iikoOrderWindowPad)); minFrom != want {
+		t.Errorf("earliest deliveryDateFrom = %q, want %q (from - pad)", minFrom, want)
+	}
+	if want := iikoDateTime(to.Add(iikoOrderWindowPad)); maxTo != want {
+		t.Errorf("latest deliveryDateTo = %q, want %q (to + pad)", maxTo, want)
 	}
 }
 

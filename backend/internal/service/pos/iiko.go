@@ -412,8 +412,19 @@ func mapIikoCustomer(in iikoCustomerInfo) POSCustomer {
 // wide windows with 422 TOO_MANY_DATA_REQUESTED, so the range is chunked.
 const iikoDeliveriesWindow = 24 * time.Hour
 
+// iikoOrderWindowPad widens the deliveries query window on both ends to absorb
+// the offset between the server clock (UTC) and the organization's local
+// timezone. iiko evaluates deliveryDateFrom/To against each order's delivery
+// date expressed in the org's local time, while we send UTC timestamps. Without
+// the pad, an order whose local delivery date is within a few hours of "now"
+// falls past the UTC upper bound (and, for UTC-ahead orgs, before the lower
+// bound) and is silently skipped. 24h comfortably covers every real UTC offset
+// (max +14/-12h). UpsertOrder is idempotent by external id, so the extra rows
+// fetched from the padding are deduplicated on write.
+const iikoOrderWindowPad = 24 * time.Hour
+
 func (p *IikoProvider) GetOrders(ctx context.Context, from, to time.Time) ([]POSOrder, error) {
-	deliveries, err := p.fetchDeliveriesChunked(ctx, from, to)
+	deliveries, err := p.fetchDeliveriesChunked(ctx, from.Add(-iikoOrderWindowPad), to.Add(iikoOrderWindowPad))
 	if err != nil {
 		return nil, err
 	}
