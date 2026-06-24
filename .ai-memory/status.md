@@ -17,7 +17,8 @@ Last updated: 2026-06-17
 - **Bot menu module**: menu editor UX overhaul, preset customization, preview
   geometry aligned with iOS/Figma, callbacks kept on edited-message path
 - **Bot registration**: refactored into sequential multi-field flow
-- **iiko Cloud**: read-sync foundation built
+- **iiko Cloud**: live — orders sync end-to-end (deliveries-window timezone fix);
+  mechanics + tooling in `docs/integrations/iiko/PLAYBOOK.md`
 - **Bot media**: download media files and upload to telegram-bot-api instead of
   passing URL (commit 95ab67c)
 - **Bot debug logging**: menu rendering + callbacks (commit 9743f60)

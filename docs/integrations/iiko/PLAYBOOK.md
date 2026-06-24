@@ -1,8 +1,8 @@
 # iiko POS — Playbook (non-obvious mechanics)
 
 Hard-won mechanics from the 2026-06 integration tests. Read this before any iiko
-POS work. Companions: `PLAN.md` (architecture/phases), the seed scripts in this
-dir, and live findings in `.ai-memory/iiko_integration.md`.
+POS work. Companions: `PLAN.md` (architecture/phases) and the seed scripts in
+this dir.
 
 Stand credentials live in `.env.local` (`IIKO_API_LOGIN`, `IIKO_ORG_ID`,
 `IIKO_EXTERNAL_MENU_ID`) — never commit the raw key. RMS stand:
@@ -86,8 +86,14 @@ then restart `iikoFront.Net.exe` → handshake + `ReportTerminalGroupAlive`.
   `[last_sync, now]` from `/deliveries`, so historically-seeded aggregate days
   are safe.
 
+## Onboarding (admin UI)
+A client only needs to paste their **apiLogin**; `org_id` + external menu are
+discovered: `POST /api/v1/integrations/discover {type, config:{api_key}}` →
+`{organizations:[{id,name}], external_menus:[{id,name}]}` (no saved integration
+needed). Frontend `CreateIntegrationModal` iiko path is 2-step: enter api_key →
+discover → pick organization (+ optional external menu).
+
 ## Tooling (this dir)
-- `seed_demo_deliveries.sh` — original 2-order Cloud delivery fixtures.
 - `seed_demo_orders.sh` — richer Cloud seed: real Resto prices, repeat customers,
   inline cash payment, `DeliveryByClient` so orders actually close. Needs an
   active terminal + open cash shift.
