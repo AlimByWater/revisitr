@@ -387,8 +387,16 @@ func TestIiko_GetOrders_Deliveries(t *testing.T) {
 			if !strings.Contains(reqBody, `"statuses":["Closed","Delivered"]`) {
 				t.Errorf("unexpected statuses body: %s", reqBody)
 			}
-			_ = json.NewEncoder(w).Encode(iikoDeliveriesResponse{
-				OrdersByOrganizations: []iikoOrdersByOrganization{{
+			// GetOrders pads the window ±24h for timezone safety, so the range is
+			// split into several daily chunks. Return the order only on the chunk
+			// whose window contains its delivery date, mirroring the real API.
+			var req struct {
+				From string `json:"deliveryDateFrom"`
+			}
+			_ = json.Unmarshal(body, &req)
+			resp := iikoDeliveriesResponse{}
+			if strings.HasPrefix(req.From, "2026-05-28") {
+				resp.OrdersByOrganizations = []iikoOrdersByOrganization{{
 					OrganizationID: "org-1",
 					Orders: []iikoDeliveryOrder{{
 						ID: "order-1",
@@ -412,8 +420,9 @@ func TestIiko_GetOrders_Deliveries(t *testing.T) {
 							}},
 						},
 					}},
-				}},
-			})
+				}}
+			}
+			_ = json.NewEncoder(w).Encode(resp)
 		default:
 			http.NotFound(w, r)
 		}
