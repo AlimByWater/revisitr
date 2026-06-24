@@ -35,6 +35,7 @@ type Sender struct {
 	botClients botClientsRepo
 	tgSender   *tgSender.Sender
 	logger     *slog.Logger
+	apiServer  string
 }
 
 func NewSender(
@@ -62,6 +63,19 @@ func WithTelegramSender(ts *tgSender.Sender) SenderOption {
 	return func(s *Sender) { s.tgSender = ts }
 }
 
+func WithSenderAPIServer(url string) SenderOption {
+	return func(s *Sender) { s.apiServer = url }
+}
+
+// newTelegoBot creates a telego bot, optionally pointing at a custom Bot API server.
+func newTelegoBot(token, apiServer string) (*telego.Bot, error) {
+	var opts []telego.BotOption
+	if apiServer != "" {
+		opts = append(opts, telego.WithAPIServer(apiServer))
+	}
+	return telego.NewBot(token, opts...)
+}
+
 func (s *Sender) SendCampaign(ctx context.Context, campaignID int) error {
 	campaign, err := s.campaigns.GetByID(ctx, campaignID)
 	if err != nil {
@@ -84,7 +98,7 @@ func (s *Sender) SendCampaign(ctx context.Context, campaignID int) error {
 		return fmt.Errorf("campaign sender: get bot: %w", err)
 	}
 
-	tBot, err := telego.NewBot(bot.Token)
+	tBot, err := newTelegoBot(bot.Token, s.apiServer)
 	if err != nil {
 		s.campaigns.UpdateStatus(ctx, campaignID, "failed")
 		return fmt.Errorf("campaign sender: create telego bot: %w", err)

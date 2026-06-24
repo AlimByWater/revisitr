@@ -168,6 +168,7 @@ func main() {
 	emojiPacksUsecase := emojipacksUC.New(emojiPacksRepo,
 		emojipacksUC.WithSync(botsRepo, emojiSyncSvc),
 		emojipacksUC.WithOwnerLinks(masterBotLinksRepo),
+		emojipacksUC.WithAPIServer(cfg.TelegramAPIURL),
 	)
 
 	// Module presets usecase

@@ -8,7 +8,6 @@ import (
 
 	"revisitr/internal/entity"
 
-	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
 )
 
@@ -37,6 +36,7 @@ type Scheduler struct {
 	loyalty    loyaltyRepo
 	logger     *slog.Logger
 	interval   time.Duration
+	apiServer  string
 }
 
 func NewScheduler(
@@ -45,6 +45,7 @@ func NewScheduler(
 	botClients schedulerClientsRepo,
 	loyalty loyaltyRepo,
 	logger *slog.Logger,
+	apiServer string,
 ) *Scheduler {
 	return &Scheduler{
 		scenarios:  scenarios,
@@ -53,6 +54,7 @@ func NewScheduler(
 		loyalty:    loyalty,
 		logger:     logger,
 		interval:   1 * time.Hour,
+		apiServer:  apiServer,
 	}
 }
 
@@ -115,7 +117,7 @@ func (s *Scheduler) evaluateBirthday(ctx context.Context, bot entity.Bot, scenar
 	clients := s.getAllBotClients(ctx, bot.ID)
 	today := time.Now()
 
-	tBot, err := telego.NewBot(bot.Token)
+	tBot, err := newTelegoBot(bot.Token, s.apiServer)
 	if err != nil {
 		s.logger.Error("scheduler: create telego bot", "error", err, "bot_id", bot.ID)
 		return
@@ -152,7 +154,7 @@ func (s *Scheduler) evaluateInactiveDays(ctx context.Context, bot entity.Bot, sc
 
 	clients := s.getAllBotClients(ctx, bot.ID)
 
-	tBot, err := telego.NewBot(bot.Token)
+	tBot, err := newTelegoBot(bot.Token, s.apiServer)
 	if err != nil {
 		s.logger.Error("scheduler: create telego bot", "error", err, "bot_id", bot.ID)
 		return

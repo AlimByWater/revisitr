@@ -42,11 +42,12 @@ type ownerLinksRepo interface {
 }
 
 type Usecase struct {
-	logger  *slog.Logger
-	repo    emojiPacksRepo
-	bots    botsRepo
-	owners  ownerLinksRepo
-	syncSvc *emojisync.Service
+	logger    *slog.Logger
+	repo      emojiPacksRepo
+	bots      botsRepo
+	owners    ownerLinksRepo
+	syncSvc   *emojisync.Service
+	apiServer string
 }
 
 func New(repo emojiPacksRepo, opts ...Option) *Usecase {
@@ -70,6 +71,21 @@ func WithOwnerLinks(owners ownerLinksRepo) Option {
 	return func(uc *Usecase) {
 		uc.owners = owners
 	}
+}
+
+func WithAPIServer(url string) Option {
+	return func(uc *Usecase) {
+		uc.apiServer = url
+	}
+}
+
+// newTelegoBot creates a telego bot, optionally pointing at a custom Bot API server.
+func (uc *Usecase) newTelegoBot(token string) (*telego.Bot, error) {
+	var opts []telego.BotOption
+	if uc.apiServer != "" {
+		opts = append(opts, telego.WithAPIServer(uc.apiServer))
+	}
+	return telego.NewBot(token, opts...)
 }
 
 func (uc *Usecase) Init(_ context.Context, logger *slog.Logger) error {
@@ -278,7 +294,7 @@ func (uc *Usecase) SyncToTelegram(ctx context.Context, orgID, packID, botID int)
 	}
 
 	// Create telego bot from token
-	tgBot, err := telego.NewBot(bot.Token)
+	tgBot, err := uc.newTelegoBot(bot.Token)
 	if err != nil {
 		return nil, fmt.Errorf("create telego bot: %w", err)
 	}
@@ -340,7 +356,7 @@ func (uc *Usecase) autoSync(ctx context.Context, orgID int, pack *entity.EmojiPa
 		return
 	}
 
-	tgBot, err := telego.NewBot(bot.Token)
+	tgBot, err := uc.newTelegoBot(bot.Token)
 	if err != nil {
 		uc.logger.Error("auto-sync: create telego bot", "error", err)
 		return

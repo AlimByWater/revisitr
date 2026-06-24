@@ -94,12 +94,13 @@ func main() {
 	go subscriber.Listen(ctx, mgr)
 
 	// Start auto-scenario scheduler
-	scheduler := campaign.NewScheduler(scenariosRepo, botsRepo, botClientsRepo, loyaltyRepo, logger)
+	scheduler := campaign.NewScheduler(scenariosRepo, botsRepo, botClientsRepo, loyaltyRepo, logger, cfg.TelegramAPIURL)
 	go scheduler.Run(ctx)
 
 	// Campaign sender with rich message support
 	_ = campaign.NewSender(campaignsRepo, botsRepo, botClientsRepo, logger,
 		campaign.WithTelegramSender(tgSender),
+		campaign.WithSenderAPIServer(cfg.TelegramAPIURL),
 	)
 
 	<-ctx.Done()
