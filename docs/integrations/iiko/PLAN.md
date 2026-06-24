@@ -174,101 +174,14 @@ Tradeoffs:
 - higher mismatch/error risk;
 - needs manual review queue for ambiguous checks.
 
-## Demo Stand (RMS, sandbox)
+## Demo Stand & Live Findings
 
-- CrmID: `9345251`
-- Domain: `https://260-347-461.iiko.it/resto/`
-- BackOffice login: `user` / `user#test` / pin `1111`
-- iikoWeb: `https://260-347-461.iikoweb.ru/navigator/ru-RU/index.html#/main`
-- Front installer: `https://downloads.iiko.online/9.4.9102.0/iiko/RMS/Front/Setup.Front.exe`
-- BackOffice installer: `https://downloads.iiko.online/9.4.9102.0/iiko/RMS/BackOffice/Setup.RMS.BackOffice.exe`
-- Stand archives if idle >1 month: run "приказ об изменении цен" monthly.
-
-The demo RMS credentials do not replace `apiLogin`. They are useful for Resto API
-fallback and for filling demo data.
-
-## Demo Cloud API Access (configured 2026-05-27)
-
-iikoWeb path:
-`Настройки Cloud API` -> `Добавить интеграцию` -> `Подключенные точки`.
-
-- API login name: `revisitr-dev`
-- API key: created in iikoWeb, stored outside git; visible prefix/suffix:
-  `a0e******492`
-- A separately created key on `clear.yourmind@yandex.ru` was checked on
-  2026-05-28 and returned `is not authorized`; do not use it unless it is
-  explicitly connected in iikoWeb Cloud API settings.
-- Email used for demo key notifications: `dev@revisitr.local`
-- Connected point: `Мой ресторан`
-- Organization id: `22fc8cb3-0e70-4c9a-b195-8d2301ee0c43`
-- Cloud check: `POST /access_token` returns token.
-- Organization check: `POST /organizations` returns `Мой ресторан`,
-  `isCloud=true`.
-- Menu check: `POST /nomenclature` works but demo menu is empty
-  (`groups=0`, `products=0`, `revision=0`).
-- External menu check: `POST /api/2/menu` returns `Revisitr Demo Menu`
-  (`externalMenuId=82279`).
-- External menu payload: `POST /api/2/menu/by_id` with
-  `externalMenuId=82279` returns category `Coffee Demo` and items:
-  `Revisitr Beans`, `Revisitr Drip`, `Revisitr Cookie`.
-- External menu item ids may arrive as `itemId` while `iikoItemId` is null.
-  The provider must fall back from `iikoItemId` to `itemId` to keep menu sync
-  useful on this stand.
-- External menu prices are currently `null`; base price list still needs setup.
-- Resto nomenclature fallback was filled with 4 product groups and 15 products:
-  - `Revisitr Coffee`: Espresso, Cappuccino, Raf, Cold Brew;
-  - `Revisitr Bakery`: Croissant, Cookie, Brownie, Cheesecake;
-  - `Revisitr Bowls`: Granola, Salad, Chicken Bowl, Soup;
-  - `Revisitr Drinks`: Lemonade, Matcha, Tea.
-- Product/category images are out of scope for the integration demo. Demo data
-  only needs enough structure for API sync: categories, products, prices,
-  stop-list/order checks.
-- Delivery-order seed script:
-  `docs/integrations/iiko/seed_demo_deliveries.sh`. It uses
-  `IIKO_API_LOGIN` from env, creates two Cloud delivery fixtures: one with an
-  inline regular customer, one without a POS customer object. Delivery phone is
-  still required by iikoCloud.
-- Current stand limitation: `POST /terminal_groups` returns the only group only
-  with `includeDisabled=true`, and `POST /deliveries/create` fails with
-  `TerminalGroupDisabled`. To seed real Cloud orders, iikoFront/terminal group
-  must be registered and active, or we need to use another demo stand.
-- Loyalty customer write check: `POST /loyalty/iiko/customer/create_or_update`
-  returns `Transport_WrongCrmId / Common_OrganizationNotFound`. This means
-  iikoBiz/iikoCard loyalty is not enabled for this demo org, so POS-side iiko
-  customers cannot be seeded through Cloud loyalty endpoints yet.
-- Terminal group check: `POST /terminal_groups` returns 1 terminal group only
-  when disabled groups are included.
-
-Do not commit the raw API key. Put it only into integration config/secrets.
-
-## Resto API Fallback (verified live, parked)
-
-Auth flow tested 2026-05-25:
-
-```http
-GET /resto/api/auth?login=user&pass=<sha1(password)>
-```
-
-Response:
-- `200`;
-- body = token UUID;
-- `Set-Cookie: key=<token>`.
-
-Working endpoints with `key=<token>`:
-- `/corporation/departments` 200;
-- `/products` 200;
-- `/employees` 200;
-- `/v2/entities/products/list` 200;
-- `/v2/reports/olap` POST only.
-
-Use fallback if:
-- `apiLogin` issuance blocks delivery;
-- a client has RMS/Resto API but no Cloud API;
-- demo verification needs current stand immediately.
-
-Cost: separate `RestoProvider`, different auth, different response shapes,
-different mappers.
-
+Stand credentials live in `.env.local` (`IIKO_API_LOGIN`, `IIKO_ORG_ID`,
+`IIKO_EXTERNAL_MENU_ID`). All hard-won operational mechanics (terminal
+activation, create→close validation chain, pickup-vs-courier closing,
+blocked endpoints, where real prices/payment types live, the deliveries-window
+timezone bug + fix, seed tooling) are consolidated in **`PLAYBOOK.md`** in this
+directory — read that for current details.
 ## Existing Codebase
 
 Already present:
