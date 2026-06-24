@@ -150,3 +150,14 @@ per client → integration must degrade gracefully when an endpoint returns 401/
 Terminal group is disabled (active=0) → cannot create test orders → deliveries
 always empty. To get live order/aggregate data, terminal group must be enabled in
 iikoOffice/BackOffice (RMS side), or use mock data per iiko docs.
+
+## 2026-06 update — terminal activated, orders flowing, mechanics solved
+
+The "terminal disabled" / "deliveries always empty" limitation above is RESOLVED.
+All the non-obvious mechanics we worked out (terminal activation via the iikoWeb
+`isEnabledForTransport` flag, the create→close validation chain, the
+`DeliveryByClient`-closes-but-`DeliveryByCourier`-doesn't trick, blocked endpoints,
+where real prices/payment types live, the deliveries-window timezone bug + fix,
+and the seed tooling) are written up in **`docs/integrations/iiko/PLAYBOOK.md`** —
+read that first. Seed scripts: `seed_demo_orders.sh` (live Cloud orders),
+`seed_history.py` (3 months of DB history for analytics/dynamics).
