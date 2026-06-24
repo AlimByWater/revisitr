@@ -13,7 +13,7 @@ type fileServer interface {
 }
 
 // StorageServe serves files from MinIO storage. Registered as a separate group
-// at /revisitr/storage to match the URL pattern used in the database.
+// at /storage to match the URL pattern used in the database.
 type StorageServe struct {
 	fs     fileServer
 	bucket string
@@ -24,7 +24,7 @@ func NewStorageServe(fs fileServer, bucket string) *StorageServe {
 }
 
 func (g *StorageServe) Path() string {
-	return "/revisitr/storage"
+	return "/storage"
 }
 
 func (g *StorageServe) Auth() gin.HandlerFunc {

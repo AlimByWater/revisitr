@@ -191,7 +191,7 @@ export default function SegmentDetailPage() {
                       'animate-in',
                       `animate-in-delay-${Math.min(i + 1, 5)}`,
                     )}
-                    onClick={() => window.open(`/revisitr/dashboard/clients/${client.id}`, '_blank')}
+                    onClick={() => window.open(`/dashboard/clients/${client.id}`, '_blank')}
                   >
                     <td className="px-4 py-3 font-medium text-neutral-900 whitespace-nowrap">
                       {client.first_name} {client.last_name?.charAt(0)}.

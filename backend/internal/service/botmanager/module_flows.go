@@ -1165,10 +1165,10 @@ func (h *handler) inputFile(part entity.MessagePart) telego.InputFile {
 	}
 	mediaURL := part.MediaURL
 	if mediaURL == "" {
-		return tu.FileFromURL("https://elysium.fm")
+		return tu.FileFromURL("https://revisitr.ru")
 	}
 	if !strings.HasPrefix(mediaURL, "http") {
-		mediaURL = "https://elysium.fm" + mediaURL
+		mediaURL = "https://revisitr.ru" + mediaURL
 	}
 
 	// Download file and upload — telegram-bot-api (local mode) often fails

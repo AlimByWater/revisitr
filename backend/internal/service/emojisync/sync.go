@@ -30,7 +30,7 @@ func (r namedReader) Name() string { return r.name }
 // Service syncs emoji pack items to Telegram custom emoji sticker sets.
 type Service struct {
 	logger  *slog.Logger
-	baseURL string // e.g. "https://elysium.fm"
+	baseURL string // e.g. "https://revisitr.ru"
 }
 
 func New(logger *slog.Logger, baseURL string) *Service {

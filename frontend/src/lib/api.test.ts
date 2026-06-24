@@ -34,7 +34,7 @@ function unauthorizedError(config: AxiosRequestConfig) {
   })
 }
 
-function mockLocation(href = 'http://localhost/revisitr/dashboard') {
+function mockLocation(href = 'http://localhost/dashboard') {
   Object.defineProperty(window, 'location', {
     configurable: true,
     value: {
@@ -48,7 +48,7 @@ describe('api interceptors', () => {
     vi.restoreAllMocks()
     vi.resetModules()
     vi.stubEnv('VITE_MOCK_API', 'false')
-    vi.stubEnv('BASE_URL', '/revisitr/')
+    vi.stubEnv('BASE_URL', '/')
     localStorage.clear()
     mockLocation()
   })
@@ -202,7 +202,7 @@ describe('api interceptors', () => {
     })
 
     expect(localStorage.getItem('token')).toBeNull()
-    expect(window.location.href).toBe('/revisitr/auth/login')
+    expect(window.location.href).toBe('/auth/login')
   })
 
   it('clears tokens and redirects when refresh request fails', async () => {
@@ -218,6 +218,6 @@ describe('api interceptors', () => {
 
     expect(localStorage.getItem('token')).toBeNull()
     expect(localStorage.getItem('refresh_token')).toBeNull()
-    expect(window.location.href).toBe('/revisitr/auth/login')
+    expect(window.location.href).toBe('/auth/login')
   })
 })

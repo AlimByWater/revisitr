@@ -8,7 +8,7 @@ export function Footer() {
           {/* Brand */}
           <div>
             <img
-              src="/revisitr/logo.png"
+              src="/logo.png"
               alt="Revisitr"
               decoding="async"
               className="h-7 w-auto invert"

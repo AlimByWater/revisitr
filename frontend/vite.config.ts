@@ -9,7 +9,7 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
     css: false,
   },
-  base: '/revisitr/',
+  base: '/',
   plugins: [react()],
   resolve: {
     alias: {
@@ -24,7 +24,7 @@ export default defineConfig({
         target: 'http://localhost:9721',
         changeOrigin: true,
       },
-      '/revisitr/storage': {
+      '/storage': {
         target: 'http://localhost:9721',
         changeOrigin: true,
       },

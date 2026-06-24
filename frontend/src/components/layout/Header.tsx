@@ -169,7 +169,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
 
           <Link to="/dashboard">
             <img
-              src="/revisitr/logo.png"
+              src="/logo.png"
               alt="Revisitr"
               decoding="async"
               className="h-6 sm:h-7 w-auto"

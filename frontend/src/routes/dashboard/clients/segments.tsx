@@ -61,7 +61,7 @@ export default function SegmentsPage() {
   const totalClients = segments.reduce((s, seg) => s + seg.client_count, 0)
 
   function handleSegmentClick(segKey: string) {
-    window.open(`/revisitr/dashboard/rfm/segments/${segKey}`, '_blank')
+    window.open(`/dashboard/rfm/segments/${segKey}`, '_blank')
   }
 
   if (isLoading) {
