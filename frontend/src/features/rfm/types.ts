@@ -10,8 +10,6 @@ export const RFM_SEGMENTS = [
   'lost',
 ] as const
 
-export type RFMSegmentKey = (typeof RFM_SEGMENTS)[number]
-
 export const RFM_SEGMENT_LABELS: Record<string, string> = {
   new: 'Новые',
   promising: 'Перспективные',

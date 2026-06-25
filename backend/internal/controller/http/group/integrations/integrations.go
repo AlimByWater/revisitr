@@ -26,6 +26,7 @@ type integrationsUsecase interface {
 	SyncNow(ctx context.Context, id, orgID int) error
 	TestConnection(ctx context.Context, id, orgID int) error
 	GetOrders(ctx context.Context, id, orgID, limit, offset int) ([]entity.ExternalOrder, int, error)
+	GetLinkedClients(ctx context.Context, id, orgID, limit, offset int) ([]entity.IntegrationLinkedClient, int, error)
 	GetCustomers(ctx context.Context, id, orgID int, opts posService.CustomerListOpts) ([]posService.POSCustomer, error)
 	GetMenu(ctx context.Context, id, orgID int) (*posService.POSMenu, error)
 	GetStats(ctx context.Context, id, orgID int) (*entity.IntegrationStats, error)
@@ -79,6 +80,7 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handleSync,
 		g.handleTestConnection,
 		g.handleGetOrders,
+		g.handleGetLinkedClients,
 		g.handleGetCustomers,
 		g.handleGetMenu,
 		g.handleGetStats,
@@ -268,6 +270,35 @@ func (g *Group) handleGetOrders() (string, string, gin.HandlerFunc) {
 
 		c.JSON(http.StatusOK, gin.H{
 			"items": orders,
+			"total": total,
+		})
+	}
+}
+
+func (g *Group) handleGetLinkedClients() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/:id/clients", func(c *gin.Context) {
+		orgID, _ := c.Get("org_id")
+
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid integration id"})
+			return
+		}
+
+		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+		if limit > 100 {
+			limit = 100
+		}
+
+		clients, total, err := g.uc.GetLinkedClients(c.Request.Context(), id, orgID.(int), limit, offset)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"items": clients,
 			"total": total,
 		})
 	}

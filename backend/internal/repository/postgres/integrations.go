@@ -125,6 +125,37 @@ func (r *Integrations) GetOrdersByIntegration(ctx context.Context, integrationID
 	return orders, total, nil
 }
 
+func (r *Integrations) GetLinkedClients(ctx context.Context, integrationID, limit, offset int) ([]entity.IntegrationLinkedClient, int, error) {
+	var total int
+	err := r.pg.DB().GetContext(ctx, &total,
+		"SELECT COUNT(DISTINCT client_id) FROM external_orders WHERE integration_id = $1 AND client_id IS NOT NULL",
+		integrationID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("integrations.GetLinkedClients count: %w", err)
+	}
+
+	var clients []entity.IntegrationLinkedClient
+	err = r.pg.DB().SelectContext(ctx, &clients, `
+		SELECT
+			bc.id AS client_id,
+			COALESCE(NULLIF(TRIM(COALESCE(bc.first_name, '') || ' ' || COALESCE(bc.last_name, '')), ''), bc.username, '') AS name,
+			COALESCE(bc.phone, '') AS phone,
+			COUNT(eo.id) AS order_count,
+			COALESCE(SUM(eo.total), 0) AS total_spent,
+			MAX(eo.ordered_at) AS last_order_at
+		FROM external_orders eo
+		JOIN bot_clients bc ON bc.id = eo.client_id
+		WHERE eo.integration_id = $1 AND eo.client_id IS NOT NULL
+		GROUP BY bc.id, bc.first_name, bc.last_name, bc.username, bc.phone
+		ORDER BY total_spent DESC
+		LIMIT $2 OFFSET $3`,
+		integrationID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("integrations.GetLinkedClients: %w", err)
+	}
+	return clients, total, nil
+}
+
 func (r *Integrations) GetSyncStats(ctx context.Context, integrationID int) (*entity.IntegrationStats, error) {
 	stats := &entity.IntegrationStats{}
 	err := r.pg.DB().GetContext(ctx, stats, `

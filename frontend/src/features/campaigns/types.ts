@@ -37,15 +37,6 @@ export interface Campaign {
   updated_at: string
 }
 
-export interface CampaignClick {
-  id: number
-  campaign_id: number
-  client_id: number
-  button_idx?: number
-  url?: string
-  clicked_at: string
-}
-
 export interface CampaignAnalyticsDetail {
   total: number
   sent: number

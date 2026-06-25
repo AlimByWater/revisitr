@@ -61,6 +61,15 @@ export interface OrderItem {
   price: number
 }
 
+export interface IntegrationClient {
+  client_id: number
+  name: string
+  phone: string
+  order_count: number
+  total_spent: number
+  last_order_at?: string
+}
+
 export interface IntegrationStats {
   total_orders: number
   total_revenue: number

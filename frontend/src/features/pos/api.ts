@@ -23,7 +23,3 @@ export async function update(
   const { data } = await api.patch<POSLocation>(`/pos/${id}`, body)
   return data
 }
-
-export async function remove(id: number): Promise<void> {
-  await api.delete(`/pos/${id}`)
-}

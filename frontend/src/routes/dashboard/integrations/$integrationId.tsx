@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useState } from 'react'
 import {
   ArrowLeft,
@@ -16,7 +16,7 @@ import {
   useIntegrationQuery,
   useIntegrationStatsQuery,
   useIntegrationOrdersQuery,
-  useIntegrationCustomersQuery,
+  useIntegrationLinkedClientsQuery,
   useIntegrationMenuQuery,
   useSyncIntegrationMutation,
   useTestConnectionMutation,
@@ -175,7 +175,7 @@ export default function IntegrationDetailPage() {
           <OverviewTab integrationId={id} integration={integration} />
         )}
         {activeTab === 'orders' && <OrdersTab integrationId={id} />}
-        {activeTab === 'customers' && <CustomersTab integrationId={id} />}
+        {activeTab === 'customers' && <ClientsTab integrationId={id} />}
         {activeTab === 'menu' && <MenuTab integrationId={id} />}
         {activeTab === 'settings' && (
           <SettingsTab integration={integration} onDeleted={() => navigate('/dashboard/integrations')} />
@@ -342,9 +342,12 @@ function OrdersTab({ integrationId }: { integrationId: number }) {
                 </td>
                 <td className="py-2.5 px-3 text-center">
                   {order.client_id ? (
-                    <span className="text-green-600 text-xs font-medium">
-                      Привязан
-                    </span>
+                    <Link
+                      to={`/dashboard/clients/${order.client_id}`}
+                      className="text-green-600 hover:text-green-700 text-xs font-medium font-mono hover:underline"
+                    >
+                      #{order.client_id}
+                    </Link>
                   ) : (
                     <span className="text-neutral-400 text-xs">—</span>
                   )}
@@ -382,75 +385,111 @@ function OrdersTab({ integrationId }: { integrationId: number }) {
   )
 }
 
-// --- Customers Tab ---
-function CustomersTab({ integrationId }: { integrationId: number }) {
-  const [search, setSearch] = useState('')
-  const { data: customers, isLoading } = useIntegrationCustomersQuery(
+// --- Clients Tab ---
+// Revisitr clients linked to this integration, derived from matched orders.
+// iiko has no bulk customer list, so we surface our own matched clients here.
+function ClientsTab({ integrationId }: { integrationId: number }) {
+  const [page, setPage] = useState(0)
+  const limit = 20
+  const { data, isLoading } = useIntegrationLinkedClientsQuery(
     integrationId,
-    50,
-    0,
-    search,
+    limit,
+    page * limit,
   )
+
+  if (isLoading) {
+    return <div className="text-sm text-neutral-500">Загрузка клиентов...</div>
+  }
+
+  const clients = data?.items || []
+  const total = data?.total || 0
+
+  if (clients.length === 0) {
+    return (
+      <p className="text-sm text-neutral-500 py-8 text-center">
+        Пока нет клиентов, привязанных к этой интеграции. Клиент появляется здесь
+        автоматически, когда заказ из POS совпадает по телефону с клиентом
+        Revisitr.
+      </p>
+    )
+  }
 
   return (
     <div className="space-y-4">
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Поиск по имени или телефону..."
-        className={cn(
-          'w-full rounded border border-neutral-900 px-3 py-2',
-          'text-sm placeholder:text-neutral-400',
-          'focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent',
-        )}
-      />
-
-      {isLoading ? (
-        <p className="text-sm text-neutral-500">Загрузка клиентов...</p>
-      ) : !customers || customers.length === 0 ? (
-        <p className="text-sm text-neutral-500 py-8 text-center">
-          {search ? 'Ничего не найдено.' : 'Нет клиентов в POS-системе.'}
-        </p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-neutral-200">
-                <th className="text-left py-2 px-3 text-neutral-500 font-medium">
-                  Имя
-                </th>
-                <th className="text-left py-2 px-3 text-neutral-500 font-medium">
-                  Телефон
-                </th>
-                <th className="text-right py-2 px-3 text-neutral-500 font-medium">
-                  Баланс
-                </th>
-                <th className="text-left py-2 px-3 text-neutral-500 font-medium">
-                  Карта
-                </th>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-neutral-200">
+              <th className="text-left py-2 px-3 text-neutral-500 font-medium">
+                Клиент
+              </th>
+              <th className="text-left py-2 px-3 text-neutral-500 font-medium">
+                Телефон
+              </th>
+              <th className="text-right py-2 px-3 text-neutral-500 font-medium">
+                Заказов
+              </th>
+              <th className="text-right py-2 px-3 text-neutral-500 font-medium">
+                Сумма
+              </th>
+              <th className="text-left py-2 px-3 text-neutral-500 font-medium">
+                Последний заказ
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {clients.map((c) => (
+              <tr
+                key={c.client_id}
+                className="border-b border-neutral-200/50 hover:bg-neutral-50 transition-colors"
+              >
+                <td className="py-2.5 px-3">
+                  <Link
+                    to={`/dashboard/clients/${c.client_id}`}
+                    className="text-accent hover:underline font-medium"
+                  >
+                    {c.name || `#${c.client_id}`}
+                  </Link>
+                </td>
+                <td className="py-2.5 px-3 text-neutral-600">
+                  {c.phone || '—'}
+                </td>
+                <td className="py-2.5 px-3 text-right text-neutral-700">
+                  {c.order_count}
+                </td>
+                <td className="py-2.5 px-3 text-right font-medium text-neutral-900">
+                  {formatCurrency(c.total_spent)}
+                </td>
+                <td className="py-2.5 px-3 text-neutral-600">
+                  {formatDate(c.last_order_at)}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {customers.map((c) => (
-                <tr
-                  key={c.external_id}
-                  className="border-b border-neutral-200/50 hover:bg-neutral-50 transition-colors"
-                >
-                  <td className="py-2.5 px-3 text-neutral-900 font-medium">
-                    {c.name}
-                  </td>
-                  <td className="py-2.5 px-3 text-neutral-600">{c.phone}</td>
-                  <td className="py-2.5 px-3 text-right text-neutral-700">
-                    {formatCurrency(c.balance)}
-                  </td>
-                  <td className="py-2.5 px-3 text-neutral-400 text-xs font-mono">
-                    {c.card_number || '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {total > limit && (
+        <div className="flex justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="px-3 py-1.5 text-sm rounded border border-neutral-900 disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+          >
+            Назад
+          </button>
+          <span className="px-3 py-1.5 text-sm text-neutral-500">
+            {page * limit + 1}–{Math.min((page + 1) * limit, total)} из {total}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={(page + 1) * limit >= total}
+            className="px-3 py-1.5 text-sm rounded border border-neutral-900 disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+          >
+            Далее
+          </button>
         </div>
       )}
     </div>

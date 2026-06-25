@@ -6,6 +6,7 @@ import type {
   CreateIntegrationRequest,
   UpdateIntegrationRequest,
   ExternalOrder,
+  IntegrationClient,
   IntegrationStats,
   POSCustomer,
   POSMenu,
@@ -64,6 +65,18 @@ export const integrationsApi = {
   ): Promise<PaginatedResponse<ExternalOrder>> => {
     const response = await api.get<PaginatedResponse<ExternalOrder>>(
       `/integrations/${id}/orders`,
+      { params: { limit, offset } },
+    )
+    return response.data
+  },
+
+  getLinkedClients: async (
+    id: number,
+    limit = 20,
+    offset = 0,
+  ): Promise<PaginatedResponse<IntegrationClient>> => {
+    const response = await api.get<PaginatedResponse<IntegrationClient>>(
+      `/integrations/${id}/clients`,
       { params: { limit, offset } },
     )
     return response.data

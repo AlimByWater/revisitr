@@ -30,15 +30,15 @@ export function useIntegrationOrdersQuery(
   )
 }
 
-export function useIntegrationCustomersQuery(
+export function useIntegrationLinkedClientsQuery(
   id: number,
   limit = 20,
   offset = 0,
-  search = '',
 ) {
   return useApiQuery(
-    id ? `integrations-${id}-customers-${limit}-${offset}-${search}` : null,
-    () => integrationsApi.getCustomers(id, limit, offset, search),
+    id ? `integrations-${id}-linked-clients-${limit}-${offset}` : null,
+    () => integrationsApi.getLinkedClients(id, limit, offset),
+    { keepPreviousData: true },
   )
 }
 
@@ -97,22 +97,4 @@ export function useTestConnectionMutation() {
   )
 }
 
-export function useIntegrationAggregatesQuery(
-  id: number,
-  from: string,
-  to: string,
-) {
-  return useApiQuery(
-    id && from && to
-      ? `integrations-${id}-aggregates-${from}-${to}`
-      : null,
-    () => integrationsApi.getAggregates(id, from, to),
-  )
-}
 
-export function useSalesDataQuery(from: string, to: string) {
-  return useApiQuery(
-    from && to ? `dashboard-sales-${from}-${to}` : null,
-    () => integrationsApi.getSalesData(from, to),
-  )
-}

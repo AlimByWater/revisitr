@@ -778,13 +778,6 @@ func (h *handler) isBaratieDemo() bool {
 	return h.info.Username == "baratie_demo_bot"
 }
 
-func (h *handler) alreadyRegisteredText() string {
-	if h.isBaratieDemo() {
-		return "⚓ Вы уже в списке гостей Baratie. Добро пожаловать на борт!"
-	}
-	return "Вы уже зарегистрированы! 👍"
-}
-
 func (h *handler) balanceNeedsRegistrationText() string {
 	if h.isBaratieDemo() {
 		return "⚓ Сначала поднимитесь на борт через /start, чтобы открыть трюм с дублонами."

@@ -1,5 +1,5 @@
 import { useApiQuery, useApiMutation } from '../../lib/swr'
-import { list, getById, create, update, remove } from './api'
+import { list, getById, create, update } from './api'
 import type { CreatePOSRequest, POSLocation } from './types'
 
 export function usePOSQuery() {
@@ -27,10 +27,4 @@ export function useUpdatePOSMutation() {
   )
 }
 
-export function useDeletePOSMutation() {
-  return useApiMutation(
-    'pos-locations/delete',
-    (id: number) => remove(id),
-    ['pos-locations'],
-  )
-}
+

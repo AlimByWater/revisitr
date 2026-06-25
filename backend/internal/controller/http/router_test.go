@@ -28,12 +28,6 @@ import (
 	"revisitr/internal/controller/http/group/wallet"
 )
 
-// stubConfig satisfies the unexported config interface required by httpCtrl.New.
-type stubConfig struct{}
-
-func (stubConfig) GetPort() string      { return "0" }
-func (stubConfig) GetJWTSecret() string { return "test-secret" }
-
 // TestAllGroupsRegisterWithoutPanic verifies that every controller group can be
 // registered on a single Gin engine without triggering route parameter conflicts
 // or any other panic. This is a pure unit test — no database, Redis, or external

@@ -248,10 +248,6 @@ func applyItemCustomizations(category entity.MenuCategory, override menuPresetCa
 	return category
 }
 
-func menuCategoryItemsText(category entity.MenuCategory) string {
-	return menuCategoryItemsTextWithDensity(category, menuListDensityDetail)
-}
-
 func menuCategoryItemsTextWithDensity(category entity.MenuCategory, density string) string {
 	lines := make([]string, 0, len(category.Items))
 	for _, item := range category.Items {

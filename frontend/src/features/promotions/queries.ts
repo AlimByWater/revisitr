@@ -16,13 +16,6 @@ export function usePromotionQuery(id: number) {
   )
 }
 
-export function usePromotionCodesQuery(promotionId: number) {
-  return useApiQuery(
-    promotionId ? `promotions-${promotionId}-codes` : null,
-    () => promotionsApi.getPromotionCodes(promotionId),
-  )
-}
-
 export function usePromoCodesQuery() {
   return useApiQuery('promo-codes', promotionsApi.listCodes)
 }
@@ -79,26 +72,4 @@ export function useGenerateCodeMutation() {
   )
 }
 
-export function useValidatePromoCodeMutation() {
-  return useApiMutation(
-    'promo-codes/validate',
-    ({
-      code,
-      clientId,
-      orderAmount,
-    }: {
-      code: string
-      clientId: number
-      orderAmount?: number
-    }) => promotionsApi.validateCode(code, clientId, orderAmount),
-  )
-}
 
-export function useActivatePromoCodeMutation() {
-  return useApiMutation(
-    'promo-codes/activate',
-    ({ code, clientId }: { code: string; clientId: number }) =>
-      promotionsApi.activateCode(code, clientId),
-    ['promo-codes'],
-  )
-}

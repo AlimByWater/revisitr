@@ -41,7 +41,7 @@ export const STANDARD_FIELD_PRESET_LABELS: Record<string, string> = {
   gender: 'Пол',
 }
 
-export const STANDARD_FIELD_NAMES = new Set(
+const STANDARD_FIELD_NAMES = new Set(
   STANDARD_FIELD_PRESETS.map((field) => field.name),
 )
 
@@ -342,7 +342,7 @@ export function normalizeTimeInput(value: string): string {
   return `${normalizedHours}:${normalizedMinutes}`
 }
 
-export function buildDefaultBookingSlots(
+function buildDefaultBookingSlots(
   posLocations: POSLocation[],
   boundPosIds: number[],
 ): BookingTimeSlot[] {
@@ -363,7 +363,7 @@ export function buildDefaultBookingSlots(
   return buildHourlySlots('10:00', '20:00')
 }
 
-export function buildHourlySlots(start: string, end: string): BookingTimeSlot[] {
+function buildHourlySlots(start: string, end: string): BookingTimeSlot[] {
   const startHour = Number(start.split(':')[0] ?? 0)
   const endHour = Number(end.split(':')[0] ?? 0)
 

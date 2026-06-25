@@ -47,6 +47,9 @@ func (m *mockIntegrationsRepo) UpsertOrder(ctx context.Context, order *entity.Ex
 func (m *mockIntegrationsRepo) GetOrdersByIntegration(_ context.Context, _ int, _ int, _ int) ([]entity.ExternalOrder, int, error) {
 	return nil, 0, nil
 }
+func (m *mockIntegrationsRepo) GetLinkedClients(_ context.Context, _ int, _ int, _ int) ([]entity.IntegrationLinkedClient, int, error) {
+	return nil, 0, nil
+}
 func (m *mockIntegrationsRepo) GetSyncStats(_ context.Context, _ int) (*entity.IntegrationStats, error) {
 	return &entity.IntegrationStats{}, nil
 }

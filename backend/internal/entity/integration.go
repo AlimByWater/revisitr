@@ -147,3 +147,15 @@ type ExternalOrder struct {
 	OrderedAt     *time.Time `json:"ordered_at,omitempty" db:"ordered_at"`
 	SyncedAt      time.Time  `json:"synced_at"      db:"synced_at"`
 }
+
+// IntegrationLinkedClient is a Revisitr client matched to this integration's
+// orders, aggregated from external_orders. iiko has no bulk customer list, so
+// the integration's "clients" view is derived from matched orders instead.
+type IntegrationLinkedClient struct {
+	ClientID    int        `json:"client_id"    db:"client_id"`
+	Name        string     `json:"name"         db:"name"`
+	Phone       string     `json:"phone"        db:"phone"`
+	OrderCount  int        `json:"order_count"  db:"order_count"`
+	TotalSpent  float64    `json:"total_spent"  db:"total_spent"`
+	LastOrderAt *time.Time `json:"last_order_at,omitempty" db:"last_order_at"`
+}

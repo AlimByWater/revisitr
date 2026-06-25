@@ -61,18 +61,6 @@ export interface Invoice {
   created_at: string
 }
 
-export interface Payment {
-  id: number
-  invoice_id: number
-  org_id: number
-  amount: number
-  currency: string
-  provider: string
-  provider_payment_id?: string
-  status: 'pending' | 'succeeded' | 'failed' | 'refunded'
-  created_at: string
-}
-
 export interface CreateSubscriptionRequest {
   tariff_slug: string
 }

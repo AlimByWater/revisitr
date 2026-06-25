@@ -21,11 +21,3 @@ export function useCompleteOnboardingMutation() {
     ['onboarding'],
   )
 }
-
-export function useResetOnboardingMutation() {
-  return useApiMutation(
-    'onboarding/reset',
-    () => onboardingApi.reset(),
-    ['onboarding'],
-  )
-}

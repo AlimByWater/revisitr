@@ -33,17 +33,6 @@ export async function updateProgram(
   return data
 }
 
-export async function createLevel(
-  programId: number,
-  body: Omit<LoyaltyLevel, 'id' | 'program_id'>,
-): Promise<LoyaltyLevel> {
-  const { data } = await api.post<LoyaltyLevel>(
-    `/loyalty/programs/${programId}/levels`,
-    body,
-  )
-  return data
-}
-
 export async function updateLevels(
   programId: number,
   levels: Omit<LoyaltyLevel, 'program_id'>[],

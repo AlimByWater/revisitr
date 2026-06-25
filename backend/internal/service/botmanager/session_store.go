@@ -31,12 +31,6 @@ type FlowState struct {
 	RegistrationData  map[string]string `json:"registration_data,omitempty"` // collected field values
 }
 
-func (s FlowState) resetFlow() FlowState {
-	return FlowState{
-		SelectedPOSID: s.SelectedPOSID,
-	}
-}
-
 type RedisSessionStore struct {
 	client *goredis.Client
 }

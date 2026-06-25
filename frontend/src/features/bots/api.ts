@@ -2,7 +2,7 @@ import { api } from '@/lib/api'
 import type {
   Bot, BotSettings, CreateBotRequest,
   CreateManagedBotRequest, CreateManagedBotResponse,
-  ActivationLinkResponse, PostCode,
+  ActivationLinkResponse,
   ModulePreset, BotModuleSettings,
 } from './types'
 
@@ -81,18 +81,4 @@ export const modulePresetsApi = {
   },
 }
 
-export const postsApi = {
-  list: async (): Promise<PostCode[]> => {
-    const response = await api.get<PostCode[]>('/posts')
-    return response.data
-  },
 
-  getByCode: async (code: string): Promise<PostCode> => {
-    const response = await api.get<PostCode>(`/posts/${code}`)
-    return response.data
-  },
-
-  remove: async (code: string): Promise<void> => {
-    await api.delete(`/posts/${code}`)
-  },
-}

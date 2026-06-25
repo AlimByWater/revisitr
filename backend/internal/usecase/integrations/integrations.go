@@ -21,6 +21,7 @@ type integrationsRepo interface {
 	UpdateLastSync(ctx context.Context, id int, status string) error
 	UpsertOrder(ctx context.Context, order *entity.ExternalOrder) error
 	GetOrdersByIntegration(ctx context.Context, integrationID, limit, offset int) ([]entity.ExternalOrder, int, error)
+	GetLinkedClients(ctx context.Context, integrationID, limit, offset int) ([]entity.IntegrationLinkedClient, int, error)
 	GetSyncStats(ctx context.Context, integrationID int) (*entity.IntegrationStats, error)
 	GetAggregates(ctx context.Context, integrationID int, from, to time.Time) ([]entity.IntegrationAggregate, error)
 	GetDashboardAggregates(ctx context.Context, orgID int, from, to time.Time) (*entity.DashboardAggregates, error)
@@ -157,6 +158,14 @@ func (uc *Usecase) GetOrders(ctx context.Context, id, orgID, limit, offset int) 
 		return nil, 0, err
 	}
 	return uc.integrations.GetOrdersByIntegration(ctx, intg.ID, limit, offset)
+}
+
+func (uc *Usecase) GetLinkedClients(ctx context.Context, id, orgID, limit, offset int) ([]entity.IntegrationLinkedClient, int, error) {
+	intg, err := uc.GetByID(ctx, id, orgID)
+	if err != nil {
+		return nil, 0, err
+	}
+	return uc.integrations.GetLinkedClients(ctx, intg.ID, limit, offset)
 }
 
 func (uc *Usecase) GetCustomers(ctx context.Context, id, orgID int, opts posService.CustomerListOpts) ([]posService.POSCustomer, error) {

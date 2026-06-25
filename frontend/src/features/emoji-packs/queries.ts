@@ -4,15 +4,10 @@ import type {
   CreateEmojiPackRequest,
   UpdateEmojiPackRequest,
   CreateEmojiItemRequest,
-  UpdateEmojiItemRequest,
 } from './types'
 
 export function useEmojiPacksQuery() {
   return useApiQuery('emoji-packs', emojiPacksApi.list)
-}
-
-export function useEmojiPackQuery(id: number) {
-  return useApiQuery(id ? `emoji-packs-${id}` : null, () => emojiPacksApi.getById(id))
 }
 
 export function useCreateEmojiPackMutation() {
@@ -47,15 +42,6 @@ export function useAddEmojiItemMutation(packId: number) {
   )
 }
 
-export function useUpdateEmojiItemMutation() {
-  return useApiMutation(
-    'emoji-packs/update-item',
-    ({ itemId, data }: { itemId: number; data: UpdateEmojiItemRequest }) =>
-      emojiPacksApi.updateItem(itemId, data),
-    ['emoji-packs'],
-  )
-}
-
 export function useDeleteEmojiItemMutation() {
   return useApiMutation(
     'emoji-packs/delete-item',
@@ -64,10 +50,4 @@ export function useDeleteEmojiItemMutation() {
   )
 }
 
-export function useReorderEmojiItemsMutation(packId: number) {
-  return useApiMutation(
-    `emoji-packs/${packId}/reorder`,
-    (itemIds: number[]) => emojiPacksApi.reorderItems(packId, itemIds),
-    [`emoji-packs-${packId}`, 'emoji-packs'],
-  )
-}
+

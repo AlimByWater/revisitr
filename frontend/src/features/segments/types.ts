@@ -88,15 +88,6 @@ export interface PredictionSummary {
   total_predicted: number
 }
 
-export const RULE_FIELDS: Record<string, string> = {
-  days_since_visit: 'Дней с последнего визита',
-  total_orders: 'Всего заказов',
-  avg_check: 'Средний чек',
-  loyalty_level: 'Уровень лояльности',
-  total_spend: 'Общая сумма покупок',
-  visit_frequency: 'Частота визитов',
-}
-
 export const RULE_OPERATORS: Record<string, string> = {
   eq: '=',
   neq: '≠',

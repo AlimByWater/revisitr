@@ -111,8 +111,6 @@ func newTestUCWithLoyalty(products *mockProductsRepo, orders *mockOrdersRepo, lo
 	return uc
 }
 
-func intPtr(v int) *int { return &v }
-
 // ── Product Tests ───────────────────────────────────────────────────────────
 
 func TestCreateProduct(t *testing.T) {
