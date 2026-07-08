@@ -4,75 +4,51 @@ SaaS-платформа лояльности для HoReCa (бары, кафе, 
 
 ## Stack
 
-- **Backend**: Go 1.23+, Gin, sqlx/PostgreSQL, go-redis, telego (Telegram bot)
+- **Backend**: Go 1.26+, Gin, sqlx/PostgreSQL, go-redis, telego (Telegram bot)
 - **Frontend**: React, TanStack (Router + Query + Table + Form), shadcn/ui, Tailwind, Vite
-- **Infrastructure**: Docker Compose, PostgreSQL 16, Redis 7, GitHub Actions
-- **Testing**: Playwright (E2E), Vitest (frontend), Go standard testing (backend + bot), Telethon (bot E2E)
+- **Infrastructure**: Docker Compose, PostgreSQL 16, Redis 7
 
-## Services
-
-| Service | Описание | Команда |
-|---------|----------|---------|
-| **server** | REST API для админ-панели (`/api/v1/`) | `make backend-run` |
-| **bot** | Telegram-бот для конечных пользователей | `make bot-run` |
-| **frontend** | React SPA (админ-панель) | `make frontend-dev` |
-
-## Quick Start
+## Быстрый старт
 
 ```bash
-# 1. Запустить инфраструктуру (PostgreSQL + Redis)
+# 1. Инфраструктура
 make dev-up
 
-# 2. Накатить миграции
-DATABASE_URL="postgres://revisitr:devpassword@localhost:6281/revisitr?sslmode=disable" make migrate-up
+# 2. Окружение
+cp .env.example .env
 
-# 3. Запустить backend
+# 3. Миграции
+source .env && cd backend && goose -dir migrations postgres "$DATABASE_URL" up
+
+# 4. Бэкенд
 make backend-run
 
-# 4. (в другом терминале) Запустить frontend
+# 5. Фронтенд
 make frontend-dev
 ```
 
-Порты: backend `:9721`, frontend `:5921`, PostgreSQL `:6281`, Redis `:7392`.
+## Порты (локальная разработка)
 
-## Architecture
+| Сервис    | Порт  |
+|-----------|-------|
+| Frontend  | 5921  |
+| Backend   | 9721  |
+| PostgreSQL| 6281  |
+| Redis     | 7392  |
+
+## Структура
 
 ```
 backend/
-  cmd/server/      — API-сервер
-  cmd/bot/         — Telegram-бот
+  cmd/server/   — API-сервер (админ-панель)
+  cmd/bot/      — Telegram-бот
   internal/
-    application/   — bootstrap, config
-    controller/    — HTTP handlers (Gin)
-    usecase/       — бизнес-логика
-    repository/    — PostgreSQL, Redis
-    entity/        — доменные модели
-  migrations/      — goose SQL-миграции
-frontend/
-  src/             — React-приложение (file-based routing)
-telegram/          — Telethon-инфраструктура для E2E тестов бота
-infra/             — Docker Compose, nginx, скрипты деплоя
+    application/ — bootstrap, config
+    controller/  — HTTP handlers
+    usecase/     — бизнес-логика
+    repository/  — PostgreSQL, Redis
+    entity/      — доменные модели
+frontend/       — React SPA
+infra/          — Docker Compose
+migrations/     — goose SQL-миграции
 ```
-
-## Документация
-
-- `docs/testing.md` — полная спецификация тестирования
-- `docs/userdocs/` — дизайн-документ, Figma-анализ
-- `docs/e2e/` — план E2E тестов (Playwright)
-- `.ai-memory/` — shared knowledge для AI агентов
-
-## Команды
-
-| Команда | Описание |
-|---------|----------|
-| `make dev-up` | Запустить PostgreSQL + Redis |
-| `make dev-down` | Остановить инфру |
-| `make backend-run` | Запустить API-сервер |
-| `make bot-run` | Запустить Telegram-бот |
-| `make frontend-dev` | Запустить Vite dev server |
-| `make migrate-up` | Накатить миграции |
-| `make test` | Все unit-тесты |
-| `make test-all` | Unit + integration |
-| `make lint` | Линтинг (go vet + eslint) |
-| `make build-backend` | Сборка Go бинарников |
-| `make docker-prod` | Запуск production сборки |
