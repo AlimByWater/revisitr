@@ -531,7 +531,9 @@ func (h *handler) handleBalance(ctx context.Context, msg *telego.Message) {
 		}
 	}
 
-	h.sendText(chatID, sb.String())
+	walletRows := append(h.appleWalletButtonRow(ctx), h.googleWalletButtonRow(ctx)...)
+	markup := h.inlineKeyboard(walletRows)
+	h.sendTextWithInlineKeyboard(chatID, sb.String(), markup)
 }
 
 func (h *handler) handleLocations(ctx context.Context, msg *telego.Message) {

@@ -38,6 +38,8 @@ const (
 	callbackBookingPickTime  = "booking:pick-time:"
 	callbackBookingPartyPage = "booking:party-page"
 	callbackBookingPickParty = "booking:pick-party:"
+	callbackWalletAddApple   = "wallet:apple"
+	callbackWalletAddGoogle  = "wallet:google"
 )
 
 func (h *handler) loadFlowState(ctx context.Context, chatID int64) (*FlowState, error) {
@@ -245,6 +247,12 @@ func (h *handler) handleCallbackQuery(ctx context.Context, query *telego.Callbac
 	case strings.HasPrefix(data, callbackBookingPickParty):
 		h.answerCallback(query.ID, "")
 		h.handleBookingPartySelection(ctx, chatID, strings.TrimPrefix(data, callbackBookingPickParty))
+	case data == callbackWalletAddApple:
+		h.answerCallback(query.ID, "")
+		h.handleWalletAddApple(ctx, query)
+	case data == callbackWalletAddGoogle:
+		h.answerCallback(query.ID, "")
+		h.handleWalletAddGoogle(ctx, query)
 	default:
 		h.answerCallback(query.ID, "Действие устарело")
 	}

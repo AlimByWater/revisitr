@@ -10,6 +10,7 @@ import (
 
 	"revisitr/internal/entity"
 	tgService "revisitr/internal/service/telegram"
+	walletUC "revisitr/internal/usecase/wallet"
 
 	"github.com/mymmrac/telego"
 )
@@ -56,6 +57,16 @@ type sessionStore interface {
 	Delete(ctx context.Context, botID int, chatID int64) error
 }
 
+type walletUsecase interface {
+	GetConfig(ctx context.Context, orgID int, platform string) (*entity.WalletConfig, error)
+	IssuePass(ctx context.Context, orgID int, req entity.IssueWalletPassRequest) (*entity.WalletPass, error)
+	GetClientPasses(ctx context.Context, clientID int) ([]entity.WalletPass, error)
+	RefreshPassBalance(ctx context.Context, clientID int, balance int, level string) error
+	GetClientsQRCode(ctx context.Context, clientID int) (string, error)
+	GetOrgName(ctx context.Context, orgID int) (string, error)
+	GenerateGoogleSaveURL(ctx context.Context, orgID int, pass *entity.WalletPass) (string, error)
+}
+
 type botInstance struct {
 	bot    *telego.Bot
 	cancel context.CancelFunc
@@ -63,20 +74,23 @@ type botInstance struct {
 }
 
 type Manager struct {
-	botsRepo      botsRepository
-	clientsRepo   botClientsRepository
-	loyaltyRepo   loyaltyRepository
-	posRepo       posRepository
-	menusRepo     menusRepository
-	emojiRepo           emojiRepository
-	moduleSettingsRepo  moduleSettingsRepository
-	sessions            sessionStore
-	tgSender      *tgService.Sender
-	logger        *slog.Logger
-	apiServer     string // custom Telegram Bot API server URL (empty = default)
-	proxyURL      string // HTTP proxy URL for Telegram API (empty = direct)
-	adminBotToken string
-	adminBot      *telego.Bot
+	botsRepo           botsRepository
+	clientsRepo        botClientsRepository
+	loyaltyRepo        loyaltyRepository
+	posRepo            posRepository
+	menusRepo          menusRepository
+	emojiRepo          emojiRepository
+	moduleSettingsRepo moduleSettingsRepository
+	sessions           sessionStore
+	wallet             walletUsecase
+	passGen            *walletUC.PassGenerator
+	baseURL            string
+	tgSender           *tgService.Sender
+	logger             *slog.Logger
+	apiServer          string // custom Telegram Bot API server URL (empty = default)
+	proxyURL           string // HTTP proxy URL for Telegram API (empty = direct)
+	adminBotToken      string
+	adminBot           *telego.Bot
 
 	mu        sync.RWMutex
 	instances map[int]*botInstance
@@ -116,6 +130,14 @@ func WithAdminBotToken(token string) ManagerOption {
 	return func(m *Manager) { m.adminBotToken = token }
 }
 
+func WithWallet(uc walletUsecase) ManagerOption {
+	return func(m *Manager) { m.wallet = uc }
+}
+
+func WithBaseURL(url string) ManagerOption {
+	return func(m *Manager) { m.baseURL = url }
+}
+
 // botOpts returns telego options configured with API server and proxy.
 func (m *Manager) botOpts() []telego.BotOption {
 	var opts []telego.BotOption
@@ -147,6 +169,7 @@ func New(
 		loyaltyRepo: loyaltyRepo,
 		posRepo:     posRepo,
 		logger:      logger,
+		passGen:     walletUC.NewPassGenerator(),
 		instances:   make(map[int]*botInstance),
 	}
 	for _, opt := range opts {
