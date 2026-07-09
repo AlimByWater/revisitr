@@ -2,8 +2,14 @@ package wallet
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
 	"log/slog"
 	"os"
+	"strings"
 	"testing"
 
 	"revisitr/internal/entity"
@@ -46,6 +52,8 @@ type mockPassRepo struct {
 	revokePass           func(ctx context.Context, id int) error
 	getStats             func(ctx context.Context, orgID int) (*entity.WalletStats, error)
 	getPassesWithPush    func(ctx context.Context, orgID int) ([]entity.WalletPass, error)
+	getClientQRCode      func(ctx context.Context, clientID int) (string, error)
+	getOrgName           func(ctx context.Context, orgID int) (string, error)
 }
 
 func (m *mockPassRepo) CreatePass(ctx context.Context, pass *entity.WalletPass) error {
@@ -77,6 +85,18 @@ func (m *mockPassRepo) GetStats(ctx context.Context, orgID int) (*entity.WalletS
 }
 func (m *mockPassRepo) GetPassesWithPushToken(ctx context.Context, orgID int) ([]entity.WalletPass, error) {
 	return m.getPassesWithPush(ctx, orgID)
+}
+func (m *mockPassRepo) GetClientQRCode(ctx context.Context, clientID int) (string, error) {
+	if m.getClientQRCode == nil {
+		return "", nil
+	}
+	return m.getClientQRCode(ctx, clientID)
+}
+func (m *mockPassRepo) GetOrgName(ctx context.Context, orgID int) (string, error) {
+	if m.getOrgName == nil {
+		return "", nil
+	}
+	return m.getOrgName(ctx, orgID)
 }
 
 func newTestUC(configs *mockConfigRepo, passes *mockPassRepo) *Usecase {
@@ -307,6 +327,87 @@ func TestRefreshPassBalance(t *testing.T) {
 	}
 	if len(updates) != 2 || updates[0] != 1 || updates[1] != 3 {
 		t.Fatalf("expected updates for passes 1 and 3, got %v", updates)
+	}
+}
+
+func TestGenerateGoogleSaveURL_WrongPlatform(t *testing.T) {
+	passes := &mockPassRepo{
+		getClientQRCode: func(_ context.Context, _ int) (string, error) { return "qr", nil },
+		getOrgName:      func(_ context.Context, _ int) (string, error) { return "Test Org", nil },
+	}
+	uc := newTestUC(&mockConfigRepo{}, passes)
+	_, err := uc.GenerateGoogleSaveURL(context.Background(), 1, &entity.WalletPass{
+		Platform: "apple", ClientID: 10, LastBalance: 100, LastLevel: "Gold", SerialNumber: "s1",
+	})
+	if err == nil {
+		t.Fatal("expected error for non-google platform")
+	}
+}
+
+func TestGenerateGoogleSaveURL_PlatformDisabled(t *testing.T) {
+	configs := &mockConfigRepo{
+		getConfig: func(_ context.Context, _ int, _ string) (*entity.WalletConfig, error) {
+			return &entity.WalletConfig{IsEnabled: false}, nil
+		},
+	}
+	passes := &mockPassRepo{
+		getClientQRCode: func(_ context.Context, _ int) (string, error) { return "qr", nil },
+		getOrgName:      func(_ context.Context, _ int) (string, error) { return "Test Org", nil },
+	}
+	uc := newTestUC(configs, passes)
+	_, err := uc.GenerateGoogleSaveURL(context.Background(), 1, &entity.WalletPass{
+		Platform: "google", ClientID: 1, LastBalance: 100, LastLevel: "Gold", SerialNumber: "s1",
+	})
+	if err != ErrPlatformDisabled {
+		t.Fatalf("expected ErrPlatformDisabled, got %v", err)
+	}
+}
+
+func TestGenerateGoogleSaveURL_Success(t *testing.T) {
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemData := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(rsaKey),
+	})
+	saKey := map[string]string{
+		"client_email": "test@test.iam.gserviceaccount.com",
+		"private_key":  string(pemData),
+	}
+	saKeyJSON, _ := json.Marshal(saKey)
+
+	configs := &mockConfigRepo{
+		getConfig: func(_ context.Context, _ int, _ string) (*entity.WalletConfig, error) {
+			return &entity.WalletConfig{
+				IsEnabled: true,
+				Credentials: entity.WalletCredentials{
+					"issuer_id":          "test-issuer",
+					"service_account_key": string(saKeyJSON),
+				},
+				Design: entity.WalletDesign{
+					OrganizationName: "Test Org",
+					BackgroundColor:  "#ff0000",
+					ForegroundColor:  "#ffffff",
+					LabelColor:       "#cccccc",
+				},
+			}, nil
+		},
+	}
+	passes := &mockPassRepo{
+		getClientQRCode: func(_ context.Context, _ int) (string, error) { return "qr-code-value", nil },
+		getOrgName:      func(_ context.Context, _ int) (string, error) { return "Test Org", nil },
+	}
+	uc := newTestUC(configs, passes)
+	url, err := uc.GenerateGoogleSaveURL(context.Background(), 1, &entity.WalletPass{
+		Platform: "google", ClientID: 1, LastBalance: 250, LastLevel: "Silver", SerialNumber: "abcd1234",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(url, "https://pay.google.com/gp/v/save/") {
+		t.Fatalf("unexpected url: %s", url)
 	}
 }
 

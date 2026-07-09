@@ -139,7 +139,11 @@ func main() {
 	authUsecase := authUC.New(&authConfig{cfg: cfg}, usersRepo, sessionsRepo)
 	botsUsecase := botsUC.New(botsRepo, botClientsRepo)
 	botsUsecase.SetEventBus(evBus)
-	loyaltyUsecase := loyaltyUC.New(loyaltyRepo)
+
+	// Phase 4 usecases (needed by loyalty)
+	walletUsecase := walletUC.New(walletRepo, walletRepo)
+
+	loyaltyUsecase := loyaltyUC.NewWithWallet(loyaltyRepo, walletUsecase)
 	clientsUsecase := clientsUC.New(clientsRepo, clientsUC.WithBotClients(botClientsRepo))
 	dashboardUsecase := dashboardUC.New(dashboardRepo)
 	campaignsUsecase := campaignsUC.New(campaignsRepo, scenariosRepo, clientsRepo,
@@ -160,7 +164,6 @@ func main() {
 	// Phase 4 usecases
 	billingUsecase := billingUC.New(billingRepo)
 	managedBotAdapter := botsUC.NewManagedBotAdapter(botsUsecase, masterBotAuthRepo)
-	walletUsecase := walletUC.New(walletRepo, walletRepo)
 	marketplaceUsecase := marketplaceUC.New(marketplaceRepo, marketplaceRepo, loyaltyUsecase)
 
 	// Emoji packs usecase

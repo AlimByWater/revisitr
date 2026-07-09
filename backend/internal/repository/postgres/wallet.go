@@ -184,3 +184,44 @@ func (r *Wallet) GetPassesWithPushToken(ctx context.Context, orgID int) ([]entit
 	}
 	return passes, nil
 }
+
+func (r *Wallet) GetClientQRCode(ctx context.Context, clientID int) (string, error) {
+	var qrCode *string
+	err := r.pg.DB().GetContext(ctx, &qrCode,
+		"SELECT qr_code FROM bot_clients WHERE id = $1", clientID)
+	if err != nil {
+		return "", fmt.Errorf("wallet.GetClientQRCode: %w", err)
+	}
+	if qrCode == nil {
+		return "", nil
+	}
+	return *qrCode, nil
+}
+
+func (r *Wallet) GetOrgName(ctx context.Context, orgID int) (string, error) {
+	var name string
+	err := r.pg.DB().GetContext(ctx, &name,
+		"SELECT name FROM organizations WHERE id = $1", orgID)
+	if err != nil {
+		return "", fmt.Errorf("wallet.GetOrgName: %w", err)
+	}
+	return name, nil
+}
+
+// ── Device Registrations (stub, for future APNs push) ───────────────────────
+
+func (r *Wallet) CreateDeviceRegistration(ctx context.Context, reg *entity.WalletDeviceRegistration) error {
+	return fmt.Errorf("wallet.CreateDeviceRegistration: not implemented")
+}
+
+func (r *Wallet) GetDeviceRegistration(ctx context.Context, deviceID, passTypeID, serial string) (*entity.WalletDeviceRegistration, error) {
+	return nil, nil
+}
+
+func (r *Wallet) DeleteDeviceRegistration(ctx context.Context, deviceID, passTypeID, serial string) error {
+	return nil
+}
+
+func (r *Wallet) GetDeviceSerials(ctx context.Context, deviceID, passTypeID string) ([]string, error) {
+	return nil, nil
+}

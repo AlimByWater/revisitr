@@ -14,6 +14,8 @@ export interface WalletDesign {
   foreground_color?: string
   label_color?: string
   description?: string
+  organization_name?: string
+  web_service_url?: string
 }
 
 export interface WalletCredentials {

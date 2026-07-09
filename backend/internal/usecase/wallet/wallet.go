@@ -37,16 +37,19 @@ type passRepo interface {
 	RevokePass(ctx context.Context, id int) error
 	GetStats(ctx context.Context, orgID int) (*entity.WalletStats, error)
 	GetPassesWithPushToken(ctx context.Context, orgID int) ([]entity.WalletPass, error)
+	GetClientQRCode(ctx context.Context, clientID int) (string, error)
+	GetOrgName(ctx context.Context, orgID int) (string, error)
 }
 
 type Usecase struct {
-	logger  *slog.Logger
-	configs configRepo
-	passes  passRepo
+	logger   *slog.Logger
+	configs  configRepo
+	passes   passRepo
+	googleGW *GoogleSaveGenerator
 }
 
 func New(configs configRepo, passes passRepo) *Usecase {
-	return &Usecase{configs: configs, passes: passes}
+	return &Usecase{configs: configs, passes: passes, googleGW: NewGoogleSaveGenerator()}
 }
 
 func (uc *Usecase) Init(_ context.Context, logger *slog.Logger) error {
@@ -195,6 +198,43 @@ func (uc *Usecase) RefreshPassBalance(ctx context.Context, clientID int, balance
 		}
 	}
 	return nil
+}
+
+// GetClientsQRCode returns the QR code string for a client.
+func (uc *Usecase) GetClientsQRCode(ctx context.Context, clientID int) (string, error) {
+	return uc.passes.GetClientQRCode(ctx, clientID)
+}
+
+// GetOrgName returns the organization name by ID.
+func (uc *Usecase) GetOrgName(ctx context.Context, orgID int) (string, error) {
+	return uc.passes.GetOrgName(ctx, orgID)
+}
+
+// GenerateGoogleSaveURL creates a signed "Add to Google Wallet" JWT link.
+func (uc *Usecase) GenerateGoogleSaveURL(ctx context.Context, orgID int, pass *entity.WalletPass) (string, error) {
+	if pass.Platform != "google" {
+		return "", fmt.Errorf("pass is not a google wallet pass")
+	}
+
+	cfg, err := uc.configs.GetConfig(ctx, orgID, "google")
+	if err != nil {
+		return "", fmt.Errorf("get google config: %w", err)
+	}
+	if cfg == nil || !cfg.IsEnabled {
+		return "", ErrPlatformDisabled
+	}
+
+	clientQR, err := uc.passes.GetClientQRCode(ctx, pass.ClientID)
+	if err != nil {
+		uc.logger.Warn("wallet: could not get client qr code", "client_id", pass.ClientID, "error", err)
+	}
+
+	orgName, err := uc.passes.GetOrgName(ctx, orgID)
+	if err != nil {
+		uc.logger.Warn("wallet: could not get org name", "org_id", orgID, "error", err)
+	}
+
+	return uc.googleGW.GenerateSaveURL(pass, cfg, clientQR, orgName)
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
