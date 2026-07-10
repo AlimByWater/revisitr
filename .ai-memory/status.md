@@ -25,7 +25,7 @@ Last updated: 2026-06-17
 
 ## Known Incomplete / Stubs
 
-- **Wallet**: RefreshPassBalance not called, pass generation not implemented
+- **Wallet**: pass generation + RefreshPassBalance called from loyalty — done. ~60-70% overall. See `docs/wallet/README.md`
 - **Billing**: payment provider integration missing
 - **Marketplace**: bot interface + loyalty integration missing
 - **Campaigns+**: A/B statistics incomplete

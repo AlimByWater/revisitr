@@ -5,7 +5,7 @@
 | Платформа | Статус | Примечание |
 |-----------|--------|------------|
 | Apple Wallet | ~70% | pkpass генерация + web service + admin download готово. Нужен Apple Developer ($99) для теста |
-| Google Wallet | ~60% | JWT-link генерация + admin save button готово. Нужен Google Cloud service account + Google Pay & Wallet console |
+| Google Wallet | ~85% | REST API создание класса/объекта + JWT save URL + admin save button готово. Нужен Google Cloud service account + Google Pay & Wallet console |
 
 ---
 
@@ -52,13 +52,15 @@
 
 ### Бэкенд
 
-- **`internal/usecase/wallet/googlesave.go`** — генератор JWT-ссылки "Save to Google Wallet":
-  - Подписывает JWT (RS256) через Google Cloud service account key
-  - Встраивает LoyaltyClass + LoyaltyObject в payload JWT
-  - Баланс → `loyaltyPoints`, QR-код → `barcode`, цвета/лого из дизайна
+- **`internal/usecase/wallet/googlerest.go`** — REST API клиент для Google Wallet:
+  - `EnsureClass()` — создаёт/обновляет LoyaltyClass через `walletobjects.googleapis.com`
+  - `CreateObject()` — создаёт/обновляет LoyaltyObject через REST API (баланс, QR, цвета)
+  - `GenerateSaveURL()` — подписывает JWT (RS256) со ссылкой на существующий объект
+- **`internal/usecase/wallet/googlesave.go`** — (legacy) генератор JWT с встроенным классом + объектом
 - **`internal/usecase/wallet/wallet.go`** — `GenerateGoogleSaveURL()`:
   - Проверяет платформу, статус, credentials
   - Возвращает ссылку `https://pay.google.com/gp/v/save/<jwt>`
+- **Интеграция**: при сохранении Google Wallet конфига → `EnsureClass()`, при выпуске пасса → `CreateObject()`
 - **Эндпоинт** (JWT):
   - `GET /passes/:serial/google-save` — возвращает `{"url": "..."}` для админки
 

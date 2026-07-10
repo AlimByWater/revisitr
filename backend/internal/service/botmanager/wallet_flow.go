@@ -17,7 +17,11 @@ func (h *handler) walletButtonRow(ctx context.Context, platform, label, callback
 		return nil
 	}
 	cfg, err := h.mgr.wallet.GetConfig(ctx, h.info.OrgID, platform)
-	if err != nil || cfg == nil || !cfg.IsEnabled {
+	if err != nil {
+		h.logger.Error("wallet: get config for button row", "error", err, "platform", platform)
+		return nil
+	}
+	if cfg == nil || !cfg.IsEnabled {
 		return nil
 	}
 	return [][]entity.InlineButton{

@@ -38,6 +38,7 @@ docker-compose.override.yml
 
 # Logs
 *.log
+google-sa-key*.json
 
 # Test coverage
 coverage/

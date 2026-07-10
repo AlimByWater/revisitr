@@ -337,7 +337,7 @@ func TestGenerateGoogleSaveURL_WrongPlatform(t *testing.T) {
 	}
 	uc := newTestUC(&mockConfigRepo{}, passes)
 	_, err := uc.GenerateGoogleSaveURL(context.Background(), 1, &entity.WalletPass{
-		Platform: "apple", ClientID: 10, LastBalance: 100, LastLevel: "Gold", SerialNumber: "s1",
+		Platform: "apple", ClientID: 10, LastBalance: 100, LastLevel: "Gold", SerialNumber: "s1", Status: "active",
 	})
 	if err == nil {
 		t.Fatal("expected error for non-google platform")
@@ -356,7 +356,7 @@ func TestGenerateGoogleSaveURL_PlatformDisabled(t *testing.T) {
 	}
 	uc := newTestUC(configs, passes)
 	_, err := uc.GenerateGoogleSaveURL(context.Background(), 1, &entity.WalletPass{
-		Platform: "google", ClientID: 1, LastBalance: 100, LastLevel: "Gold", SerialNumber: "s1",
+		Platform: "google", ClientID: 1, LastBalance: 100, LastLevel: "Gold", SerialNumber: "s1", Status: "active",
 	})
 	if err != ErrPlatformDisabled {
 		t.Fatalf("expected ErrPlatformDisabled, got %v", err)
@@ -401,7 +401,7 @@ func TestGenerateGoogleSaveURL_Success(t *testing.T) {
 	}
 	uc := newTestUC(configs, passes)
 	url, err := uc.GenerateGoogleSaveURL(context.Background(), 1, &entity.WalletPass{
-		Platform: "google", ClientID: 1, LastBalance: 250, LastLevel: "Silver", SerialNumber: "abcd1234",
+		Platform: "google", ClientID: 1, LastBalance: 250, LastLevel: "Silver", SerialNumber: "abcd1234", Status: "active",
 	})
 	if err != nil {
 		t.Fatal(err)

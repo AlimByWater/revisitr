@@ -192,29 +192,34 @@ export default function WalletPage() {
 
 function GoogleSaveButton({ serial }: { serial: string }) {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleClick = async () => {
     setLoading(true)
+    setError(null)
     try {
       const url = await walletApi.getGoogleSaveURL(serial)
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch {
-      // silent
+      setError('Не удалось сгенерировать ссылку')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <button
-      onClick={handleClick}
-      disabled={loading}
-      type="button"
-      className="inline-flex items-center gap-1 rounded border border-blue-200 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
-    >
-      <Smartphone className="h-3 w-3" />
-      {loading ? 'Загрузка...' : 'Save to Wallet'}
-    </button>
+    <div className="flex items-center gap-1">
+      <button
+        onClick={handleClick}
+        disabled={loading}
+        type="button"
+        className="inline-flex items-center gap-1 rounded border border-blue-200 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+      >
+        <Smartphone className="h-3 w-3" />
+        {loading ? 'Загрузка...' : 'Save to Wallet'}
+      </button>
+      {error && <span className="text-xs text-red-500">{error}</span>}
+    </div>
   )
 }
 
