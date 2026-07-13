@@ -45,6 +45,10 @@ export const menusApi = {
     return response.data
   },
 
+  deleteCategory: async (categoryId: number): Promise<void> => {
+    await api.delete(`/menus/categories/${categoryId}`)
+  },
+
   addItem: async (menuId: number, categoryId: number, data: CreateMenuItemRequest): Promise<MenuItem> => {
     const response = await api.post<MenuItem>(`/menus/${menuId}/categories/${categoryId}/items`, data)
     return response.data

@@ -12,7 +12,7 @@ import { findMenuBindingConflicts } from '@/features/menus/helpers'
 import { usePOSQuery } from '@/features/pos/queries'
 import { CardSkeleton } from '@/components/common/LoadingSkeleton'
 import { ErrorState } from '@/components/common/ErrorState'
-import { AlertTriangle, ArrowLeft, ChevronRight, Copy, Plus, Trash2, UtensilsCrossed } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ChevronRight, Copy, Plus, Trash2, UtensilsCrossed, X } from 'lucide-react'
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('ru-RU', {
@@ -34,6 +34,7 @@ export default function MenusPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
   const [copyNotice, setCopyNotice] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
 
   const conflicts = useMemo(
     () => findMenuBindingConflicts(menus ?? []),
@@ -54,6 +55,7 @@ export default function MenusPage() {
 
   const handleDelete = async (id: number) => {
     await deleteMenu.mutate(id)
+    setConfirmDeleteId(null)
     mutate()
   }
 
@@ -248,17 +250,45 @@ export default function MenusPage() {
                       <Copy className="w-3.5 h-3.5" />
                       Создать копию
                     </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        handleDelete(menu.id)
-                      }}
-                      className="p-1.5 rounded text-neutral-500 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-                      aria-label="Удалить меню"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {confirmDeleteId === menu.id ? (
+                      <div className="flex items-center gap-1 animate-in">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            handleDelete(menu.id)
+                          }}
+                          disabled={deleteMenu.isPending}
+                          className="inline-flex items-center gap-1 rounded bg-red-500 px-2 py-1.5 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Удалить
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            setConfirmDeleteId(null)
+                          }}
+                          className="inline-flex items-center justify-center rounded p-1.5 text-neutral-500 hover:bg-neutral-100"
+                          aria-label="Отмена"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setConfirmDeleteId(menu.id)
+                        }}
+                        className="p-1.5 rounded text-neutral-500 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                        aria-label="Удалить меню"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
 

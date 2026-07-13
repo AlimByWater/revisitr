@@ -7,7 +7,9 @@ vi.mock('@/features/menus/queries', () => ({
   useAddCategoryMutation: vi.fn(),
   useAddItemMutation: vi.fn(),
   useUpdateCategoryMutation: vi.fn(),
+  useDeleteCategoryMutation: vi.fn(),
   useUpdateItemMutation: vi.fn(),
+  useDeleteItemMutation: vi.fn(),
   useUpdateMenuMutation: vi.fn(),
 }))
 
@@ -30,7 +32,9 @@ import {
   useAddItemMutation,
   useMenuQuery,
   useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
   useUpdateItemMutation,
+  useDeleteItemMutation,
   useUpdateMenuMutation,
 } from '@/features/menus/queries'
 import { usePOSQuery } from '@/features/pos/queries'
@@ -40,7 +44,9 @@ const mockUseMenuQuery = vi.mocked(useMenuQuery)
 const mockUseAddCategoryMutation = vi.mocked(useAddCategoryMutation)
 const mockUseAddItemMutation = vi.mocked(useAddItemMutation)
 const mockUseUpdateCategoryMutation = vi.mocked(useUpdateCategoryMutation)
+const mockUseDeleteCategoryMutation = vi.mocked(useDeleteCategoryMutation)
 const mockUseUpdateItemMutation = vi.mocked(useUpdateItemMutation)
+const mockUseDeleteItemMutation = vi.mocked(useDeleteItemMutation)
 const mockUseUpdateMenuMutation = vi.mocked(useUpdateMenuMutation)
 const mockUsePOSQuery = vi.mocked(usePOSQuery)
 
@@ -85,9 +91,17 @@ describe('MenuDetailPage', () => {
       ...mutationStub(),
     } as unknown as ReturnType<typeof useUpdateCategoryMutation>)
 
+    mockUseDeleteCategoryMutation.mockReturnValue({
+      ...mutationStub(),
+    } as unknown as ReturnType<typeof useDeleteCategoryMutation>)
+
     mockUseUpdateItemMutation.mockReturnValue({
       ...mutationStub(),
     } as unknown as ReturnType<typeof useUpdateItemMutation>)
+
+    mockUseDeleteItemMutation.mockReturnValue({
+      ...mutationStub(),
+    } as unknown as ReturnType<typeof useDeleteItemMutation>)
 
     mockUseUpdateMenuMutation.mockReturnValue({
       ...mutationStub(),
@@ -173,6 +187,6 @@ describe('MenuDetailPage', () => {
     // Categories are collapsed by default — expand to see items
     fireEvent.click(screen.getByText('Кофе'))
     expect(screen.getByText('250 мл')).toBeInTheDocument()
-    expect(screen.getByText('Есть фото')).toBeInTheDocument()
+    expect(screen.getByAltText('Капучино')).toHaveAttribute('src', 'https://cdn.test/cappuccino.png')
   })
 })
