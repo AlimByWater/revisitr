@@ -189,4 +189,49 @@ describe('MenuDetailPage', () => {
     expect(screen.getByText('250 мл')).toBeInTheDocument()
     expect(screen.getByAltText('Капучино')).toHaveAttribute('src', 'https://cdn.test/cappuccino.png')
   })
+
+  it('submits icon fields when adding a new category', () => {
+    const addCategoryMutate = vi.fn().mockResolvedValue(undefined)
+    mockUseAddCategoryMutation.mockReturnValue({
+      ...mutationStub(),
+      mutate: addCategoryMutate,
+    } as unknown as ReturnType<typeof useAddCategoryMutation>)
+    mockUseMenuQuery.mockReturnValue({
+      data: {
+        id: 5,
+        org_id: 1,
+        name: 'Основное меню',
+        source: 'manual',
+        created_at: '2026-04-18T00:00:00Z',
+        updated_at: '2026-04-18T00:00:00Z',
+        bindings: [],
+        categories: [],
+      },
+      isLoading: false,
+      isError: false,
+      mutate: vi.fn(),
+      error: undefined,
+      isValidating: false,
+    } as unknown as ReturnType<typeof useMenuQuery>)
+
+    renderPage()
+
+    fireEvent.click(screen.getByRole('button', { name: /^Категория$/i }))
+    fireEvent.change(screen.getByPlaceholderText('Название категории'), {
+      target: { value: 'Десерты' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('Эмодзи (например ☕)'), {
+      target: { value: '🍰' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('URL иконки'), {
+      target: { value: 'https://cdn.test/dessert-icon.png' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^Добавить$/i }))
+
+    expect(addCategoryMutate).toHaveBeenCalledWith({
+      name: 'Десерты',
+      icon_emoji: '🍰',
+      icon_image_url: 'https://cdn.test/dessert-icon.png',
+    })
+  })
 })
