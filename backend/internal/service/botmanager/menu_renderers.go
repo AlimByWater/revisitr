@@ -264,13 +264,7 @@ func (h *handler) carouselContent(items []carouselItem, index int, custom menuPr
 	item := items[index]
 	total := len(items)
 
-	text := menuSections(
-		item.CategoryHeading,
-		item.Name+" — "+formatMenuPrice(item.Price),
-		strings.TrimSpace(valueOrEmpty(item.Weight)),
-		strings.TrimSpace(valueOrEmpty(item.Description)),
-	)
-	text = truncateMenuText(text)
+	rawText := formatMenuItemCardText(item.CategoryHeading, item.MenuItem)
 
 	var nav []entity.InlineButton
 	if index > 0 {
@@ -304,13 +298,13 @@ func (h *handler) carouselContent(items []carouselItem, index int, custom menuPr
 		content.Parts = []entity.MessagePart{{
 			Type:      entity.PartPhoto,
 			MediaURL:  *item.ImageURL,
-			Text:      text,
+			Text:      truncateMenuCaption(rawText),
 			ParseMode: "HTML",
 		}}
 	} else {
 		content.Parts = []entity.MessagePart{{
 			Type:      entity.PartText,
-			Text:      text,
+			Text:      truncateMenuText(rawText),
 			ParseMode: "HTML",
 		}}
 	}
@@ -323,19 +317,46 @@ func (h *handler) sendCarouselItem(ctx context.Context, chatID int64, items []ca
 	return h.sendContentMessage(ctx, chatID, h.carouselContent(items, index, custom))
 }
 
-func truncateMenuText(text string) string {
-	runes := []rune(strings.TrimSpace(text))
-	if len(runes) <= 4000 {
-		return string(runes)
+func formatMenuItemCardText(heading string, item entity.MenuItem) string {
+	lines := []string{
+		"/// " + html.EscapeString(heading),
+		html.EscapeString(item.Name) + " — " + formatMenuPrice(item.Price),
 	}
-	return string(runes[:4000]) + "\n\n... ещё позиции"
+	if item.Weight != nil && strings.TrimSpace(*item.Weight) != "" {
+		lines = append(lines, html.EscapeString(strings.TrimSpace(*item.Weight)))
+	}
+	text := strings.Join(lines, "\n")
+	if item.Description != nil && strings.TrimSpace(*item.Description) != "" {
+		text += "\n\n" + html.EscapeString(strings.TrimSpace(*item.Description))
+	}
+	return text
 }
 
-func valueOrEmpty(value *string) string {
-	if value == nil {
-		return ""
+const menuTextMaxLen = 4000
+
+// menuCaptionMaxLen is Telegram's hard limit for photo captions (1024 chars),
+// unlike the 4096-char limit for plain text messages.
+const menuCaptionMaxLen = 1024
+
+func truncateMenuText(text string) string {
+	return truncateMenuTextTo(text, menuTextMaxLen)
+}
+
+func truncateMenuCaption(text string) string {
+	return truncateMenuTextTo(text, menuCaptionMaxLen)
+}
+
+func truncateMenuTextTo(text string, max int) string {
+	const suffix = "\n\n... ещё позиции"
+	runes := []rune(strings.TrimSpace(text))
+	if len(runes) <= max {
+		return string(runes)
 	}
-	return *value
+	cut := max - len([]rune(suffix))
+	if cut < 0 {
+		cut = 0
+	}
+	return string(runes[:cut]) + suffix
 }
 
 func renderMenuASCIIBlock(items []entity.MenuItem) string {
@@ -426,7 +447,10 @@ func (h *handler) handleMenuCardNavigationCallback(ctx context.Context, query *t
 		return
 	}
 
-	_ = h.updateMessageByID(ctx, chatID, query.Message.GetMessageID(), content)
+	state := h.currentFlowState(ctx, chatID)
+	state.Flow = "menu"
+	state.FlowMessageID = h.replaceFlowMessage(ctx, chatID, state, content)
+	_ = h.saveFlowState(ctx, chatID, state)
 }
 
 func parseMenuCardValue(value string) (itemID int, categoryID int, ok bool) {
@@ -469,12 +493,7 @@ func (h *handler) menuItemCardContent(ctx context.Context, chatID int64, itemID 
 	h.logger.Info("menuItemCardContent: item found", "chat_id", chatID, "category_name", category.Category.Name, "item_index", index, "total_items", len(items))
 
 	item := items[index]
-	text := menuSections(
-		category.Heading,
-		html.EscapeString(item.Name)+" — "+formatMenuPrice(item.Price),
-		html.EscapeString(strings.TrimSpace(valueOrEmpty(item.Weight))),
-		html.EscapeString(strings.TrimSpace(valueOrEmpty(item.Description))),
-	)
+	text := formatMenuItemCardText(category.Heading, item)
 
 	var rows [][]entity.InlineButton
 	var nav []entity.InlineButton
@@ -517,7 +536,7 @@ func (h *handler) menuItemCardContent(ctx context.Context, chatID int64, itemID 
 		content.Parts = []entity.MessagePart{{
 			Type:      entity.PartPhoto,
 			MediaURL:  *item.ImageURL,
-			Text:      truncateMenuText(text),
+			Text:      truncateMenuCaption(text),
 			ParseMode: "HTML",
 		}}
 	} else {
