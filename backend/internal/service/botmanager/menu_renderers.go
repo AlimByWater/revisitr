@@ -15,6 +15,12 @@ import (
 const menuTabsPerRow = 4
 const menuItemButtonsPerRow = 1
 
+// A single long category label forces Telegram to split the row's width evenly,
+// truncating every other button in that row too. Capping rows containing a long
+// label to fewer columns keeps short labels readable instead of getting squeezed.
+const menuTabLongLabelChars = 10
+const menuTabsPerRowWithLongLabel = 2
+
 func (h *handler) renderMenuTabs(ctx context.Context, chatID int64, selectedCategoryID int) {
 	h.logger.Info("renderMenuTabs called", "chat_id", chatID, "selected_category_id", selectedCategoryID)
 
@@ -80,7 +86,16 @@ func (h *handler) menuBasePart(menu *entity.Menu) entity.MessagePart {
 
 func buildCategoryTabRows(categories []menuCategoryPresentation, activeCategoryID int) [][]entity.InlineButton {
 	rows := make([][]entity.InlineButton, 0, (len(categories)+menuTabsPerRow-1)/menuTabsPerRow)
-	current := make([]entity.InlineButton, 0, menuTabsPerRow)
+	var current []entity.InlineButton
+	rowHasLongLabel := false
+
+	flush := func() {
+		if len(current) > 0 {
+			rows = append(rows, current)
+			current = nil
+			rowHasLongLabel = false
+		}
+	}
 
 	for _, category := range categories {
 		text := category.ButtonText
@@ -89,22 +104,26 @@ func buildCategoryTabRows(categories []menuCategoryPresentation, activeCategoryI
 			style = "success"
 		}
 
+		isLong := len([]rune(text)) > menuTabLongLabelChars
+		rowCap := menuTabsPerRow
+		if rowHasLongLabel || isLong {
+			rowCap = menuTabsPerRowWithLongLabel
+		}
+		if len(current) >= rowCap {
+			flush()
+		}
+
 		current = append(current, entity.InlineButton{
 			Text:              text,
 			Data:              callbackMenuTabPref + strconv.Itoa(category.Category.ID),
 			Style:             style,
 			IconCustomEmojiID: category.ButtonIconCustomEmojiID,
 		})
-
-		if len(current) == menuTabsPerRow {
-			rows = append(rows, current)
-			current = make([]entity.InlineButton, 0, menuTabsPerRow)
+		if isLong {
+			rowHasLongLabel = true
 		}
 	}
-
-	if len(current) > 0 {
-		rows = append(rows, current)
-	}
+	flush()
 
 	return rows
 }
@@ -320,7 +339,7 @@ func (h *handler) sendCarouselItem(ctx context.Context, chatID int64, items []ca
 func formatMenuItemCardText(heading string, item entity.MenuItem) string {
 	lines := []string{
 		"/// " + html.EscapeString(heading),
-		html.EscapeString(item.Name) + " — " + formatMenuPrice(item.Price),
+		"<b>" + html.EscapeString(item.Name) + " — " + formatMenuPrice(item.Price) + "</b>",
 	}
 	if item.Weight != nil && strings.TrimSpace(*item.Weight) != "" {
 		lines = append(lines, html.EscapeString(strings.TrimSpace(*item.Weight)))

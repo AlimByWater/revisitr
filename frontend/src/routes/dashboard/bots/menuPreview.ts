@@ -199,7 +199,7 @@ export function buildItemCardContent(category: MenuPreviewCategory, itemID: numb
   const item = category.items[index]
   const sections = [
     categoryHeading(category),
-    `${item.label} — ${formatMenuPrice(item.price)}`,
+    `<b>${item.label} — ${formatMenuPrice(item.price)}</b>`,
     item.weight?.trim() || '',
     item.description?.trim() || '',
   ]
@@ -250,7 +250,7 @@ export function buildCarouselContent(entries: CarouselEntry[], index: number, na
   const { item, categoryHeading: heading } = entries[index]
   const text = truncateMenuText(menuSections(
     heading,
-    `${item.label} — ${formatMenuPrice(item.price)}`,
+    `<b>${item.label} — ${formatMenuPrice(item.price)}</b>`,
     item.weight?.trim() || '',
     item.description?.trim() || '',
   ))
