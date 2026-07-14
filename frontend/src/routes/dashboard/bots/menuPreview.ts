@@ -183,7 +183,7 @@ export function buildItemSimpleContent(category: MenuPreviewCategory, itemID: nu
   const lines: string[] = [`<b>${item.label}</b>`]
   if (item.description?.trim()) lines.push(item.description.trim())
   lines.push(`Цена: ${formatMenuPrice(item.price)}`)
-  if (item.weight?.trim()) lines.push(`Граммаж: ${item.weight.trim()}`)
+  if (item.weight?.trim()) lines.push(`Граммаж: <i>${item.weight.trim()}</i>`)
 
   return {
     parts: [{ type: 'text' as const, text: lines.join('\n'), parse_mode: 'HTML' }],
@@ -200,7 +200,7 @@ export function buildItemCardContent(category: MenuPreviewCategory, itemID: numb
   const sections = [
     categoryHeading(category),
     `<b>${item.label} — ${formatMenuPrice(item.price)}</b>`,
-    item.weight?.trim() || '',
+    item.weight?.trim() ? `<i>${item.weight.trim()}</i>` : '',
     item.description?.trim() || '',
   ]
 
@@ -251,7 +251,7 @@ export function buildCarouselContent(entries: CarouselEntry[], index: number, na
   const text = truncateMenuText(menuSections(
     heading,
     `<b>${item.label} — ${formatMenuPrice(item.price)}</b>`,
-    item.weight?.trim() || '',
+    item.weight?.trim() ? `<i>${item.weight.trim()}</i>` : '',
     item.description?.trim() || '',
   ))
 

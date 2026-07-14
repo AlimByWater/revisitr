@@ -174,7 +174,7 @@ func TestFormatMenuItemCardText(t *testing.T) {
 			IsAvailable: true,
 		}
 		got := formatMenuItemCardText("Закуски", item)
-		want := "/// Закуски\n<b>Blinis Demidoff — 1390 ₽</b>\n140 г\n\nГречневые блины с крем-фрешем и икрой осетра, подаются в холодной подаче."
+		want := "/// Закуски\n<b>Blinis Demidoff — 1390 ₽</b>\n<i>140 г</i>\n\nГречневые блины с крем-фрешем и икрой осетра, подаются в холодной подаче."
 		if got != want {
 			t.Fatalf("got:\n%s\n\nwant:\n%s", got, want)
 		}
@@ -202,7 +202,7 @@ func TestFormatMenuItemCardText(t *testing.T) {
 			IsAvailable: true,
 		}
 		got := formatMenuItemCardText("Напитки", item)
-		want := "/// Напитки\n<b>Water — 100 ₽</b>\n500 мл"
+		want := "/// Напитки\n<b>Water — 100 ₽</b>\n<i>500 мл</i>"
 		if got != want {
 			t.Fatalf("got:\n%s\n\nwant:\n%s", got, want)
 		}

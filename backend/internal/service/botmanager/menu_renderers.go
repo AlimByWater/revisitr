@@ -342,7 +342,7 @@ func formatMenuItemCardText(heading string, item entity.MenuItem) string {
 		"<b>" + html.EscapeString(item.Name) + " — " + formatMenuPrice(item.Price) + "</b>",
 	}
 	if item.Weight != nil && strings.TrimSpace(*item.Weight) != "" {
-		lines = append(lines, html.EscapeString(strings.TrimSpace(*item.Weight)))
+		lines = append(lines, "<i>"+html.EscapeString(strings.TrimSpace(*item.Weight))+"</i>")
 	}
 	text := strings.Join(lines, "\n")
 	if item.Description != nil && strings.TrimSpace(*item.Description) != "" {

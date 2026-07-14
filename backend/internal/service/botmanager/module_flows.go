@@ -527,7 +527,7 @@ func (h *handler) handleMenuItemCallback(ctx context.Context, chatID int64, valu
 			}
 			text += fmt.Sprintf("\n\nЦена: %.0f ₽", item.Price)
 			if item.Weight != nil && *item.Weight != "" {
-				text += "\nГраммаж: " + html.EscapeString(*item.Weight)
+				text += "\nГраммаж: <i>" + html.EscapeString(*item.Weight) + "</i>"
 			}
 
 			content := entity.MessageContent{
