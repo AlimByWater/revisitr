@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Revisitr iiko loyalty plugin (iikoFront Front.Net).
+    Target API: V8 (obsolete but supported through iikoFront 10.3 — covers the
+    9.4 test host and a wide band of client installs). See docs/integrations/iiko/PLUGIN_DESIGN.md §1.1.
+
+    Build discipline: the Resto.Front.Api.Vx contract is COMPILE-TIME ONLY and
+    must NOT be shipped with the plugin — iikoFront supplies it at runtime. The
+    Resto.Front.Api.PluginPackaging package handles this automatically for V8.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <AssemblyName>Resto.Front.Api.RevisitrPlugin</AssemblyName>
+    <RootNamespace>Revisitr.IikoPlugin</RootNamespace>
+    <Company>Revisitr</Company>
+    <Product>Revisitr iiko Loyalty Plugin</Product>
+    <Copyright>Copyright © Revisitr</Copyright>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- HttpClient + built-in JSON (JavaScriptSerializer). No third-party deps. -->
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Web.Extensions" />
+    <!-- Required by the Front.Net API surface (dialogs / view manager). -->
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Resto.Front.Api.PluginPackaging" Version="1.0.29">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <!-- Contract: compile-time only; packaging excludes it from the output. -->
+    <PackageReference Include="Resto.Front.Api.V8" Version="8.7.6032" />
+    <!-- Rx is provided by iikoFront at runtime; PrivateAssets=all → not shipped. -->
+    <PackageReference Include="System.Reactive" Version="4.2.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="revisitr.plugin.config.example.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

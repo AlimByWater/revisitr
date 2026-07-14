@@ -14,6 +14,7 @@ import (
 	"revisitr/internal/service/botmanager"
 	"revisitr/internal/service/campaign"
 	"revisitr/internal/service/eventbus"
+	"revisitr/internal/service/poscode"
 	tgService "revisitr/internal/service/telegram"
 )
 
@@ -71,6 +72,7 @@ func main() {
 	mgrOpts = append(mgrOpts, botmanager.WithEmoji(emojiPacksRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithSessionStore(botmanager.NewRedisSessionStore(rds.Client())))
 	mgrOpts = append(mgrOpts, botmanager.WithModuleSettings(botModuleSettingsRepo))
+	mgrOpts = append(mgrOpts, botmanager.WithPOSCode(poscode.New(rds.Client)))
 	mgrOpts = append(mgrOpts, botmanager.WithAdminBotToken(cfg.MasterBot.Token))
 	if cfg.TelegramAPIURL != "" {
 		logger.Info("using custom Telegram API server", "url", cfg.TelegramAPIURL)

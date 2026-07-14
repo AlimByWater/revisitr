@@ -10,6 +10,11 @@ import (
 type ProgramConfig struct {
 	WelcomeBonus int    `json:"welcome_bonus"`
 	CurrencyName string `json:"currency_name"`
+	// MaxRedeemPercent caps how much of a check can be paid with points at the POS.
+	// 0 means no explicit cap (treated as 100%).
+	MaxRedeemPercent float64 `json:"max_redeem_percent,omitempty"`
+	// SumWithDiscounts allows loyalty to stack with iiko's own discounts.
+	SumWithDiscounts bool `json:"sum_with_discounts,omitempty"`
 }
 
 func (c *ProgramConfig) Scan(src interface{}) error {

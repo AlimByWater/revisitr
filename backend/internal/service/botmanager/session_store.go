@@ -25,6 +25,7 @@ type FlowState struct {
 	AwaitingFeedback bool   `json:"awaiting_feedback,omitempty"`
 	CarouselIndex    int    `json:"carousel_index,omitempty"`
 	CarouselTotal    int    `json:"carousel_total,omitempty"`
+	CodeMessageID    int    `json:"code_message_id,omitempty"`
 
 	// Registration flow
 	RegistrationField string            `json:"registration_field,omitempty"` // current field name being collected

@@ -1,0 +1,5 @@
+{
+  "baseUrl": "https://api.revisitr.ru",
+  "apiKey": "rvk_paste_the_key_from_the_web_cabinet_here",
+  "timeoutSeconds": 6
+}

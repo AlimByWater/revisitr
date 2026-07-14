@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"revisitr/internal/entity"
+	"revisitr/internal/service/poscode"
 	tgService "revisitr/internal/service/telegram"
 
 	"github.com/mymmrac/telego"
@@ -71,6 +72,7 @@ type Manager struct {
 	emojiRepo           emojiRepository
 	moduleSettingsRepo  moduleSettingsRepository
 	sessions            sessionStore
+	posCode             *poscode.Service
 	tgSender      *tgService.Sender
 	logger        *slog.Logger
 	apiServer     string // custom Telegram Bot API server URL (empty = default)
@@ -110,6 +112,10 @@ func WithSessionStore(store sessionStore) ManagerOption {
 
 func WithModuleSettings(repo moduleSettingsRepository) ManagerOption {
 	return func(m *Manager) { m.moduleSettingsRepo = repo }
+}
+
+func WithPOSCode(svc *poscode.Service) ManagerOption {
+	return func(m *Manager) { m.posCode = svc }
 }
 
 func WithAdminBotToken(token string) ManagerOption {

@@ -531,7 +531,20 @@ func (h *handler) handleBalance(ctx context.Context, msg *telego.Message) {
 		}
 	}
 
-	h.sendText(chatID, sb.String())
+	text := stripEmojiMarkers(sb.String())
+	if text == "" {
+		return
+	}
+
+	content := entity.MessageContent{
+		Parts: []entity.MessagePart{{Type: entity.PartText, Text: text}},
+	}
+	if h.mgr.posCode != nil {
+		content.Buttons = [][]entity.InlineButton{{
+			{Text: "🎫 Код для кассы", Data: callbackPOSCode},
+		}}
+	}
+	h.sendContentMessage(ctx, chatID, content)
 }
 
 func (h *handler) handleLocations(ctx context.Context, msg *telego.Message) {
