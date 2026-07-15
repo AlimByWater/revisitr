@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { User, Menu, LogOut, Settings } from 'lucide-react'
+import { User, Menu, LogOut, Settings, Sun, Moon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -24,7 +24,6 @@ export function Header({ onMenuToggle }: HeaderProps) {
     navigate('/auth/login')
   }
 
-  const isAurora = theme === 'aurora'
   const isDashboard = location.pathname === '/dashboard' || location.pathname === '/dashboard/'
 
   // Close dropdown on outside click
@@ -38,119 +37,6 @@ export function Header({ onMenuToggle }: HeaderProps) {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [menuOpen])
-
-  if (isAurora) {
-    return (
-      <header
-        className="h-16 border-b flex items-center justify-between px-4 md:px-6 sticky top-0 z-30 transition-all duration-500 header-glass"
-      >
-        <div className="flex items-center gap-4 md:gap-8">
-          {/* Mobile burger */}
-          <button
-            onClick={onMenuToggle}
-            type="button"
-            className="lg:hidden h-11 w-11 rounded-lg flex items-center justify-center transition-colors text-white/60 hover:text-white hover:bg-white/10"
-            aria-label="Открыть меню"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
-          <Link to="/dashboard" className="text-xl font-bold tracking-tight group/logo select-none">
-            <span className="text-white/90">
-              revi
-            </span>
-            <span
-              className="transition-all duration-300 text-violet-400 group-hover/logo:drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]"
-            >
-              s
-            </span>
-            <span className="text-white/90">
-              itr
-            </span>
-          </Link>
-
-          <nav className="hidden md:flex items-center gap-6">
-            <Link
-              to="/dashboard"
-              className={cn(
-                'text-sm font-medium transition-colors',
-                location.pathname.startsWith('/dashboard') && !location.pathname.startsWith('/dashboard/account')
-                  ? 'text-white'
-                  : 'text-white/50 hover:text-white/90',
-              )}
-            >
-              Панель управления
-            </Link>
-          </nav>
-        </div>
-
-        <div className="flex items-center gap-3 md:gap-5">
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            type="button"
-            className="theme-toggle"
-            title="Светлая тема"
-            aria-label="Переключить тему"
-          />
-
-          <a
-            href="#"
-            className="hidden md:block text-sm font-medium transition-colors text-white/40 hover:text-violet-400"
-          >
-            Тарифы
-          </a>
-          <a
-            href="#"
-            className="hidden md:block text-sm font-medium transition-colors text-white/40 hover:text-violet-400"
-          >
-            Поддержка
-          </a>
-
-          {/* User dropdown */}
-          <div
-            ref={menuRef}
-            className="relative flex items-center gap-2 md:gap-3 pl-3 md:pl-4 border-l border-white/10"
-          >
-            <button
-              type="button"
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/10"
-            >
-              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/10">
-                <User className="w-4 h-4 text-white/60" />
-              </div>
-              <span className="text-sm font-medium hidden lg:block text-white/70">
-                {user?.name || 'Администратор'}
-              </span>
-            </button>
-
-            {menuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 rounded-xl border shadow-lg py-1 z-50 bg-neutral-900 border-white/10">
-                <Link
-                  to="/dashboard/account"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-white/70 hover:bg-white/10 hover:text-white"
-                >
-                  <Settings className="w-4 h-4" />
-                  Настройки аккаунта
-                </Link>
-                <div className="my-1 border-t border-white/10" />
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm w-full transition-colors text-red-400 hover:bg-red-500/10"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Выйти
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-    )
-  }
 
   return (
     <header className="z-30 transition-all duration-500 px-4 sm:px-8 lg:px-16 pt-4 sm:pt-6 pb-0">
@@ -219,13 +105,27 @@ export function Header({ onMenuToggle }: HeaderProps) {
         {/* Right: theme toggle + user */}
         <div className="flex items-center gap-3 md:gap-5 ml-auto">
           {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            type="button"
-            className="theme-toggle"
-            title="Aurora тема"
-            aria-label="Переключить тему"
-          />
+          <div className="flex items-center gap-2">
+            <Sun
+              className={cn(
+                'w-4 h-4 shrink-0 transition-colors',
+                theme === 'light' ? 'text-neutral-900' : 'text-neutral-400',
+              )}
+            />
+            <button
+              onClick={toggleTheme}
+              type="button"
+              className={cn('theme-toggle', theme === 'dark' && 'theme-toggle--checked')}
+              title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+              aria-label="Переключить тему"
+            />
+            <Moon
+              className={cn(
+                'w-4 h-4 shrink-0 transition-colors',
+                theme === 'dark' ? 'text-neutral-900' : 'text-neutral-400',
+              )}
+            />
+          </div>
 
           {/* User dropdown */}
           <div
