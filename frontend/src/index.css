@@ -338,9 +338,6 @@
   position: relative;
   width: 44px;
   height: 24px;
-  padding-block: 10px;
-  box-sizing: content-box;
-  background-clip: content-box;
   border-radius: 12px;
   border: none;
   cursor: pointer;
@@ -353,7 +350,7 @@
 .theme-toggle::before {
   content: '';
   position: absolute;
-  top: 14px;
+  top: 4px;
   left: 4px;
   width: 16px;
   height: 16px;
