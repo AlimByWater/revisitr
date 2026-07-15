@@ -181,6 +181,12 @@
   background-image: none;
 }
 
+/* Header wordmark (black PNG) — recolor to white in dark mode, same technique
+   Footer already uses (Footer's logo has its own permanent `invert` class). */
+[data-theme="dark"] header img[src="/logo.png"] {
+  filter: invert(1);
+}
+
 [data-theme="dark"] .bg-white:not(.tg-root *) { background: var(--color-surface-card) !important; }
 [data-theme="dark"] .bg-white\/80:not(.tg-root *) { background: var(--color-header-bg) !important; }
 [data-theme="dark"] .bg-white\/95:not(.tg-root *) { background: rgba(28, 28, 34, 0.92) !important; }
