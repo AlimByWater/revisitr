@@ -1,16 +1,16 @@
-# Graph Report - revisitr  (2026-06-26)
+# Graph Report - revisitr  (2026-07-15)
 
 ## Corpus Check
-- 524 files · ~294,938 words
+- 547 files · ~313,191 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 5134 nodes · 7956 edges · 331 communities (254 shown, 77 thin omitted)
-- Extraction: 83% EXTRACTED · 17% INFERRED · 0% AMBIGUOUS · INFERRED: 1340 edges (avg confidence: 0.8)
+- 5493 nodes · 8580 edges · 346 communities (274 shown, 72 thin omitted)
+- Extraction: 84% EXTRACTED · 16% INFERRED · 0% AMBIGUOUS · INFERRED: 1381 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `cb26422a`
+- Built from commit: `1610c288`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -287,6 +287,7 @@
 - [[_COMMUNITY_Community 270|Community 270]]
 - [[_COMMUNITY_Community 271|Community 271]]
 - [[_COMMUNITY_Community 272|Community 272]]
+- [[_COMMUNITY_Community 273|Community 273]]
 - [[_COMMUNITY_Community 274|Community 274]]
 - [[_COMMUNITY_Community 275|Community 275]]
 - [[_COMMUNITY_Community 276|Community 276]]
@@ -295,15 +296,28 @@
 - [[_COMMUNITY_Community 279|Community 279]]
 - [[_COMMUNITY_Community 280|Community 280]]
 - [[_COMMUNITY_Community 281|Community 281]]
+- [[_COMMUNITY_Community 282|Community 282]]
+- [[_COMMUNITY_Community 283|Community 283]]
 - [[_COMMUNITY_Community 284|Community 284]]
 - [[_COMMUNITY_Community 285|Community 285]]
 - [[_COMMUNITY_Community 286|Community 286]]
 - [[_COMMUNITY_Community 287|Community 287]]
+- [[_COMMUNITY_Community 289|Community 289]]
+- [[_COMMUNITY_Community 290|Community 290]]
+- [[_COMMUNITY_Community 291|Community 291]]
 - [[_COMMUNITY_Community 292|Community 292]]
+- [[_COMMUNITY_Community 293|Community 293]]
 - [[_COMMUNITY_Community 294|Community 294]]
+- [[_COMMUNITY_Community 295|Community 295]]
+- [[_COMMUNITY_Community 296|Community 296]]
 - [[_COMMUNITY_Community 297|Community 297]]
 - [[_COMMUNITY_Community 298|Community 298]]
+- [[_COMMUNITY_Community 299|Community 299]]
+- [[_COMMUNITY_Community 300|Community 300]]
+- [[_COMMUNITY_Community 301|Community 301]]
 - [[_COMMUNITY_Community 302|Community 302]]
+- [[_COMMUNITY_Community 303|Community 303]]
+- [[_COMMUNITY_Community 304|Community 304]]
 - [[_COMMUNITY_Community 305|Community 305]]
 - [[_COMMUNITY_Community 306|Community 306]]
 - [[_COMMUNITY_Community 307|Community 307]]
@@ -311,8 +325,8 @@
 - [[_COMMUNITY_Community 309|Community 309]]
 - [[_COMMUNITY_Community 310|Community 310]]
 - [[_COMMUNITY_Community 311|Community 311]]
+- [[_COMMUNITY_Community 312|Community 312]]
 - [[_COMMUNITY_Community 313|Community 313]]
-- [[_COMMUNITY_Community 315|Community 315]]
 - [[_COMMUNITY_Community 319|Community 319]]
 - [[_COMMUNITY_Community 320|Community 320]]
 - [[_COMMUNITY_Community 321|Community 321]]
@@ -335,11 +349,11 @@
 2. `mustRegister()` - 96 edges
 3. `uniqueEmail()` - 93 edges
 4. `cn()` - 91 edges
-5. `useApiMutation()` - 73 edges
+5. `useApiMutation()` - 74 edges
 6. `useApiQuery()` - 64 edges
 7. `decodeJSON()` - 59 edges
-8. `handler` - 50 edges
-9. `main()` - 49 edges
+8. `main()` - 50 edges
+9. `handler` - 50 edges
 10. `Group` - 33 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -349,12 +363,12 @@
   frontend/src/features/bots/components/PresetGallery.tsx → frontend/src/lib/utils.ts
 - `PlaceholderPicker()` --calls--> `cn()`  [INFERRED]
   frontend/src/features/telegram-preview/components/MessageContentEditor.tsx → frontend/src/lib/utils.ts
+- `useAuthStore` --calls--> `RegisterPage()`  [INFERRED]
+  frontend/src/stores/auth.ts → frontend/src/routes/auth/register.tsx
 - `FilterGroup()` --calls--> `cn()`  [INFERRED]
   frontend/src/components/filters/ClientFilterBuilder.tsx → frontend/src/lib/utils.ts
-- `AuroraNavItem()` --calls--> `cn()`  [INFERRED]
-  frontend/src/components/layout/AuroraSidebar.tsx → frontend/src/lib/utils.ts
 
-## Communities (331 total, 77 thin omitted)
+## Communities (346 total, 72 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.07
@@ -366,15 +380,15 @@ Nodes (49): create_client(), get_client(), Telethon client factory with async co
 
 ### Community 2 - "Community 2"
 Cohesion: 0.04
-Nodes (49): Footer(), AccountPage, authLoader(), BillingPage, BotBookingSettingsPage, BotDetailPage, BotFeedbackSettingsPage, BotMenuSettingsPage (+41 more)
+Nodes (47): Footer(), AccountPage, BillingPage, BotBookingSettingsPage, BotDetailPage, BotFeedbackSettingsPage, BotMenuSettingsPage, BotsPage (+39 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.18
 Nodes (16): DashboardAggregates, ExternalOrder, Integration, IntegrationAggregate, IntegrationClient, IntegrationConfig, IntegrationStats, MenuCategory (+8 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.13
-Nodes (20): MenuPresetCategoryCustomization, MenuPresetCustomizations, MenuPresetItemCustomization, PresetButtonStyle, createDefaultMenuPresetCustomizations(), formatPrice(), inputClassName, isMenuPresetCustomizationDirty() (+12 more)
+Cohesion: 0.14
+Nodes (19): MenuPresetCategoryCustomization, MenuPresetCustomizations, MenuPresetItemCustomization, createDefaultMenuPresetCustomizations(), formatPrice(), inputClassName, isMenuPresetCustomizationDirty(), MenuPresetCustomizerProps (+11 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.05
@@ -393,8 +407,8 @@ Cohesion: 0.11
 Nodes (36): MenuDisplaySettingsPanelProps, MessageContentEditor, buildCarouselContent(), buildCategoryContent(), buildCategoryTabRows(), buildItemCardContent(), buildItemSimpleContent(), buildListHeaderText() (+28 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.08
-Nodes (3): Group, Group, Group
+Cohesion: 0.07
+Nodes (4): billingUsecase, Group, Group, Group
 
 ### Community 11 - "Community 11"
 Cohesion: 0.14
@@ -402,7 +416,7 @@ Nodes (31): newUC(), ptr(), testBot(), TestCreate_RepoError(), TestCreate_Succes
 
 ### Community 12 - "Community 12"
 Cohesion: 0.06
-Nodes (34): RateBadge(), SortableTh(), SortKey, ErrorState(), ErrorStateProps, InfoHint(), InfoHintProps, PageButton() (+26 more)
+Nodes (33): RateBadge(), SortableTh(), SortKey, EmptyState(), EmptyStateProps, ErrorState(), ErrorStateProps, InfoHint() (+25 more)
 
 ### Community 13 - "Community 13"
 Cohesion: 0.08
@@ -421,8 +435,8 @@ Cohesion: 0.09
 Nodes (27): mockRFMRepo, mockRFMService, mockSegmentsRepo, newTestUC(), TestGetActiveTemplate_Configured(), TestGetActiveTemplate_Default(), TestGetConfig(), TestGetConfig_ReturnsDefaults() (+19 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.10
-Nodes (19): handler, mergeMediaIDs(), TestMergeMediaIDsKeepsOriginalTemplateText(), TestPersonalizeMessageContentUsesClientValues(), TestTemplateValuesFallBackToTelegramUser(), personalizeMessageContent(), personalizeText(), templateValues() (+11 more)
+Cohesion: 0.08
+Nodes (20): handler, handler, mergeMediaIDs(), TestMergeMediaIDsKeepsOriginalTemplateText(), TestPersonalizeMessageContentUsesClientValues(), TestTemplateValuesFallBackToTelegramUser(), personalizeMessageContent(), personalizeText() (+12 more)
 
 ### Community 18 - "Community 18"
 Cohesion: 0.08
@@ -438,11 +452,11 @@ Nodes (4): Option, handleError(), campaignsUsecase, Group
 
 ### Community 21 - "Community 21"
 Cohesion: 0.07
-Nodes (9): ptr(), TestCopy(), TestCreate(), TestDelete_NotOwner(), TestDelete_Success(), TestGet_Success(), TestUpdateCategory_NotOwner(), TestUpdateItem_NotOwner() (+1 more)
+Nodes (11): ptr(), TestCopy(), TestCreate(), TestDelete_NotOwner(), TestDelete_Success(), TestDeleteCategory_NotOwner(), TestDeleteCategory_Success(), TestGet_Success() (+3 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.05
-Nodes (52): campaignsApi, CampaignDetailPage(), formatDate(), statusConfig, CreateCampaignPage(), Format, FORMAT_OPTIONS, inputClass (+44 more)
+Cohesion: 0.08
+Nodes (42): campaignsApi, CampaignDetailPage(), formatDate(), statusConfig, CreateCampaignPage(), CampaignsPage(), useActionLogQuery(), useCampaignQuery() (+34 more)
 
 ### Community 23 - "Community 23"
 Cohesion: 0.06
@@ -461,8 +475,8 @@ Cohesion: 0.07
 Nodes (32): iikoItemPrice(), mapIikoDeliveryComponent(), mapIikoDeliveryItems(), positiveInt(), IikoAPIError, iikoCustomerCard, iikoCustomerInfo, iikoCustomerWallet (+24 more)
 
 ### Community 27 - "Community 27"
-Cohesion: 0.10
-Nodes (18): mockConfigRepo, mockPassRepo, newTestUC(), TestGetConfig_NotFound(), TestGetConfigs(), TestGetPass_NotFound(), TestGetStats(), TestIssuePass_AlreadyExists() (+10 more)
+Cohesion: 0.09
+Nodes (21): mockConfigRepo, mockPassRepo, newTestUC(), TestGenerateGoogleSaveURL_PlatformDisabled(), TestGenerateGoogleSaveURL_Success(), TestGenerateGoogleSaveURL_WrongPlatform(), TestGetConfig_NotFound(), TestGetConfigs() (+13 more)
 
 ### Community 28 - "Community 28"
 Cohesion: 0.09
@@ -473,8 +487,8 @@ Cohesion: 0.07
 Nodes (3): Clients, buildSegmentFilterWhere(), Segments
 
 ### Community 30 - "Community 30"
-Cohesion: 0.07
-Nodes (21): ClientRFMStats, OnboardingAnswer, OnboardingQuestion, AllRFMSegments(), RecommendTemplate(), StandardTemplateKeys(), TestAllRFMSegments(), TestSegmentNames_AllCovered() (+13 more)
+Cohesion: 0.08
+Nodes (18): ClientRFMStats, OnboardingAnswer, OnboardingQuestion, AllRFMSegments(), TestAllRFMSegments(), TestSegmentNames_AllCovered(), TestStandardTemplates_ThresholdsValid(), RFMConfig (+10 more)
 
 ### Community 31 - "Community 31"
 Cohesion: 0.08
@@ -489,16 +503,16 @@ Cohesion: 0.07
 Nodes (29): Demo Stand & Live Findings, Existing Codebase, Flow A — iikoFront plugin (ideal), Flow B — Manual code flow (fallback), iiko Integration Plan, Integration Capability Matrix, Layer 1 — Read-only POS sync, Layer 2 — Loyalty engine in Revisitr (+21 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.07
-Nodes (23): buttonContentFromValue(), buttonSummary(), buttonValueFromContent(), ConnectionTab, FIELD_TYPE_OPTIONS, GeneralTab, inputClassName, MessageContentEditor (+15 more)
+Cohesion: 0.08
+Nodes (21): BotDetailPage(), buttonContentFromValue(), buttonSummary(), buttonValueFromContent(), ConnectionTab, FIELD_TYPE_OPTIONS, formatDate(), GeneralTab (+13 more)
 
 ### Community 37 - "Community 37"
-Cohesion: 0.16
-Nodes (20): mockClientsRepo, mockIntegrationsRepo, NewSyncService(), mockIntegration(), syncLogger(), TestGetCustomers_Success(), TestGetMenu_Success(), TestSync_SubsequentUsesLastSyncAt() (+12 more)
+Cohesion: 0.06
+Nodes (32): clientsRepo, discoveryProvider, NewProvider(), integrationsRepo, menusRepo, TestNewProvider_Factory(), mockClientsRepo, mockIntegrationsRepo (+24 more)
 
 ### Community 38 - "Community 38"
-Cohesion: 0.11
-Nodes (18): strPtr(), TestBuildCategoryTabRowsMarksActiveCategory(), TestMenuListTextModes(), TestPresentMenuCategoriesAppliesOrderAndOverrides(), TestPresentMenuCategoriesSupportsEmojiOnlyTabs(), registerRoute(), TestAllGroupsRegisterWithoutPanic(), Auth() (+10 more)
+Cohesion: 0.10
+Nodes (21): strPtr(), TestBuildCategoryTabRowsMarksActiveCategory(), TestFormatMenuItemCardText(), TestMenuListTextModes(), TestPresentMenuCategoriesAppliesOrderAndOverrides(), TestPresentMenuCategoriesSupportsEmojiOnlyTabs(), TestTruncateMenuCaption(), RecommendTemplate() (+13 more)
 
 ### Community 39 - "Community 39"
 Cohesion: 0.07
@@ -526,7 +540,7 @@ Nodes (15): CreatePromoCodeRequest, CreatePromotionRequest, PromoChannelAnalytic
 
 ### Community 46 - "Community 46"
 Cohesion: 0.06
-Nodes (21): WithSalesUsecase(), dashboardUsecase, salesUsecase, authCfg, group, buildEngine(), TestMain(), FeatureGate() (+13 more)
+Nodes (15): FeatureGate(), FeatureChecker, NewBotClients(), clientProfileRow, NewClients(), NewLoyalty(), NewMenus(), NewModulePresets() (+7 more)
 
 ### Community 47 - "Community 47"
 Cohesion: 0.13
@@ -537,16 +551,16 @@ Cohesion: 0.08
 Nodes (18): ABTestResults, AudienceFilter, Campaign, CampaignAnalyticsDetail, CampaignButton, CampaignButtons, CampaignClick, CampaignMessage (+10 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.08
-Nodes (33): buildChartData(), formatMoney(), SEGMENT_HEX_COLORS, SEGMENT_ICONS, SegmentsPage(), rfmApi, RFMDashboardPage(), SEGMENT_ICONS (+25 more)
+Cohesion: 0.17
+Nodes (16): ActiveTemplateResponse, OnboardingAnswer, OnboardingQuestion, RFM_SEGMENT_COLORS, RFM_SEGMENT_LABELS, RFM_SEGMENTS, RFMConfig, RFMDashboard (+8 more)
 
 ### Community 50 - "Community 50"
 Cohesion: 0.09
 Nodes (3): mockPromotionsRepo, TestCreate_SetsOrgAndActive(), TestGetByID_NotFound()
 
 ### Community 51 - "Community 51"
-Cohesion: 0.10
-Nodes (24): applyBookingDefaults(), BotRequirement, buildDefaultBookingSlots(), buildHourlySlots(), DEFAULT_BOOKING_PARTY_OPTIONS, defaultBookingIntro(), getSystemButtons(), MODULE_DEFS (+16 more)
+Cohesion: 0.13
+Nodes (19): applyBookingDefaults(), BotRequirement, buildDefaultBookingSlots(), buildHourlySlots(), DEFAULT_BOOKING_PARTY_OPTIONS, defaultBookingIntro(), getSystemButtons(), MODULE_DEFS (+11 more)
 
 ### Community 52 - "Community 52"
 Cohesion: 0.11
@@ -561,8 +575,8 @@ Cohesion: 0.11
 Nodes (8): BotModuleSettings, JSONB, ModulePreset, botEventPublisher, botsRepo, presetsRepo, settingsRepo, Usecase
 
 ### Community 55 - "Community 55"
-Cohesion: 0.17
-Nodes (11): handler, carouselItem, buildCategoryItemRows(), buildCategoryTabRows(), buildMenuListCategoryRows(), ensureMenuTextPart(), findCategoryItem(), parseMenuCardValue() (+3 more)
+Cohesion: 0.16
+Nodes (15): handler, carouselItem, buildCategoryItemRows(), buildCategoryTabRows(), buildMenuListCategoryRows(), ensureMenuTextPart(), findCategoryItem(), formatMenuItemCardText() (+7 more)
 
 ### Community 56 - "Community 56"
 Cohesion: 0.11
@@ -574,11 +588,11 @@ Nodes (6): earnFromCheckRequest, Group, handleError(), loyaltyUsecase, Option, r
 
 ### Community 58 - "Community 58"
 Cohesion: 0.08
-Nodes (23): 1. Think Before Coding, 2. Simplicity First, 3. Surgical Changes, 4. Goal-Driven Execution, AI Agent Memory, Architecture, Claude Code MCP для тестирования, code:block1 (1. [Step] → verify: [check]) (+15 more)
+Nodes (24): 1. Think Before Coding, 2. Simplicity First, 3. Surgical Changes, 4. Goal-Driven Execution, AI Agent Memory, Architecture, Claude Code MCP для тестирования, code:block1 (1. [Step] → verify: [check]) (+16 more)
 
 ### Community 59 - "Community 59"
 Cohesion: 0.08
-Nodes (23): 1. Think Before Coding, 2. Simplicity First, 3. Surgical Changes, 4. Goal-Driven Execution, AI Agent Memory, Architecture, Claude Code MCP для тестирования, code:block1 (1. [Step] → verify: [check]) (+15 more)
+Nodes (24): 1. Think Before Coding, 2. Simplicity First, 3. Surgical Changes, 4. Goal-Driven Execution, AI Agent Memory, Architecture, Claude Code MCP для тестирования, code:block1 (1. [Step] → verify: [check]) (+16 more)
 
 ### Community 60 - "Community 60"
 Cohesion: 0.09
@@ -593,16 +607,16 @@ Cohesion: 0.11
 Nodes (21): createProgram(), getProgram(), listPrograms(), updateLevels(), updateProgram(), CreateProgramModal(), CreateProgramModalProps, LoyaltyProgramsPage() (+13 more)
 
 ### Community 63 - "Community 63"
-Cohesion: 0.10
-Nodes (5): intPtr(), newTestUsecase(), TestCalculateBonus(), TestEarnFromCheck(), mockRepo
+Cohesion: 0.06
+Nodes (9): Usecase, NewWithWallet(), intPtr(), newTestUsecase(), TestCalculateBonus(), TestEarnFromCheck(), mockRepo, repository (+1 more)
 
 ### Community 64 - "Community 64"
-Cohesion: 0.11
-Nodes (18): main(), botClientsRepository, botInstance, botsRepository, emojiRepository, loyaltyRepository, WithAdminBotToken(), WithEmoji() (+10 more)
+Cohesion: 0.08
+Nodes (22): main(), botClientsRepository, botInstance, botsRepository, emojiRepository, loyaltyRepository, Manager, WithAdminBotToken() (+14 more)
 
 ### Community 65 - "Community 65"
-Cohesion: 0.14
-Nodes (16): clientsApi, ClientDetailPage(), ClientsPage(), Column, columns, formatBalance(), useClientProfileQuery(), useClientsQuery() (+8 more)
+Cohesion: 0.28
+Nodes (10): clientsApi, ClientDetailPage(), useClientProfileQuery(), useUpdateTagsMutation(), ClientFilter, ClientProfile, ClientStats, LoyaltyTransaction (+2 more)
 
 ### Community 66 - "Community 66"
 Cohesion: 0.09
@@ -617,20 +631,20 @@ Cohesion: 0.15
 Nodes (19): generateCodeResp, promoCodeResp, promotionResp, mustCreatePromotion(), TestPromotions_Create_SetsActive(), TestPromotions_CrossOrg_Forbidden(), TestPromotions_Delete(), TestPromotions_GetByID() (+11 more)
 
 ### Community 69 - "Community 69"
-Cohesion: 0.15
-Nodes (10): clientsRepo, discoveryProvider, NewProvider(), integrationsRepo, menusRepo, TestNewProvider_Factory(), newDiscoveryProvider(), toEntityItems() (+2 more)
+Cohesion: 0.09
+Nodes (31): ApiException, Dictionary, Exception, Func, Guid, HttpClient, IDisposable, decimal (+23 more)
 
 ### Community 70 - "Community 70"
-Cohesion: 0.17
-Nodes (14): analyticsApi, MailingsAnalyticsPage(), useCampaignAnalyticsQuery(), AnalyticsFilter, CampaignAnalytics, CampaignStat, ChartPoint, ClientDemographics (+6 more)
+Cohesion: 0.11
+Nodes (18): analyticsApi, MailingsAnalyticsPage(), useCampaignAnalyticsQuery(), useSalesAnalyticsQuery(), formatCurrency(), HorizontalBar(), SalesAnalyticsPage(), AnalyticsFilter (+10 more)
 
 ### Community 71 - "Community 71"
-Cohesion: 0.12
-Nodes (23): menusApi, MenuConflict, CategorySection(), inputClassName, MenuItemRow(), useAddItemMutation(), useDeleteItemMutation(), useUpdateCategoryMutation() (+15 more)
+Cohesion: 0.10
+Nodes (33): useUploadFileMutation(), useApiMutation(), menusApi, MenuConflict, MenusPage(), CategorySection(), inputClassName, MenuDetailPage() (+25 more)
 
 ### Community 72 - "Community 72"
-Cohesion: 0.11
-Nodes (17): useRFMSegmentClientsQuery(), escapeCsvField(), formatDate(), formatMoney(), pluralClients(), result, ScoreBadge(), SEGMENT_ICONS (+9 more)
+Cohesion: 0.25
+Nodes (6): badges, dashes, mockClients, mockNavigate, revenueHeader, user
 
 ### Community 73 - "Community 73"
 Cohesion: 0.14
@@ -645,8 +659,8 @@ Cohesion: 0.12
 Nodes (3): Group, handleError(), promotionsUsecase
 
 ### Community 77 - "Community 77"
-Cohesion: 0.12
-Nodes (5): configRepo, passRepo, Usecase, generateAuthToken(), generateSerial()
+Cohesion: 0.05
+Nodes (26): New(), configRepo, NewGoogleWalletAPI(), TestAPI_GenerateSaveURL_InvalidJSON(), TestAPI_GenerateSaveURL_MissingIssuerID(), TestAPI_GenerateSaveURL_MissingServiceAccountKey(), TestAPI_GenerateSaveURL_Success(), truncate() (+18 more)
 
 ### Community 78 - "Community 78"
 Cohesion: 0.16
@@ -657,8 +671,8 @@ Cohesion: 0.16
 Nodes (17): authResp, decodeJSON(), doRequest(), mustLogin(), menuCategoryResp, menuItemResp, menuResp, mustAddCategory() (+9 more)
 
 ### Community 80 - "Community 80"
-Cohesion: 0.11
-Nodes (31): botsApi, modulePresetsApi, BotDetailPage(), formatDate(), MenuDisplaySettingsPanel(), useBotModuleSettingsQuery(), useBotQuery(), useModulePresetsQuery() (+23 more)
+Cohesion: 0.09
+Nodes (22): LoyaltyAnalyticsPage(), PIE_COLORS, useLoyaltyAnalyticsQuery(), BotsPage(), statusConfig, MenuDisplaySettingsPanel(), useBotModuleSettingsQuery(), useBotQuery() (+14 more)
 
 ### Community 81 - "Community 81"
 Cohesion: 0.21
@@ -696,8 +710,12 @@ Nodes (25): CustomSegmentsPage(), FILTER_ATTRIBUTES, FilterRule, inputClassName,
 Cohesion: 0.11
 Nodes (18): code:block1 (/graphify                                             # full), code:bash (if [ ! -f graphify-out/.graphify_python ]; then), code:bash (graphify cluster-only .), code:bash (graphify path "NODE_A" "NODE_B"), code:bash ($(cat graphify-out/.graphify_python) -m graphify save-result), code:bash ($(cat graphify-out/.graphify_python) -c "), code:bash (python3 -m graphify.watch INPUT_PATH --debounce 3), code:bash (graphify hook install    # install) (+10 more)
 
+### Community 91 - "Community 91"
+Cohesion: 0.11
+Nodes (19): New(), New(), appleBarcode, appleField, applePass, appleStoreCard, fetchImage(), NewPassGenerator() (+11 more)
+
 ### Community 95 - "Community 95"
-Cohesion: 0.16
+Cohesion: 0.15
 Nodes (3): Group, handleError(), menusUsecase
 
 ### Community 96 - "Community 96"
@@ -721,8 +739,8 @@ Cohesion: 0.19
 Nodes (6): ChatHeader(), ChatHeaderProps, Composer(), pillStyle, StickerMessage(), StickerMessageProps
 
 ### Community 102 - "Community 102"
-Cohesion: 0.13
-Nodes (15): AuroraNavItem(), navigation, NavItem, SubItem, ACTION_STEPS, OnboardingProgress(), allNavHrefs, groupBusiness (+7 more)
+Cohesion: 0.12
+Nodes (16): AuroraNavItem(), AuroraSidebar(), navigation, NavItem, SubItem, ACTION_STEPS, OnboardingProgress(), allNavHrefs (+8 more)
 
 ### Community 103 - "Community 103"
 Cohesion: 0.12
@@ -733,8 +751,8 @@ Cohesion: 0.15
 Nodes (11): test, waitForPageLoad(), root, entityBtns, jsErrors, passwordInputs, otherPeriod, periodBtn (+3 more)
 
 ### Community 105 - "Community 105"
-Cohesion: 0.26
-Nodes (3): pgCfg, rdsCfg, envOr()
+Cohesion: 0.12
+Nodes (10): WithSalesUsecase(), dashboardUsecase, salesUsecase, authCfg, group, pgCfg, rdsCfg, buildEngine() (+2 more)
 
 ### Community 106 - "Community 106"
 Cohesion: 0.16
@@ -789,12 +807,12 @@ Cohesion: 0.17
 Nodes (11): handler, applyItemCustomizations(), formatMenuPrice(), menuCategoryItemsTextWithDensity(), menuSections(), normalizeMenuListDensity(), normalizeMenuListLayout(), menuCategoryPresentation (+3 more)
 
 ### Community 123 - "Community 123"
-Cohesion: 0.08
-Nodes (18): LoginPage(), loginMock, mockNavigate, passwordInput, user, RegisterPage(), mockNavigate, registerMock (+10 more)
+Cohesion: 0.15
+Nodes (10): LoginPage(), MobileNav, MobileNavItem, MobileNavProps, AuthState, { isAuthenticated, user, accessToken }, mockTokens, mockUser (+2 more)
 
 ### Community 124 - "Community 124"
-Cohesion: 0.11
-Nodes (27): usePreviewAudienceMutation(), promotionsApi, PromotionsArchivePage(), PromoCodesPage(), CreatePromotionPage(), PromotionsPage(), useChannelAnalyticsQuery(), useCreatePromotionMutation() (+19 more)
+Cohesion: 0.07
+Nodes (35): usePreviewAudienceMutation(), promotionsApi, channelLabels, PromotionsArchivePage(), recurrenceLabels, typeConfig, channelLabels, CreatePromoCodeModal() (+27 more)
 
 ### Community 126 - "Community 126"
 Cohesion: 0.12
@@ -821,8 +839,8 @@ Cohesion: 0.17
 Nodes (11): formatBalance(), formatCurrency(), formatDate(), genderLabels, OrdersTab(), OrderStatsContent(), ProfileTab(), TabId (+3 more)
 
 ### Community 132 - "Community 132"
-Cohesion: 0.16
-Nodes (12): dashboardApi, DashboardHome(), formatCurrency(), MetricCard(), useDashboardChartsQuery(), useDashboardWidgetsQuery(), ChartPoint, DashboardCharts (+4 more)
+Cohesion: 0.26
+Nodes (10): dashboardApi, DashboardHome(), useDashboardChartsQuery(), useDashboardWidgetsQuery(), ChartPoint, DashboardCharts, DashboardFilter, DashboardMetric (+2 more)
 
 ### Community 133 - "Community 133"
 Cohesion: 0.13
@@ -880,6 +898,10 @@ Nodes (5): hashToken(), config, sessionsRepo, Usecase, usersRepo
 Cohesion: 0.15
 Nodes (12): AnalyticsFilter, CampaignAnalytics, CampaignStat, ClientDemographics, ClientTxStats, FunnelStep, LoyaltyAnalytics, LoyaltyComparison (+4 more)
 
+### Community 149 - "Community 149"
+Cohesion: 0.11
+Nodes (13): mockLoyaltyRepo, mockWalletUsecase, TestAppleWalletButtonRow_HiddenWhenDisabled(), TestAppleWalletButtonRow_ShownWhenEnabled(), TestCurrentLoyaltySnapshot_NoActiveProgram(), TestCurrentLoyaltySnapshot_ReturnsBalanceAndLevel(), TestGetOrIssuePass_IssuesNewWhenAbsent(), TestGetOrIssuePass_MatchesRequestedPlatformOnly() (+5 more)
+
 ### Community 150 - "Community 150"
 Cohesion: 0.15
 Nodes (12): CustomerListOpts, MenuCategory, MenuItem, POSCustomer, POSDailyAggregate, POSDiscovery, POSExternalMenu, POSMenu (+4 more)
@@ -909,8 +931,8 @@ Cohesion: 0.15
 Nodes (13): code:bash ($(cat graphify-out/.graphify_python) -c "), code:block11 ([Agent tool call 1: files 1-15, subagent_type="general-purpo), code:bash (PROJECT_ROOT=$(cat graphify-out/.graphify_root)), code:block13 (You are a graphify extraction subagent. Read the files liste), code:bash ($(cat graphify-out/.graphify_python) -c "), code:bash ($(cat graphify-out/.graphify_python) -c "), code:bash ($(cat graphify-out/.graphify_python) -c "), code:bash ($(cat graphify-out/.graphify_python) -c ") (+5 more)
 
 ### Community 157 - "Community 157"
-Cohesion: 0.15
-Nodes (8): copyMutate, mockUseCopyMenuMutation, mockUseCreateMenuMutation, mockUseDeleteMenuMutation, mockUseMenusQuery, mockUsePOSQuery, mockUseUpdateMenuMutation, refetchMenus
+Cohesion: 0.14
+Nodes (9): copyMutate, deleteMutate, mockUseCopyMenuMutation, mockUseCreateMenuMutation, mockUseDeleteMenuMutation, mockUseMenusQuery, mockUsePOSQuery, mockUseUpdateMenuMutation (+1 more)
 
 ### Community 158 - "Community 158"
 Cohesion: 0.19
@@ -953,8 +975,8 @@ Cohesion: 0.20
 Nodes (6): { container }, mockNavigate, mockQuestions, mockRecommendation, recommendMutate, user
 
 ### Community 172 - "Community 172"
-Cohesion: 0.19
-Nodes (14): ActivationLinkResponse, Bot, BotModuleSettings, BotSettings, CreateBotRequest, CreateManagedBotRequest, CreateManagedBotResponse, FeedbackModuleConfig (+6 more)
+Cohesion: 0.11
+Nodes (22): botsApi, modulePresetsApi, ActivationLinkResponse, BookingModuleConfig, BookingTimeSlot, Bot, BotButton, BotModuleSettings (+14 more)
 
 ### Community 173 - "Community 173"
 Cohesion: 0.04
@@ -981,20 +1003,20 @@ Cohesion: 0.20
 Nodes (3): mockOnboardingRepo, TestGetState_ExistingState(), TestReset()
 
 ### Community 182 - "Community 182"
-Cohesion: 0.20
-Nodes (7): mockUseAddCategoryMutation, mockUseAddItemMutation, mockUseMenuQuery, mockUsePOSQuery, mockUseUpdateCategoryMutation, mockUseUpdateItemMutation, mockUseUpdateMenuMutation
+Cohesion: 0.15
+Nodes (10): addCategoryMutate, mockUseAddCategoryMutation, mockUseAddItemMutation, mockUseDeleteCategoryMutation, mockUseDeleteItemMutation, mockUseMenuQuery, mockUsePOSQuery, mockUseUpdateCategoryMutation (+2 more)
 
 ### Community 183 - "Community 183"
 Cohesion: 0.17
 Nodes (16): marketplaceApi, MarketplacePage(), statusConfig, useCreateProductMutation(), useDeleteProductMutation(), useMarketplaceOrdersQuery(), useMarketplaceProductsQuery(), useMarketplaceStatsQuery() (+8 more)
 
 ### Community 184 - "Community 184"
-Cohesion: 0.14
-Nodes (16): create(), getById(), list(), update(), CreatePOSModal(), CreatePOSModalProps, DAYS, DEFAULT_DAY (+8 more)
+Cohesion: 0.11
+Nodes (18): create(), getById(), list(), update(), CreatePOSModal(), CreatePOSModalProps, POSListPage(), DAYS (+10 more)
 
 ### Community 185 - "Community 185"
-Cohesion: 0.31
-Nodes (8): walletApi, IssueWalletPassRequest, SaveWalletConfigRequest, WalletConfig, WalletCredentials, WalletDesign, WalletPass, WalletStats
+Cohesion: 0.21
+Nodes (14): WalletPage(), walletApi, useRevokeWalletPassMutation(), useSaveWalletConfigMutation(), useWalletConfigsQuery(), useWalletPassesQuery(), useWalletStatsQuery(), IssueWalletPassRequest (+6 more)
 
 ### Community 186 - "Community 186"
 Cohesion: 0.36
@@ -1017,8 +1039,8 @@ Cohesion: 0.22
 Nodes (8): adminBotLinksRepo, botsRepository, campaignsRepository, dashboardRepository, masterBotAuthRepo, masterBotLinksRepo, postCodesRepo, promotionsRepository
 
 ### Community 194 - "Community 194"
-Cohesion: 0.09
-Nodes (13): ClientInfo, clientsRepo, codeService, ConfigResult, IdentifyResult, integrationsRepo, keysRepo, loyaltyService (+5 more)
+Cohesion: 0.06
+Nodes (45): ClientInfo, clientsRepo, codeService, ConfigResult, IdentifyResult, integrationsRepo, keysRepo, loyaltyService (+37 more)
 
 ### Community 195 - "Community 195"
 Cohesion: 0.22
@@ -1033,8 +1055,8 @@ Cohesion: 0.28
 Nodes (6): Theme, ThemeContext, ThemeContextType, ThemeProvider(), App(), router
 
 ### Community 198 - "Community 198"
-Cohesion: 0.25
-Nodes (6): useTheme(), AuroraHeader(), breadcrumbMap, Header(), HeaderProps, DashboardLayout()
+Cohesion: 0.22
+Nodes (7): useTheme(), AuroraHeader(), breadcrumbMap, Header(), HeaderProps, Sidebar(), DashboardLayout()
 
 ### Community 199 - "Community 199"
 Cohesion: 0.31
@@ -1048,9 +1070,13 @@ Nodes (6): assertNoLoadingErrors(), ConsoleErrors, navigateAndVerify(), errorPat
 Cohesion: 0.25
 Nodes (3): fileServer, NewStorageServe(), StorageServe
 
+### Community 208 - "Community 208"
+Cohesion: 0.08
+Nodes (24): APNs Push-уведомления, code:bash (cd backend && go test ./internal/usecase/wallet/... -v -coun), code:bash (cd backend && go test ./internal/usecase/wallet/... -v -coun), code:block3 (wallet_configs (per-org платформа)), Google Wallet (partial — ~60%), Google Wallet: как настроить, Wallet: Карты лояльности (Apple / Google), Архитектура (+16 more)
+
 ### Community 209 - "Community 209"
-Cohesion: 0.25
-Nodes (3): CampaignQueue, MessageQueue, QueueMessage
+Cohesion: 0.18
+Nodes (4): ActionExecutor, CampaignQueue, MessageQueue, QueueMessage
 
 ### Community 210 - "Community 210"
 Cohesion: 0.42
@@ -1061,8 +1087,8 @@ Cohesion: 0.36
 Nodes (4): FlowState, RedisSessionStore, flowStateKey(), NewRedisSessionStore()
 
 ### Community 212 - "Community 212"
-Cohesion: 0.32
-Nodes (4): useSalesAnalyticsQuery(), formatCurrency(), HorizontalBar(), SalesAnalyticsPage()
+Cohesion: 0.12
+Nodes (16): 0. Предусловия (выяснить ДО кода), 1. Забрать SDK, 2. Выбрать версию API под свой iikoFront, 3. Собрать sample, 4. Разложить в папку плагинов iikoFront, 5. Добавить тип оплаты в backoffice, 6. Перезапустить iikoFront и проверить загрузку, 7. Проверить на кассе (+8 more)
 
 ### Community 213 - "Community 213"
 Cohesion: 0.25
@@ -1085,8 +1111,8 @@ Cohesion: 0.08
 Nodes (23): 1. Общее, 2. Аутентификация, 3. Идентификация гостя, 4.1 `POST /identify`, 4.2 `POST /redeem`, 4.3 `POST /accrue`, 4.4 `GET /config`, 4. Эндпоинты (+15 more)
 
 ### Community 218 - "Community 218"
-Cohesion: 0.22
-Nodes (5): getApiErrorMessage(), channelLabels, CreatePromoCodeModal(), useCreatePromoCodeMutation(), useGenerateCodeMutation()
+Cohesion: 0.12
+Nodes (15): code:powershell (cd iiko-plugin\RevisitrPlugin), code:block2 (C:\Program Files\iiko\iikoRMS\Front.Net\Plugins\Resto.Front.), code:block3 (%appdata%\Roaming\iiko\CashServer\Logs\plugin-Resto.Front.Ap), code:xml (<Manifest>), Revisitr iiko Loyalty Plugin, ⚠️ Грабли (проверено на iikoFront 9.4.9102, плагин загружается успешно), Известные ограничения (MVP), Как работает на кассе (+7 more)
 
 ### Community 219 - "Community 219"
 Cohesion: 0.39
@@ -1112,6 +1138,10 @@ Nodes (4): Application, Controller, Repository, Usecase
 Cohesion: 0.15
 Nodes (7): APIKeyAuth(), KeyAuthenticator, Group, identifyRequest, opRequest, pluginUsecase, handleError()
 
+### Community 228 - "Community 228"
+Cohesion: 0.23
+Nodes (12): rfmApi, RFMDashboardPage(), SEGMENT_ICONS, RFMOnboardingPage(), useRFMActiveTemplateQuery(), useRFMDashboardQuery(), useRFMOnboardingQuestionsQuery(), useRFMRecalculateMutation() (+4 more)
+
 ### Community 229 - "Community 229"
 Cohesion: 0.29
 Nodes (3): Config, Deps, Service
@@ -1121,8 +1151,8 @@ Cohesion: 0.33
 Nodes (5): DEFAULT_STYLE, InlineKeyboard(), InlineKeyboardProps, STYLE_BG, InlineButton
 
 ### Community 233 - "Community 233"
-Cohesion: 0.13
-Nodes (14): 1. Платформа, 2. Архитектура и компоненты, 3.1 Списание бонусов (юзкейс 3.1), 3.2 Только начисление (юзкейс 3.2), 3.3 Гость не предъявил карту (юзкейс 3.3), 3.4 Сплит счёта (юзкейс 4), 3. Runtime-флоу, 4. Устойчивость (+6 more)
+Cohesion: 0.12
+Nodes (17): 1.1 Универсальность: один плагин на много версий iikoFront, 1. Платформа, 1. Платформа и лицензирование, 2. Архитектура и компоненты, 3.1 Списание бонусов (юзкейс 3.1), 3.2 Только начисление (юзкейс 3.2), 3.3 Гость не предъявил карту (юзкейс 3.3), 3.4 Сплит счёта (юзкейс 4) (+9 more)
 
 ### Community 235 - "Community 235"
 Cohesion: 0.14
@@ -1197,8 +1227,8 @@ Cohesion: 0.40
 Nodes (3): BotEventHandler, Subscriber, NewSubscriber()
 
 ### Community 257 - "Community 257"
-Cohesion: 0.10
-Nodes (11): NewFromEnv(), main(), NewCampaigns(), Dashboard, calcTrend(), NewDashboard(), parsePeriod(), NewMasterBot() (+3 more)
+Cohesion: 0.08
+Nodes (9): NewFromEnv(), main(), NewCampaigns(), NewMasterBot(), MasterBot, NewPostCodes(), PostCodes, NewMasterBotAuth() (+1 more)
 
 ### Community 262 - "Community 262"
 Cohesion: 0.33
@@ -1216,9 +1246,17 @@ Nodes (3): formatPrice(), StatusBadge(), TariffCard()
 Cohesion: 0.40
 Nodes (4): createBtn, descInput, nameInput, submitBtn
 
+### Community 266 - "Community 266"
+Cohesion: 0.22
+Nodes (8): Decisions, Doing, Done, Evidence, Next, Problems, Today, Worklog
+
+### Community 268 - "Community 268"
+Cohesion: 0.54
+Nodes (6): dim(), expect(), green(), red(), run(), test_plugin.sh script
+
 ### Community 270 - "Community 270"
-Cohesion: 0.40
-Nodes (3): channelLabels, recurrenceLabels, typeConfig
+Cohesion: 0.25
+Nodes (7): code:bash (# 1. Инфраструктура), code:block2 (backend/), Revisitr, Stack, Быстрый старт, Порты (локальная разработка), Структура
 
 ### Community 271 - "Community 271"
 Cohesion: 0.33
@@ -1228,9 +1266,21 @@ Nodes (5): Aesthetic Direction, Brand Personality, Design Context, Design Princi
 Cohesion: 0.33
 Nodes (5): SWOT-анализ, Введение, Ключевые гипотезы, О продукте, ПОЗИЦИОНИРОВАНИЕ
 
+### Community 273 - "Community 273"
+Cohesion: 0.29
+Nodes (4): RegisterPage(), mockNavigate, registerMock, user
+
 ### Community 274 - "Community 274"
 Cohesion: 0.40
 Nodes (4): .ai-memory — Shared AI Agent Memory, Maintenance, Structure, Usage
+
+### Community 275 - "Community 275"
+Cohesion: 0.43
+Nodes (4): Dashboard, calcTrend(), NewDashboard(), parsePeriod()
+
+### Community 276 - "Community 276"
+Cohesion: 0.29
+Nodes (5): botFixture, mockGetBotPOSLocations, mockUseBotQuery, mockUsePOSQuery, mockUseProgramsQuery
 
 ### Community 277 - "Community 277"
 Cohesion: 0.50
@@ -1248,6 +1298,14 @@ Nodes (3): PhoneFrame(), PhoneFrameProps, StatusBar()
 Cohesion: 0.40
 Nodes (4): Button, ButtonProps, sizes, variants
 
+### Community 282 - "Community 282"
+Cohesion: 0.29
+Nodes (6): Format, FORMAT_OPTIONS, inputClass, TabType, TRIGGER_OPTIONS, TriggerType
+
+### Community 283 - "Community 283"
+Cohesion: 0.48
+Nodes (5): escapeCsvField(), formatDate(), formatMoney(), pluralClients(), result
+
 ### Community 284 - "Community 284"
 Cohesion: 0.33
 Nodes (4): IntegrationsPage(), STATUS_STYLES, TYPE_LABELS, useIntegrationsQuery()
@@ -1260,13 +1318,45 @@ Nodes (4): botSelect, messageInput, nameInput, options
 Cohesion: 0.40
 Nodes (4): createBtn, nameInput, root, submitBtn
 
+### Community 289 - "Community 289"
+Cohesion: 0.29
+Nodes (4): ConfigForm(), inputClass, PlatformCard(), platformConfig
+
+### Community 290 - "Community 290"
+Cohesion: 0.29
+Nodes (6): useRFMSegmentClientsQuery(), ScoreBadge(), SEGMENT_ICONS, SegmentDetailPage(), SortCol, SortOrder
+
+### Community 291 - "Community 291"
+Cohesion: 0.29
+Nodes (5): IFrontPlugin, RevisitrApiClient, List, Revisitr.IikoPlugin, RevisitrPlugin
+
+### Community 293 - "Community 293"
+Cohesion: 0.33
+Nodes (4): loginMock, mockNavigate, passwordInput, user
+
+### Community 295 - "Community 295"
+Cohesion: 0.47
+Nodes (5): buildChartData(), formatMoney(), SEGMENT_HEX_COLORS, SEGMENT_ICONS, SegmentsPage()
+
 ### Community 297 - "Community 297"
 Cohesion: 0.50
 Nodes (3): AdminBotLink, AdminBotStatus, GenerateLinkCodeResponse
 
 ### Community 298 - "Community 298"
-Cohesion: 0.15
-Nodes (8): LoyaltyAnalyticsPage(), PIE_COLORS, useLoyaltyAnalyticsQuery(), BotsPage(), statusConfig, useBotsQuery(), AuroraSidebar(), Sidebar()
+Cohesion: 0.40
+Nodes (3): statusConfig, TabType, triggerLabels
+
+### Community 299 - "Community 299"
+Cohesion: 0.40
+Nodes (3): string, PluginSettings, Revisitr.IikoPlugin
+
+### Community 300 - "Community 300"
+Cohesion: 0.40
+Nodes (4): decimal, string, Revisitr.IikoPlugin, SessionData
+
+### Community 301 - "Community 301"
+Cohesion: 0.50
+Nodes (3): apiKey, baseUrl, timeoutSeconds
 
 ### Community 302 - "Community 302"
 Cohesion: 0.50
@@ -1305,19 +1395,17 @@ Cohesion: 0.67
 Nodes (3): code:bash ($(cat graphify-out/.graphify_python) -c "), code:block31 (Graph complete. Outputs in PATH_TO_DIR/graphify-out/), Step 9 - Save manifest, update cost tracker, clean up, and report
 
 ## Knowledge Gaps
-- **1338 isolated node(s):** `migrate.sh script`, `target`, `lib`, `module`, `skipLibCheck` (+1333 more)
+- **1429 isolated node(s):** `migrate.sh script`, `target`, `lib`, `module`, `skipLibCheck` (+1424 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **77 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **72 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `main()` connect `Community 46` to `Community 0`, `Community 257`, `Community 129`, `Community 259`, `Community 7`, `Community 136`, `Community 139`, `Community 141`, `Community 275`, `Community 37`, `Community 167`, `Community 44`, `Community 177`, `Community 56`, `Community 64`, `Community 203`, `Community 204`, `Community 205`, `Community 206`, `Community 207`, `Community 210`, `Community 84`, `Community 92`, `Community 94`, `Community 227`, `Community 228`, `Community 107`, `Community 109`, `Community 237`, `Community 111`, `Community 239`, `Community 121`, `Community 125`?**
-  _High betweenness centrality (0.071) - this node is a cross-community bridge._
-- **Why does `cn()` connect `Community 12` to `Community 131`, `Community 4`, `Community 132`, `Community 134`, `Community 264`, `Community 142`, `Community 22`, `Community 279`, `Community 153`, `Community 154`, `Community 36`, `Community 298`, `Community 172`, `Community 47`, `Community 49`, `Community 183`, `Community 184`, `Community 315`, `Community 62`, `Community 65`, `Community 198`, `Community 71`, `Community 72`, `Community 80`, `Community 81`, `Community 82`, `Community 212`, `Community 88`, `Community 89`, `Community 218`, `Community 220`, `Community 102`, `Community 231`, `Community 103`, `Community 235`, `Community 236`, `Community 238`, `Community 114`, `Community 116`, `Community 123`, `Community 124`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
-- **Why does `TestIiko_GetOrders_ChunksWindow()` connect `Community 83` to `Community 10`, `Community 38`?**
-  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+- **Why does `main()` connect `Community 46` to `Community 0`, `Community 257`, `Community 129`, `Community 259`, `Community 135`, `Community 7`, `Community 136`, `Community 139`, `Community 141`, `Community 275`, `Community 37`, `Community 167`, `Community 44`, `Community 177`, `Community 56`, `Community 63`, `Community 203`, `Community 204`, `Community 205`, `Community 206`, `Community 207`, `Community 210`, `Community 84`, `Community 92`, `Community 93`, `Community 94`, `Community 227`, `Community 105`, `Community 107`, `Community 109`, `Community 237`, `Community 111`, `Community 239`, `Community 121`, `Community 125`?**
+  _High betweenness centrality (0.074) - this node is a cross-community bridge._
+- **Why does `cn()` connect `Community 12` to `Community 131`, `Community 4`, `Community 132`, `Community 134`, `Community 264`, `Community 142`, `Community 22`, `Community 279`, `Community 153`, `Community 154`, `Community 289`, `Community 290`, `Community 36`, `Community 296`, `Community 172`, `Community 47`, `Community 183`, `Community 184`, `Community 62`, `Community 198`, `Community 71`, `Community 70`, `Community 80`, `Community 81`, `Community 82`, `Community 88`, `Community 89`, `Community 220`, `Community 228`, `Community 102`, `Community 231`, `Community 103`, `Community 235`, `Community 236`, `Community 238`, `Community 114`, `Community 116`, `Community 123`, `Community 124`?**
+  _High betweenness centrality (0.034) - this node is a cross-community bridge._
 - **Are the 108 inferred relationships involving `assertStatus()` (e.g. with `mustCreateManagedBot()` and `TestManagedBots_ActivationLink_StoresOneTimeToken()`) actually correct?**
   _`assertStatus()` has 108 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 92 inferred relationships involving `mustRegister()` (e.g. with `TestManagedBots_ActivationLink_StoresOneTimeToken()` and `TestManagedBots_CreateManaged_EndToEndFlow()`) actually correct?**
@@ -1326,3 +1414,5 @@ _Questions this graph is uniquely positioned to answer:_
   _`uniqueEmail()` has 92 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 89 inferred relationships involving `cn()` (e.g. with `EmojiPicker()` and `SortableCategoryRow()`) actually correct?**
   _`cn()` has 89 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 43 inferred relationships involving `useApiMutation()` (e.g. with `useCreateEmojiPackMutation()` and `useUpdateEmojiPackMutation()`) actually correct?**
+  _`useApiMutation()` has 43 INFERRED edges - model-reasoned connections that need verification._
