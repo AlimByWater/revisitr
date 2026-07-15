@@ -1,4 +1,5 @@
-using System.Reactive.Disposables;
+using System;
+using System.Collections.Generic;
 using Resto.Front.Api;
 using Resto.Front.Api.Attributes;
 using Resto.Front.Api.Attributes.JetBrains;
@@ -13,29 +14,27 @@ namespace Revisitr.IikoPlugin
     /// on the remaining (money) part of the check.
     ///
     /// Deploy the build output to:
-    ///   C:\Program Files\iiko\iikoRMS\Front.Net\Plugins\Resto.Front.Api.RevisitrPlugin\
-    /// alongside revisitr.plugin.config.json (see the .example file).
+    ///   C:\Program Files\iiko\iikoRMS\Front.Net\Plugins\Resto.Front.Api.RevisitrPlugin.V8\
+    /// alongside manifest.xml and revisitr.plugin.config.json (see the .example file).
     /// </summary>
     [UsedImplicitly]
     [PluginLicenseModuleId(21016318)] // iikoAPIPayment — loyalty systems (free ModuleID)
     public sealed class RevisitrPlugin : IFrontPlugin
     {
-        private readonly CompositeDisposable subscriptions;
+        private readonly List<IDisposable> disposables = new List<IDisposable>();
         private readonly RevisitrApiClient apiClient;
 
         public RevisitrPlugin()
         {
-            subscriptions = new CompositeDisposable();
-
             var settings = PluginSettings.Load();
             apiClient = new RevisitrApiClient(settings);
 
             var processor = new RevisitrPaymentProcessor(apiClient);
-            subscriptions.Add(processor);
+            disposables.Add(processor);
 
             try
             {
-                subscriptions.Add(PluginContext.Operations.RegisterPaymentSystem(processor));
+                disposables.Add(PluginContext.Operations.RegisterPaymentSystem(processor));
             }
             catch (LicenseRestrictionException ex)
             {
@@ -53,7 +52,12 @@ namespace Revisitr.IikoPlugin
 
         public void Dispose()
         {
-            subscriptions?.Dispose();
+            // Dispose in reverse order: unregister the payment system before the processor.
+            for (var i = disposables.Count - 1; i >= 0; i--)
+            {
+                try { disposables[i].Dispose(); }
+                catch (Exception ex) { PluginContext.Log.Warn($"Revisitr: dispose error: {ex.Message}"); }
+            }
             apiClient?.Dispose();
         }
     }

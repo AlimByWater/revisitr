@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Web.Script.Serialization;
 using Resto.Front.Api;
 using Resto.Front.Api.Data.Cheques;
 using Resto.Front.Api.Data.Orders;
@@ -28,6 +29,9 @@ namespace Revisitr.IikoPlugin
     {
         private const string Key = "revisitr";
         private const string Name = "Revisitr Бонусы";
+
+        // V8 rollback data is a plain string, so SessionData is carried as JSON.
+        private static readonly JavaScriptSerializer Json = new JavaScriptSerializer();
 
         private readonly RevisitrApiClient api;
 
@@ -85,7 +89,7 @@ namespace Revisitr.IikoPlugin
                 throw new PaymentActionFailedException("Сервис лояльности недоступен. Закройте заказ обычным способом.");
             }
 
-            context.SetRollbackData(new SessionData
+            context.SetRollbackData(Json.Serialize(new SessionData
             {
                 Session = id.Session,
                 Available = id.AvailableToRedeem,
@@ -93,7 +97,7 @@ namespace Revisitr.IikoPlugin
                 Currency = id.Currency,
                 ClientName = id.Name,
                 OrderTotal = orderTotal
-            });
+            }));
 
             viewManager.ShowOkPopup("Revisitr",
                 $"Гость: {id.Name}\n" +
@@ -101,7 +105,10 @@ namespace Revisitr.IikoPlugin
                 $"Доступно к списанию: {id.AvailableToRedeem:0.##} {id.Currency}");
         }
 
-        // Executes after the plugin payment item is added — cap the bonus sum to what's available.
+        // Executes after the plugin payment item is added.
+        // MVP: no client-side sum capping — the backend rejects redeem > available
+        // (400), and the cashier already sees "available to redeem" in the popup.
+        // Capping the numpad range is a UX follow-up (needs the V8 sum-limit API).
         public void OnPaymentAdded(
             IOrder order,
             IPaymentItem paymentItem,
@@ -111,23 +118,6 @@ namespace Revisitr.IikoPlugin
             IViewManager viewManager,
             IPaymentDataContext context)
         {
-            var sd = context.GetRollbackData<SessionData>();
-            var available = sd != null ? sd.Available : 0m;
-
-            // Can't pay more bonuses than the guest has available, nor more than the bill.
-            var max = Math.Min(available, order.ResultSum);
-            if (max < 0m)
-                max = 0m;
-
-            try
-            {
-                operations.ChangePaymentItemSum(max, 0m, max, paymentItem, order, operations.GetDefaultCredentials());
-            }
-            catch (Exception ex)
-            {
-                // Non-fatal: the cashier can still edit the sum manually within backend limits.
-                PluginContext.Log.Warn($"Revisitr: could not cap payment sum: {ex.Message}");
-            }
         }
 
         public bool OnPreliminaryPaymentEditing(
@@ -156,7 +146,8 @@ namespace Revisitr.IikoPlugin
             IViewManager viewManager,
             IPaymentDataContext context)
         {
-            var sd = context.GetRollbackData<SessionData>();
+            var raw = context.GetRollbackData();
+            var sd = string.IsNullOrEmpty(raw) ? null : Json.Deserialize<SessionData>(raw);
             if (sd == null || string.IsNullOrEmpty(sd.Session))
                 throw new PaymentActionFailedException("Сессия Revisitr не найдена. Удалите оплату и повторите ввод кода.");
 

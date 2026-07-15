@@ -32,50 +32,63 @@ V8 (см. `PLUGIN_DESIGN.md` §1.1 про универсальность).
 
 ## Предусловия для сборки
 
-- Windows + Visual Studio 2022 (или Build Tools) + .NET Framework **4.7.2**
-  Developer Pack.
-- Доступ к NuGet (пакеты `Resto.Front.Api.V8`, `Resto.Front.Api.PluginPackaging`
-  из профиля iiko публичные).
+- Windows + **.NET SDK** (проверено на 8.0.419; `winget install Microsoft.DotNet.SDK.8`).
+- Доступ к NuGet (пакет `Resto.Front.Api.V8` из публичного профиля iiko).
+- Dev-pack .NET Framework 4.7.2 НЕ нужен — reference-сборки тянутся из NuGet
+  (`Microsoft.NETFramework.ReferenceAssemblies`, уже прописан в csproj).
+
+> Проверено сборкой на тестовом хосте с iikoFront **9.4.9102** (хост отдаёт
+> контракты V7/V8/V9 → V8 совместим).
 
 ## Сборка
 
 ```powershell
 cd iiko-plugin\RevisitrPlugin
-dotnet build -c Release
-# или msbuild RevisitrPlugin.csproj /p:Configuration=Release
+dotnet build RevisitrPlugin.csproj -c Release
 ```
 
-Результат — `bin\Release\Resto.Front.Api.RevisitrPlugin.dll` (+
-`revisitr.plugin.config.example.json`).
+Результат в `bin\Release\`: `Resto.Front.Api.RevisitrPlugin.dll`, `manifest.xml`,
+`revisitr.plugin.config.example.json`.
 
 ⚠️ **Контракт-DLL не поставляется** с плагином — iikoFront даёт его в рантайме.
-За это отвечает пакет `Resto.Front.Api.PluginPackaging`; для V8 исключение
-контракта из вывода происходит автоматически. Если положить
-`Resto.Front.Api.V8.dll` рядом с плагином вручную — будет
-`TypeLoadException` при загрузке. Не делай этого.
+В csproj это обеспечено `<ExcludeAssets>runtime</ExcludeAssets>` на пакете
+`Resto.Front.Api.V8`. Положить `Resto.Front.Api.V8.dll` рядом вручную →
+`TypeLoadException`. Не делай этого.
+
+> Пакет `Resto.Front.Api.PluginPackaging` НЕ используется: его MSBuild-таргеты
+> ломаются и под `dotnet build` (Core), и под VS-MSBuild без .NET workload.
+> Вместо него — ручной `manifest.xml` + `ExcludeAssets`.
 
 ## Установка на кассу
 
-1. Создай папку рядом с `iikoFront.exe`:
+1. Создай подпапку в папке плагинов iikoFront (суффикс `.V8` — локальная
+   конвенция именования плагинов iiko):
    ```
-   C:\Program Files\iiko\iikoRMS\Front.Net\Plugins\Resto.Front.Api.RevisitrPlugin\
+   C:\Program Files\iiko\iikoRMS\Front.Net\Plugins\Resto.Front.Api.RevisitrPlugin.V8\
    ```
-   и выдай пользователю iikoFront права на запись в неё.
-2. Скопируй туда содержимое `bin\Release\` (как минимум `.dll` и всё, что
-   положил packaging, **кроме** контракт-DLL).
-3. Переименуй `revisitr.plugin.config.example.json` → `revisitr.plugin.config.json`
-   и впиши:
+2. Скопируй туда из `bin\Release\`: `Resto.Front.Api.RevisitrPlugin.dll`,
+   `manifest.xml`, `revisitr.plugin.config.json` (**без** контракт-DLL и `.pdb`).
+3. Заполни `revisitr.plugin.config.json`:
    - `baseUrl` — адрес бэкенда Revisitr (только HTTPS в проде);
    - `apiKey` — ключ заведения из веб-кабинета Revisitr (`rvk_…`, показывается
      один раз);
    - `timeoutSeconds` — таймаут HTTP (по умолчанию 6).
 4. В iikoOffice/backoffice → **Типы оплат** → Добавить внешний тип оплаты,
    связанный с плагином (после старта плагина появится тип с ключом `revisitr`).
-5. Перезапусти iikoFront. Проверь лог:
+5. Запусти/перезапусти iikoFront. Проверь лог:
    ```
-   %appdata%\Roaming\iiko\CashServer\Logs\plugin-Resto.Front.Api.RevisitrPlugin.log
+   %appdata%\Roaming\iiko\CashServer\Logs\plugin-Resto.Front.Api.RevisitrPlugin.V8.log
    ```
    Должна быть строка `Revisitr payment system 'revisitr' registered`.
+
+`manifest.xml` (обязателен для iikoFront, лежит рядом с DLL):
+```xml
+<Manifest>
+  <FileName>Resto.Front.Api.RevisitrPlugin.dll</FileName>
+  <TypeName>Revisitr.IikoPlugin.RevisitrPlugin</TypeName>
+  <ApiVersion>V8</ApiVersion>
+</Manifest>
+```
 
 ## Как работает на кассе
 
