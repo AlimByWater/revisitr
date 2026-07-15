@@ -87,8 +87,27 @@ dotnet build RevisitrPlugin.csproj -c Release
   <FileName>Resto.Front.Api.RevisitrPlugin.dll</FileName>
   <TypeName>Revisitr.IikoPlugin.RevisitrPlugin</TypeName>
   <ApiVersion>V8</ApiVersion>
+  <LicenseModuleId>21016318</LicenseModuleId>
 </Manifest>
 ```
+
+### ⚠️ Грабли (проверено на iikoFront 9.4.9102, плагин загружается успешно)
+
+- **`<LicenseModuleId>` ОБЯЗАТЕЛЕН В МАНИФЕСТЕ.** iikoFront читает module id из
+  манифеста, а НЕ из атрибута `[PluginLicenseModuleId]` в сборке (чтобы не грузить
+  недоверенную DLL). Без него — `WARN "... doesn't have LicenseModuleId"` и плагин
+  не грузится, хотя атрибут в сборке есть. Атрибут в коде оставляем, но решает
+  именно манифест.
+- **Подпись iiko НЕ нужна.** Для module id `21016318` iikoFront пишет
+  `Skipped signature checking` и грузит неподписанный плагин. (Собственные плагины
+  iiko подписаны `CN=JSC AIKO`, но нам это не требуется.)
+- **iikoFront перечитывает только НОВЫЕ папки плагинов.** Замену DLL/манифеста
+  внутри существующей папки он игнорирует (берёт кэш метаданных). Для обновления:
+  либо переименуй папку (новое имя = «новая директория» → полный перечит), либо
+  чисти кэш. Имя папки косметическое (ключ оплаты `revisitr` задаётся в коде).
+- Успешная загрузка в логе:
+  `plugin-<folder>.log` → `Revisitr payment system 'revisitr' registered`;
+  `api.log` → `Host process ... for plugin "<folder>" has been started`.
 
 ## Как работает на кассе
 

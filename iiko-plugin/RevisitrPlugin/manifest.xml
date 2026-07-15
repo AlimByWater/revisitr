@@ -3,4 +3,13 @@
   <FileName>Resto.Front.Api.RevisitrPlugin.dll</FileName>
   <TypeName>Revisitr.IikoPlugin.RevisitrPlugin</TypeName>
   <ApiVersion>V8</ApiVersion>
+  <!--
+    REQUIRED. iikoFront reads the license module id from the MANIFEST (not the
+    [PluginLicenseModuleId] assembly attribute) so it can validate without loading
+    the untrusted assembly. Without this element iikoFront rejects the plugin with
+    WARN "... doesn't have LicenseModuleId", even though the attribute is present.
+    21016318 = iikoAPIPayment (loyalty). For this module id iikoFront skips
+    Authenticode signature checking, so no iiko code-signing is needed.
+  -->
+  <LicenseModuleId>21016318</LicenseModuleId>
 </Manifest>
