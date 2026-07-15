@@ -531,8 +531,13 @@ func (h *handler) handleBalance(ctx context.Context, msg *telego.Message) {
 		}
 	}
 
-	walletRows := append(h.appleWalletButtonRow(ctx), h.googleWalletButtonRow(ctx)...)
-	markup := h.inlineKeyboard(walletRows)
+	rows := append(h.appleWalletButtonRow(ctx), h.googleWalletButtonRow(ctx)...)
+	if h.mgr.posCode != nil {
+		rows = append(rows, []entity.InlineButton{
+			{Text: "🎫 Код для кассы", Data: callbackPOSCode},
+		})
+	}
+	markup := h.inlineKeyboard(rows)
 	h.sendTextWithInlineKeyboard(chatID, sb.String(), markup)
 }
 

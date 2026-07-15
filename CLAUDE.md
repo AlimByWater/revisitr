@@ -133,6 +133,16 @@ tuna http 9722 --basic-auth="login:password"
 - **Коммиты**: conventional commits (feat/fix/refactor/docs/chore)
 - **Ветки**: feature branches → PR → main
 
+## iiko integration
+
+Перед любыми выводами, советами или кодом по iiko (плагин iikoFront, лицензии,
+API, поведение кассы) **сначала сверься с первоисточником** — не утверждай
+поведение iiko по памяти. Ключевые доки в репозитории: `docs/integrations/iiko/`
+(PLUGIN_CONTRACT.md, PLUGIN_DESIGN.md, PLUGIN_SAMPLE_PLAYBOOK.md). Первоисточники:
+`github.com/iiko/front.api.sdk`, `iiko.github.io/front.api.doc`, `ru.iiko.help`
+(это JS-SPA — WebFetch её не берёт, нужен Playwright MCP). Если факта нет или он
+устарел — проверь источник и обнови доку, а не догадывайся.
+
 ## Testing
 
 Полная спецификация: `docs/testing.md`

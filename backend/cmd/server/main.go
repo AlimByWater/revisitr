@@ -28,6 +28,7 @@ import (
 	modulepresetsGroup "revisitr/internal/controller/http/group/modulepresets"
 	onboardingGroup "revisitr/internal/controller/http/group/onboarding"
 	posGroup "revisitr/internal/controller/http/group/pos"
+	pospluginGroup "revisitr/internal/controller/http/group/posplugin"
 	postsGroup "revisitr/internal/controller/http/group/posts"
 	promotionsGroup "revisitr/internal/controller/http/group/promotions"
 	rfmGroup "revisitr/internal/controller/http/group/rfm"
@@ -42,6 +43,7 @@ import (
 	emojisyncService "revisitr/internal/service/emojisync"
 	"revisitr/internal/service/eventbus"
 	posService "revisitr/internal/service/pos"
+	"revisitr/internal/service/poscode"
 	rfmService "revisitr/internal/service/rfm"
 	analyticsUC "revisitr/internal/usecase/analytics"
 	authUC "revisitr/internal/usecase/auth"
@@ -58,6 +60,7 @@ import (
 	modulepresetsUC "revisitr/internal/usecase/modulepresets"
 	onboardingUC "revisitr/internal/usecase/onboarding"
 	posUC "revisitr/internal/usecase/pos"
+	pospluginUC "revisitr/internal/usecase/posplugin"
 	promotionsUC "revisitr/internal/usecase/promotions"
 	rfmUC "revisitr/internal/usecase/rfm"
 	segmentsUC "revisitr/internal/usecase/segments"
@@ -97,6 +100,8 @@ func main() {
 	segmentsRepo := pgRepo.NewSegments(pg)
 	promotionsRepo := pgRepo.NewPromotions(pg)
 	integrationsRepo := pgRepo.NewIntegrations(pg)
+	pluginKeysRepo := pgRepo.NewPluginKeys(pg)
+	pluginOpsRepo := pgRepo.NewPluginOperations(pg)
 
 	// Phase 4 repos
 	billingRepo := pgRepo.NewBilling(pg)
@@ -125,6 +130,7 @@ func main() {
 		posService.WithMenus(menusRepo),
 	)
 	rfmSvc := rfmService.New(botClientsRepo, loyaltyRepo, rfmRepo, logger)
+	posCodeSvc := poscode.New(rds.Client)
 
 	// Auto-action services
 	actionExecutor := autoactionService.NewActionExecutor(scenariosRepo, logger)
@@ -160,6 +166,7 @@ func main() {
 	)
 	promotionsUsecase := promotionsUC.New(promotionsRepo)
 	integrationsUsecase := integrationsUC.New(integrationsRepo, posSyncSvc)
+	pluginUsecase := pospluginUC.New(loyaltyUsecase, clientsRepo, pluginKeysRepo, pluginOpsRepo, integrationsRepo, posCodeSvc)
 
 	// Phase 4 usecases
 	billingUsecase := billingUC.New(billingRepo)
@@ -242,6 +249,8 @@ func main() {
 	integrationsGrp := integrationsGroup.New(integrationsUsecase, jwtSecret,
 		integrationsGroup.WithFeatureGate(integrationsGate),
 	)
+	pluginGrp := pospluginGroup.New(pluginUsecase)
+	pluginAdminGrp := pospluginGroup.NewAdmin(pluginUsecase, jwtSecret)
 
 	// Phase 4 groups
 	billingGrp := billingGroup.New(billingUsecase, jwtSecret)
@@ -267,6 +276,7 @@ func main() {
 		healthGrp, authGrp, botsGrp, loyaltyGrp, posGrp, clientsGrp,
 		dashboardGrp, campaignsGrp,
 		analyticsGrp, segmentsGrp, promotionsGrp, integrationsGrp,
+		pluginGrp, pluginAdminGrp,
 		filesGrp,
 		menusGrp, rfmGrp, onboardingGrp,
 		billingGrp, masterbotGrp, walletGrp, marketplaceGrp, postsGrp,
@@ -336,6 +346,7 @@ func main() {
 			authUsecase, botsUsecase, loyaltyUsecase, posUsecase,
 			clientsUsecase, dashboardUsecase, campaignsUsecase,
 			analyticsUsecase, segmentsUsecase, promotionsUsecase, integrationsUsecase,
+			pluginUsecase,
 			menusUsecase, rfmUsecase, onboardingUsecase,
 			billingUsecase, walletUsecase, marketplaceUsecase,
 			emojiPacksUsecase,

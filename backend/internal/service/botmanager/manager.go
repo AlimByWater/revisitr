@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"revisitr/internal/entity"
+	"revisitr/internal/service/poscode"
 	tgService "revisitr/internal/service/telegram"
 	walletUC "revisitr/internal/usecase/wallet"
 
@@ -84,6 +85,7 @@ type Manager struct {
 	sessions           sessionStore
 	wallet             walletUsecase
 	passGen            *walletUC.PassGenerator
+	posCode            *poscode.Service
 	baseURL            string
 	tgSender           *tgService.Sender
 	logger             *slog.Logger
@@ -124,6 +126,10 @@ func WithSessionStore(store sessionStore) ManagerOption {
 
 func WithModuleSettings(repo moduleSettingsRepository) ManagerOption {
 	return func(m *Manager) { m.moduleSettingsRepo = repo }
+}
+
+func WithPOSCode(svc *poscode.Service) ManagerOption {
+	return func(m *Manager) { m.posCode = svc }
 }
 
 func WithAdminBotToken(token string) ManagerOption {
