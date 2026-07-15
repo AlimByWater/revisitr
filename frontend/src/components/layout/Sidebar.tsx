@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useBotsQuery } from '@/features/bots/queries'
-import { useTheme } from '@/contexts/ThemeContext'
-import { OnboardingProgress } from './OnboardingProgress'
 import {
   LayoutDashboard,
   TrendingUp,
@@ -140,7 +138,7 @@ function isBestNavMatch(href: string, path: string): boolean {
   )
 }
 
-function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<string, number>; isAurora: boolean }) {
+function NavGroup({ item, badges }: { item: NavItem; badges: Record<string, number> }) {
   const location = useLocation()
   const currentPath = location.pathname
 
@@ -148,8 +146,7 @@ function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<st
     ? isBestNavMatch(item.href, currentPath)
     : item.children?.some((child) => isBestNavMatch(child.href, currentPath))
 
-  // Default theme: collapsed by default, auto-expand only when child is active
-  // Aurora: same behavior
+  // Collapsed by default, auto-expand only when child is active
   const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
@@ -165,25 +162,13 @@ function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<st
         to={item.href!}
         className={cn(
           'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-200',
-          isAurora
-            ? cn(
-                'font-medium',
-                isActive
-                  ? 'bg-[var(--color-accent)]/15 text-white'
-                  : 'text-white/40 hover:text-white/90 hover:bg-white/[0.06] hover:translate-x-0.5',
-              )
-            : cn(
-                isActive
-                  ? 'font-bold text-neutral-900'
-                  : 'text-neutral-600 hover:text-neutral-900 hover:scale-[1.02] transition-all duration-150',
-              ),
+          isActive
+            ? 'font-bold text-neutral-900'
+            : 'text-neutral-600 hover:text-neutral-900 hover:scale-[1.02] transition-all duration-150',
         )}
       >
         <Icon className="w-5 h-5 shrink-0" />
         <span className="flex-1">{item.label}</span>
-        {isActive && isAurora && (
-          <div className="w-1.5 h-1.5 rounded-full animate-dot-in bg-violet-400" />
-        )}
       </Link>
     )
   }
@@ -194,18 +179,9 @@ function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<st
         onClick={() => setExpanded(!expanded)}
         className={cn(
           'w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-200',
-          isAurora
-            ? cn(
-                'font-medium',
-                isActive
-                  ? 'text-white/90'
-                  : 'text-white/40 hover:text-white/90 hover:bg-white/[0.06] hover:translate-x-0.5',
-              )
-            : cn(
-                isActive
-                  ? 'font-bold text-neutral-900'
-                  : 'text-neutral-600 hover:text-neutral-900 hover:scale-[1.02] transition-all duration-150',
-              ),
+          isActive
+            ? 'font-bold text-neutral-900'
+            : 'text-neutral-600 hover:text-neutral-900 hover:scale-[1.02] transition-all duration-150',
         )}
         type="button"
         aria-expanded={expanded}
@@ -213,20 +189,14 @@ function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<st
         <Icon className="w-5 h-5 shrink-0" />
         <span className="flex-1 text-left">{item.label}</span>
         {badge !== undefined && badge > 0 && (
-          <span className={cn(
-            'text-[10px] font-medium tabular-nums px-1.5 py-0.5 rounded-sm min-w-[18px] text-center',
-            isAurora
-              ? 'bg-violet-500/20 text-violet-300'
-              : 'bg-neutral-100 text-neutral-600 border border-neutral-300',
-          )}>
+          <span className="text-[10px] font-medium tabular-nums px-1.5 py-0.5 rounded-sm min-w-[18px] text-center bg-neutral-100 text-neutral-600 border border-neutral-300">
             {badge}
           </span>
         )}
         <ChevronDown
           className={cn(
-            'w-4 h-4 transition-transform duration-200',
+            'w-4 h-4 transition-transform duration-200 text-neutral-500',
             expanded && 'rotate-180',
-            !isAurora && 'text-neutral-500',
           )}
         />
       </button>
@@ -234,9 +204,7 @@ function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<st
       <div
         className={cn(
           'ml-8 space-y-0.5 overflow-hidden transition-all duration-200',
-          expanded
-            ? cn('max-h-40 opacity-100', isAurora ? 'mt-1' : 'mb-1')
-            : 'max-h-0 opacity-0',
+          expanded ? 'max-h-40 opacity-100 mb-1' : 'max-h-0 opacity-0',
         )}
       >
         {item.children.map((child) => {
@@ -247,17 +215,9 @@ function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<st
               to={child.href}
               className={cn(
                 'block px-4 py-2 rounded-lg text-sm transition-all duration-200',
-                isAurora
-                  ? cn(
-                      isChildActive
-                        ? 'text-white bg-[var(--color-accent)]/15'
-                        : 'text-white/35 hover:text-white/90 hover:bg-white/[0.06] hover:translate-x-0.5',
-                    )
-                  : cn(
-                      isChildActive
-                        ? 'font-medium text-neutral-900'
-                        : 'text-neutral-400 hover:text-neutral-700',
-                    ),
+                isChildActive
+                  ? 'font-medium text-neutral-900'
+                  : 'text-neutral-400 hover:text-neutral-700',
               )}
             >
               {child.label}
@@ -271,85 +231,11 @@ function NavGroup({ item, badges, isAurora }: { item: NavItem; badges: Record<st
 
 export function Sidebar() {
   const { data: bots } = useBotsQuery()
-  const { theme } = useTheme()
-  const isAurora = theme === 'aurora'
 
   const badges: Record<string, number> = {
     bots: bots?.length ?? 0,
   }
 
-  /* ── Aurora theme: original full-height sticky dark sidebar ── */
-  if (isAurora) {
-    return (
-      <aside className="w-sidebar sidebar-glass shrink-0 flex-col h-screen sticky top-0 z-20 hidden lg:flex">
-        <div className="p-6">
-          <div className="flex items-center gap-2 group/logo">
-            <span className="text-2xl font-bold tracking-tight select-none text-white/90">
-              revi
-              <span className="transition-all duration-300 text-violet-400 group-hover/logo:drop-shadow-[0_0_10px_rgba(139,92,246,0.65)]">
-                s
-              </span>
-              itr
-            </span>
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider text-violet-300 bg-violet-500/15">
-              PRO
-            </span>
-          </div>
-        </div>
-
-        <OnboardingProgress isAurora={isAurora} />
-
-        <nav
-          className="flex-1 px-3 overflow-y-auto py-1"
-          aria-label="Основная навигация"
-        >
-          {/* Primary */}
-          <NavGroup item={navigation[0]} badges={badges} isAurora={isAurora} />
-
-          {/* Business data */}
-          <div className="mt-4 space-y-0.5">
-            {navigation.slice(1, 6).map((item) => (
-              <NavGroup key={item.label} item={item} badges={badges} isAurora={isAurora} />
-            ))}
-          </div>
-
-          {/* Configuration */}
-          <div className="mt-4 pt-4 border-t border-white/[0.05] space-y-0.5">
-            {navigation.slice(6).map((item) => (
-              <NavGroup key={item.label} item={item} badges={badges} isAurora={isAurora} />
-            ))}
-          </div>
-        </nav>
-
-        <div className="p-4 border-t border-white/[0.05]">
-          <button
-            type="button"
-            onClick={async () => {
-              const token = localStorage.getItem('token')
-              if (!token) return
-              try {
-                const baseURL = import.meta.env.VITE_API_URL || '/api/v1'
-                await fetch(`${baseURL}/onboarding/reset`, {
-                  method: 'POST',
-                  headers: { Authorization: `Bearer ${token}` },
-                })
-                const basePath = import.meta.env.BASE_URL?.replace(/\/$/, '') || ''
-                window.location.href = `${basePath}/dashboard/onboarding`
-              } catch { /* ignore */ }
-            }}
-            className="block w-full text-[11px] text-white/20 hover:text-white/40 transition-colors text-center mb-2"
-          >
-            Пройти настройку заново
-          </button>
-          <p className="text-[11px] font-mono text-white/20 text-center uppercase tracking-wider">
-            &copy; 2026 Revisitr
-          </p>
-        </div>
-      </aside>
-    )
-  }
-
-  /* ── Default theme: white outlined box, auto-sized to content ── */
   return (
     <aside className="hidden lg:block w-[220px] shrink-0">
       <nav
@@ -357,7 +243,7 @@ export function Sidebar() {
         aria-label="Основная навигация"
       >
         {/* Дашборд */}
-        <NavGroup item={navigation[0]} badges={badges} isAurora={false} />
+        <NavGroup item={navigation[0]} badges={badges} />
 
         {/* Separator */}
         <div className="my-2 ml-3 mr-2 border-t border-neutral-200" />
@@ -365,7 +251,7 @@ export function Sidebar() {
         {/* Аналитика, Клиенты, Лояльность, Рассылки, Акции */}
         <div className="space-y-0.5">
           {groupBusiness.map((i) => (
-            <NavGroup key={navigation[i].label} item={navigation[i]} badges={badges} isAurora={false} />
+            <NavGroup key={navigation[i].label} item={navigation[i]} badges={badges} />
           ))}
         </div>
 
@@ -375,7 +261,7 @@ export function Sidebar() {
         {/* Мои боты, Маркетплейс, Точки продаж, Меню, Интеграции, Биллинг */}
         <div className="space-y-0.5">
           {groupConfig.map((i) => (
-            <NavGroup key={navigation[i].label} item={navigation[i]} badges={badges} isAurora={false} />
+            <NavGroup key={navigation[i].label} item={navigation[i]} badges={badges} />
           ))}
         </div>
       </nav>

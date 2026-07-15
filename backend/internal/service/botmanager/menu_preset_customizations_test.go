@@ -86,6 +86,39 @@ func TestBuildCategoryTabRowsMarksActiveCategory(t *testing.T) {
 	}
 }
 
+func TestBuildCategoryTabRowsIsolatesLongLabels(t *testing.T) {
+	rows := buildCategoryTabRows([]menuCategoryPresentation{
+		{Category: entity.MenuCategory{ID: 1}, ButtonText: "Закуски"},
+		{Category: entity.MenuCategory{ID: 2}, ButtonText: "Основные блюда"},
+		{Category: entity.MenuCategory{ID: 3}, ButtonText: "Десерты"},
+		{Category: entity.MenuCategory{ID: 4}, ButtonText: "Напитки"},
+	}, 0)
+
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 rows, got %d: %#v", len(rows), rows)
+	}
+	if len(rows[0]) != 2 || len(rows[1]) != 2 {
+		t.Fatalf("expected long label to cap rows at 2 columns, got row sizes %d/%d", len(rows[0]), len(rows[1]))
+	}
+	if rows[0][1].Text != "Основные блюда" {
+		t.Fatalf("expected long label to share a row with only one sibling, got %#v", rows[0])
+	}
+}
+
+func TestBuildCategoryTabRowsPacksShortLabelsFour(t *testing.T) {
+	rows := buildCategoryTabRows([]menuCategoryPresentation{
+		{Category: entity.MenuCategory{ID: 1}, ButtonText: "Закуски"},
+		{Category: entity.MenuCategory{ID: 2}, ButtonText: "Салаты"},
+		{Category: entity.MenuCategory{ID: 3}, ButtonText: "Горячее"},
+		{Category: entity.MenuCategory{ID: 4}, ButtonText: "Напитки"},
+		{Category: entity.MenuCategory{ID: 5}, ButtonText: "Десерты"},
+	}, 0)
+
+	if len(rows) != 2 || len(rows[0]) != 4 || len(rows[1]) != 1 {
+		t.Fatalf("expected 4-per-row packing for short labels, got %#v", rows)
+	}
+}
+
 func TestPresentMenuCategoriesSupportsEmojiOnlyTabs(t *testing.T) {
 	h := &handler{}
 	icon := "🍰"
@@ -141,7 +174,7 @@ func TestFormatMenuItemCardText(t *testing.T) {
 			IsAvailable: true,
 		}
 		got := formatMenuItemCardText("Закуски", item)
-		want := "/// Закуски\nBlinis Demidoff — 1390 ₽\n140 г\n\nГречневые блины с крем-фрешем и икрой осетра, подаются в холодной подаче."
+		want := "/// Закуски\n<b>Blinis Demidoff — 1390 ₽</b>\n<i>140 г</i>\n\nГречневые блины с крем-фрешем и икрой осетра, подаются в холодной подаче."
 		if got != want {
 			t.Fatalf("got:\n%s\n\nwant:\n%s", got, want)
 		}
@@ -155,7 +188,7 @@ func TestFormatMenuItemCardText(t *testing.T) {
 			IsAvailable: true,
 		}
 		got := formatMenuItemCardText("Напитки", item)
-		want := "/// Напитки\nEspresso — 250 ₽\n\nКлассический эспрессо 30 мл"
+		want := "/// Напитки\n<b>Espresso — 250 ₽</b>\n\nКлассический эспрессо 30 мл"
 		if got != want {
 			t.Fatalf("got:\n%s\n\nwant:\n%s", got, want)
 		}
@@ -169,13 +202,13 @@ func TestFormatMenuItemCardText(t *testing.T) {
 			IsAvailable: true,
 		}
 		got := formatMenuItemCardText("Напитки", item)
-		want := "/// Напитки\nWater — 100 ₽\n500 мл"
+		want := "/// Напитки\n<b>Water — 100 ₽</b>\n<i>500 мл</i>"
 		if got != want {
 			t.Fatalf("got:\n%s\n\nwant:\n%s", got, want)
 		}
 	})
 
-	t.Run("name with HTML chars is escaped", func(t *testing.T) {
+	t.Run("name and description HTML chars are escaped", func(t *testing.T) {
 		item := entity.MenuItem{
 			Name:        "Fish & Chips",
 			Price:       590,
@@ -183,8 +216,11 @@ func TestFormatMenuItemCardText(t *testing.T) {
 			IsAvailable: true,
 		}
 		got := formatMenuItemCardText("Main", item)
-		if strings.Contains(got, "<b>") {
-			t.Fatalf("expected HTML escaped, got: %s", got)
+		if !strings.Contains(got, "Fish &amp; Chips") {
+			t.Fatalf("expected name HTML escaped, got: %s", got)
+		}
+		if !strings.Contains(got, "&lt;b&gt;Test&lt;/b&gt;") {
+			t.Fatalf("expected description HTML escaped, got: %s", got)
 		}
 	})
 

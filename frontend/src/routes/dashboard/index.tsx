@@ -24,27 +24,24 @@ import {
   useDashboardWidgetsQuery,
   useDashboardChartsQuery,
 } from '@/features/dashboard/queries'
-import { useTheme } from '@/contexts/ThemeContext'
 import { MetricSkeleton, ChartSkeleton as ChartSkeletonComponent } from '@/components/common/LoadingSkeleton'
 import { PeriodFilter } from '@/components/common/PeriodFilter'
 import type { DashboardFilter, DashboardMetric } from '@/features/dashboard/types'
 
 export default function DashboardHome() {
   const [filter, setFilter] = useState<DashboardFilter>({ period: '30d' })
-  const { theme } = useTheme()
-  const isAurora = theme === 'aurora'
 
   const { data: widgets, isLoading: widgetsLoading } =
     useDashboardWidgetsQuery(filter)
   const { data: charts, isLoading: chartsLoading } =
     useDashboardChartsQuery(filter)
 
-  const accentColor = isAurora ? '#8B5CF6' : '#EF3219'
-  const gridColor = isAurora ? 'rgba(255,255,255,0.06)' : '#f0f0f0'
-  const tickColor = isAurora ? 'rgba(255,255,255,0.3)' : '#a3a3a3'
-  const tooltipBg = isAurora ? 'rgba(15,11,26,0.9)' : '#fff'
-  const tooltipBorder = isAurora ? 'rgba(255,255,255,0.1)' : '#e5e5e5'
-  const tooltipColor = isAurora ? 'rgba(255,255,255,0.9)' : undefined
+  const accentColor = '#EF3219'
+  const gridColor = '#f0f0f0'
+  const tickColor = '#a3a3a3'
+  const tooltipBg = '#fff'
+  const tooltipBorder = '#e5e5e5'
+  const tooltipColor = undefined
 
   return (
     <div>
@@ -78,7 +75,6 @@ export default function DashboardHome() {
           loading={widgetsLoading}
           icon={<DollarSign className="w-4 h-4" />}
           format="currency"
-          isAurora={isAurora}
         />
         <MetricCard
           label="Ср. чек"
@@ -86,7 +82,6 @@ export default function DashboardHome() {
           loading={widgetsLoading}
           icon={<Receipt className="w-4 h-4" />}
           format="currency"
-          isAurora={isAurora}
         />
         <MetricCard
           label="Новые клиенты"
@@ -94,7 +89,6 @@ export default function DashboardHome() {
           loading={widgetsLoading}
           icon={<UserPlus className="w-4 h-4" />}
           format="number"
-          isAurora={isAurora}
         />
         <MetricCard
           label="Активные"
@@ -102,7 +96,6 @@ export default function DashboardHome() {
           loading={widgetsLoading}
           icon={<Users className="w-4 h-4" />}
           format="number"
-          isAurora={isAurora}
         />
       </div>
 
@@ -110,7 +103,7 @@ export default function DashboardHome() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in animate-in-delay-3">
 
         <div
-          className={cn('border border-neutral-900 rounded bg-white p-6 transition-all duration-300', isAurora && 'glass-card')}
+          className="border border-neutral-900 rounded bg-white p-6 transition-all duration-300"
         >
           <h3
             className="text-sm font-semibold mb-4 text-neutral-600"
@@ -150,14 +143,14 @@ export default function DashboardHome() {
                     color: tooltipColor,
                   }}
                   labelStyle={tooltipColor ? { color: tooltipColor } : undefined}
-                  cursor={{ fill: isAurora ? 'rgba(255,255,255,0.05)' : '#f5f5f5' }}
+                  cursor={{ fill: '#f5f5f5' }}
                 />
                 <Area
                   type="monotone"
                   dataKey="value"
                   stroke={accentColor}
                   fill={accentColor}
-                  fillOpacity={isAurora ? 0.15 : 0.08}
+                  fillOpacity={0.08}
                   strokeWidth={2}
                 />
               </AreaChart>
@@ -166,7 +159,7 @@ export default function DashboardHome() {
         </div>
 
         <div
-          className={cn('border border-neutral-900 rounded bg-white p-6 transition-all duration-300', isAurora && 'glass-card')}
+          className="border border-neutral-900 rounded bg-white p-6 transition-all duration-300"
         >
           <h3
             className="text-sm font-semibold mb-4 text-neutral-600"
@@ -204,7 +197,7 @@ export default function DashboardHome() {
                     color: tooltipColor,
                   }}
                   labelStyle={tooltipColor ? { color: tooltipColor } : undefined}
-                  cursor={{ fill: isAurora ? 'rgba(255,255,255,0.05)' : '#f5f5f5' }}
+                  cursor={{ fill: '#f5f5f5' }}
                 />
                 <Bar dataKey="value" fill={accentColor} radius={[2, 2, 0, 0]} />
               </BarChart>
@@ -222,14 +215,12 @@ function MetricCard({
   loading,
   icon,
   format,
-  isAurora,
 }: {
   label: string
   metric?: DashboardMetric
   loading: boolean
   icon: React.ReactNode
   format: 'currency' | 'number'
-  isAurora: boolean
 }) {
   if (loading || !metric) {
     return <MetricSkeleton />
@@ -240,20 +231,11 @@ function MetricCard({
 
   const trend = metric.trend
   const trendColor =
-    trend > 0
-      ? isAurora ? 'text-emerald-400' : 'text-green-600'
-      : trend < 0
-        ? isAurora ? 'text-red-400' : 'text-red-500'
-        : isAurora ? 'text-white/30' : 'text-neutral-400'
+    trend > 0 ? 'text-green-600' : trend < 0 ? 'text-red-500' : 'text-neutral-400'
   const TrendIcon = trend > 0 ? TrendingUp : trend < 0 ? TrendingDown : Minus
 
   return (
-    <div
-      className={cn(
-        'border border-neutral-900 rounded bg-white p-5',
-        isAurora && 'glass-card',
-      )}
-    >
+    <div className="border border-neutral-900 rounded bg-white p-5">
       <div className="flex items-center gap-2 mb-3" style={{ color: 'var(--color-text-muted)' }}>
         {icon}
         <span className="text-xs font-medium uppercase tracking-wide">
