@@ -134,29 +134,197 @@
 }
 
 /* ═══════════════════════════════════════
-   Dark theme — whole-page CSS invert
+   Dark theme
    ═══════════════════════════════════════
-   Dark mode is not a separate palette: it's the exact same light theme with every
-   pixel's color inverted (and hue-rotated back to compensate, so hues stay put and
-   only lightness flips). This guarantees the dark theme is a perfect copy of the
-   light one — nothing to individually recolor, nothing to miss. */
-html[data-theme="dark"] {
-  filter: invert(1) hue-rotate(180deg);
+   A soft, low-contrast dark palette (not an inverted light theme) — dark gray
+   surfaces, near-invisible borders, no stark black/white extremes. Most of the app
+   uses hardcoded Tailwind utility classes (bg-white, border-neutral-900, etc.)
+   instead of the CSS vars above, so those get explicit dark-mode overrides too,
+   including their opacity-modifier and hover:/focus:/active:/disabled: variants
+   (each compiles to its own selector in Tailwind, distinct from the bare class).
+   Everything is scoped with :not(.tg-root *) so the Telegram bot-preview mockup
+   keeps showing true Telegram colors regardless of the admin's site theme. */
+[data-theme="dark"] {
+  --color-accent-rgb: 255 92 64;
+  --color-accent-hover-rgb: 255 112 88;
+  --color-accent: rgb(var(--color-accent-rgb));
+  --color-accent-hover: rgb(var(--color-accent-hover-rgb));
+  --color-accent-light: rgb(var(--color-accent-rgb) / 0.14);
+  --color-accent-glow: rgb(var(--color-accent-rgb) / 0.4);
+
+  --color-surface: #131316;
+  --color-surface-card: #1c1c22;
+  --color-surface-border: #26262e;
+
+  --color-sidebar-bg: #131316;
+  --color-sidebar-hover: #1e1e24;
+  --color-sidebar-active: #26262e;
+  --color-sidebar-muted: #86868f;
+  --color-sidebar-text: #f2f2f4;
+  --color-sidebar-border: rgba(255, 255, 255, 0.06);
+
+  --color-header-bg: rgba(19, 19, 22, 0.85);
+  --color-header-border: #26262e;
+
+  --color-text-primary: #f2f2f4;
+  --color-text-secondary: #a0a0aa;
+  --color-text-muted: #6e6e78;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.5);
+
+  --noise-opacity: 0.015;
+  --sidebar-noise-opacity: 0.02;
 }
 
-/* The Telegram bot-preview mockup must keep showing real Telegram colors (what an
-   end user actually sees), independent of the admin's site theme — so it gets a
-   second invert to cancel the page-wide one out. */
-[data-theme="dark"] .tg-root {
-  filter: invert(1) hue-rotate(180deg);
+[data-theme="dark"] body {
+  background-image: none;
 }
 
-/* The footer and the mobile-nav drawer (.sidebar-glass) are permanently-dark sections
-   even in the light theme — not part of the light/dark swap — so they also get
-   counter-inverted to stay dark instead of flipping to light with the rest of the page. */
-[data-theme="dark"] footer,
-[data-theme="dark"] .sidebar-glass {
-  filter: invert(1) hue-rotate(180deg);
+[data-theme="dark"] .bg-white:not(.tg-root *) { background: var(--color-surface-card) !important; }
+[data-theme="dark"] .bg-white\/80:not(.tg-root *) { background: var(--color-header-bg) !important; }
+[data-theme="dark"] .bg-white\/95:not(.tg-root *) { background: rgba(28, 28, 34, 0.92) !important; }
+[data-theme="dark"] .hover\:bg-white:hover:not(.tg-root *) { background: var(--color-surface-card) !important; }
+
+[data-theme="dark"] .bg-neutral-50:not(.tg-root *),
+[data-theme="dark"] .bg-neutral-100:not(.tg-root *),
+[data-theme="dark"] .hover\:bg-neutral-50:hover:not(.tg-root *),
+[data-theme="dark"] .hover\:bg-neutral-100:hover:not(.tg-root *),
+[data-theme="dark"] .active\:bg-neutral-100:active:not(.tg-root *),
+[data-theme="dark"] .disabled\:bg-neutral-100:disabled:not(.tg-root *) {
+  background: #232329 !important;
+}
+
+[data-theme="dark"] .bg-neutral-50\/70:not(.tg-root *),
+[data-theme="dark"] .bg-neutral-50\/60:not(.tg-root *),
+[data-theme="dark"] .bg-neutral-50\/50:not(.tg-root *),
+[data-theme="dark"] .bg-neutral-50\/40:not(.tg-root *) {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+[data-theme="dark"] .bg-neutral-200:not(.tg-root *),
+[data-theme="dark"] .hover\:bg-neutral-200:hover:not(.tg-root *),
+[data-theme="dark"] .bg-neutral-200\/60:not(.tg-root *) {
+  background: #2a2a32 !important;
+}
+
+[data-theme="dark"] .hover\:bg-neutral-300:hover:not(.tg-root *),
+[data-theme="dark"] .active\:bg-neutral-300:active:not(.tg-root *),
+[data-theme="dark"] .disabled\:bg-neutral-300:disabled:not(.tg-root *),
+[data-theme="dark"] .group-hover\:bg-neutral-300:is(:hover *):not(.tg-root *) {
+  background: #33333c !important;
+}
+
+/* Solid "black" buttons/badges (bg-neutral-900 + text-white) — a soft dark surface
+   distinguishable from the page/card, not a stark inverted white. */
+[data-theme="dark"] .bg-neutral-900:not(.tg-root *) {
+  background: #26262e !important;
+}
+
+[data-theme="dark"] .hover\:bg-neutral-700:hover:not(.tg-root *) {
+  background: #32323c !important;
+}
+
+[data-theme="dark"] .active\:bg-neutral-800:active:not(.tg-root *) {
+  background: #2c2c36 !important;
+}
+
+[data-theme="dark"] .text-neutral-900:not(.tg-root *),
+[data-theme="dark"] .text-neutral-800:not(.tg-root *),
+[data-theme="dark"] .hover\:text-neutral-900:hover:not(.tg-root *),
+[data-theme="dark"] .hover\:text-neutral-800:hover:not(.tg-root *) {
+  color: #f2f2f4 !important;
+}
+
+[data-theme="dark"] .text-neutral-700:not(.tg-root *),
+[data-theme="dark"] .hover\:text-neutral-700:hover:not(.tg-root *),
+[data-theme="dark"] .focus\:text-neutral-700:focus:not(.tg-root *) {
+  color: #cfcfd6 !important;
+}
+
+[data-theme="dark"] .text-neutral-600:not(.tg-root *),
+[data-theme="dark"] .hover\:text-neutral-600:hover:not(.tg-root *) {
+  color: #a0a0aa !important;
+}
+
+[data-theme="dark"] .text-neutral-500:not(.tg-root *),
+[data-theme="dark"] .hover\:text-neutral-500:hover:not(.tg-root *),
+[data-theme="dark"] .disabled\:text-neutral-500:disabled:not(.tg-root *),
+[data-theme="dark"] .group-hover\:text-neutral-500:is(:hover *):not(.tg-root *) {
+  color: #86868f !important;
+}
+
+[data-theme="dark"] .text-neutral-400:not(.tg-root *) {
+  color: #6e6e78 !important;
+}
+
+[data-theme="dark"] .text-neutral-300:not(.tg-root *) {
+  color: #504f58 !important;
+}
+
+[data-theme="dark"] .border-neutral-200:not(.tg-root *),
+[data-theme="dark"] .border-neutral-100:not(.tg-root *),
+[data-theme="dark"] .hover\:border-neutral-200:hover:not(.tg-root *),
+[data-theme="dark"] .border-neutral-200\/50:not(.tg-root *),
+[data-theme="dark"] .border-neutral-200\/70:not(.tg-root *) {
+  border-color: #26262e !important;
+}
+
+/* Card borders — subtle, barely visible, not a bold black/white outline */
+[data-theme="dark"] .border-neutral-900:not(.tg-root *) {
+  border-color: #2c2c36 !important;
+}
+
+/* Focus indicator must still stand out — use the brand accent instead of a border shade */
+[data-theme="dark"] .focus\:border-neutral-900:focus:not(.tg-root *) {
+  border-color: rgb(var(--color-accent-rgb)) !important;
+}
+
+[data-theme="dark"] .hover\:border-neutral-300:hover:not(.tg-root *),
+[data-theme="dark"] .disabled\:border-neutral-300:disabled:not(.tg-root *) {
+  border-color: #33333c !important;
+}
+
+[data-theme="dark"] .hover\:border-neutral-400:hover:not(.tg-root *) {
+  border-color: #3a3a44 !important;
+}
+
+[data-theme="dark"] .shadow-sm:not(.tg-root *) {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .hover\:shadow-\[0_6px_16px_rgba\(0\,0\,0\,0\.07\)\]:hover:not(.tg-root *) {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="dark"] select:not(.tg-root *),
+[data-theme="dark"] input[type="text"]:not(.tg-root *),
+[data-theme="dark"] input[type="search"]:not(.tg-root *),
+[data-theme="dark"] input[type="tel"]:not(.tg-root *),
+[data-theme="dark"] input[type="email"]:not(.tg-root *),
+[data-theme="dark"] input[type="password"]:not(.tg-root *),
+[data-theme="dark"] input[type="number"]:not(.tg-root *),
+[data-theme="dark"] input[type="date"]:not(.tg-root *),
+[data-theme="dark"] input[type="time"]:not(.tg-root *),
+[data-theme="dark"] input[type="datetime-local"]:not(.tg-root *),
+[data-theme="dark"] input[type="month"]:not(.tg-root *),
+[data-theme="dark"] input[type="week"]:not(.tg-root *),
+[data-theme="dark"] input:not([type]):not(.tg-root *),
+[data-theme="dark"] textarea:not(.tg-root *) {
+  background: #191920 !important;
+  border-color: #2c2c36 !important;
+  color: #f2f2f4 !important;
+  color-scheme: dark;
+}
+
+[data-theme="dark"] select option:not(.tg-root *) {
+  background: #1c1c22;
+  color: #f2f2f4;
+}
+
+[data-theme="dark"] .text-green-600:not(.tg-root *),
+[data-theme="dark"] .text-green-700:not(.tg-root *) {
+  color: #4ade80 !important;
 }
 
 /* Theme toggle button */
@@ -186,6 +354,15 @@ html[data-theme="dark"] {
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   background: white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] .theme-toggle {
+  background: #2c2c36;
+}
+
+[data-theme="dark"] .theme-toggle::before {
+  background: rgb(var(--color-accent-rgb));
+  box-shadow: 0 0 8px rgb(var(--color-accent-rgb) / 0.4);
 }
 
 .theme-toggle--checked::before {
@@ -224,6 +401,10 @@ html[data-theme="dark"] {
     background: #f0f0f0;
   }
 
+  [data-theme="dark"] .shimmer:not(.tg-root *) {
+    background: #232329;
+  }
+
   .shimmer::after {
     content: '';
     position: absolute;
@@ -235,6 +416,15 @@ html[data-theme="dark"] {
       transparent 100%
     );
     animation: shimmer 1.8s ease-in-out infinite;
+  }
+
+  [data-theme="dark"] .shimmer::after:not(.tg-root *) {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.08) 50%,
+      transparent 100%
+    );
   }
 
   @keyframes shimmer {
