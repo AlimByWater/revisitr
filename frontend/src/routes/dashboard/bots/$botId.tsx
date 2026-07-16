@@ -2142,5 +2142,8 @@ function moduleConfigHref(
   if (moduleKey === "feedback") {
     return `/dashboard/bots/${botId}/feedback`;
   }
+  if (moduleKey === "lunch") {
+    return `/dashboard/bots/${botId}/lunch`;
+  }
   return `/dashboard/bots/${botId}?tab=modules`;
 }

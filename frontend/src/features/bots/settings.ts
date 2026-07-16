@@ -15,6 +15,7 @@ export const MODULE_DEFS = [
   { key: 'menu', label: 'Меню', description: 'Показ меню заведения в боте' },
   { key: 'feedback', label: 'Связаться', description: 'Вопросы гостей и обратная связь' },
   { key: 'booking', label: 'Бронирование', description: 'Бронирование столиков' },
+  { key: 'lunch', label: 'Ланч', description: 'Бизнес-ланчи с самосборкой заказа' },
 ] as const
 
 export const STANDARD_FIELD_PRESETS: FormField[] = [
