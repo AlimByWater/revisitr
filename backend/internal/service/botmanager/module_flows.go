@@ -250,6 +250,8 @@ func (h *handler) handleCallbackQuery(ctx context.Context, query *telego.Callbac
 	case strings.HasPrefix(data, callbackBookingPickParty):
 		h.answerCallback(query.ID, "")
 		h.handleBookingPartySelection(ctx, chatID, strings.TrimPrefix(data, callbackBookingPickParty))
+	case strings.HasPrefix(data, callbackLunchPrefix):
+		h.handleLunchCallback(ctx, query)
 	case data == callbackWalletAddApple:
 		h.answerCallback(query.ID, "")
 		h.handleWalletAddApple(ctx, query)

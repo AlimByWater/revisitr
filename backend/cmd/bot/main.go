@@ -56,6 +56,7 @@ func main() {
 	loyaltyRepo := pgRepo.NewLoyalty(pg)
 	posRepo := pgRepo.NewPOS(pg)
 	menusRepo := pgRepo.NewMenus(pg)
+	lunchRepo := pgRepo.NewLunch(pg)
 	emojiPacksRepo := pgRepo.NewEmojiPacks(pg)
 	botModuleSettingsRepo := pgRepo.NewBotModuleSettings(pg)
 
@@ -77,6 +78,7 @@ func main() {
 	var mgrOpts []botmanager.ManagerOption
 	mgrOpts = append(mgrOpts, botmanager.WithTelegramSender(tgSender))
 	mgrOpts = append(mgrOpts, botmanager.WithMenus(menusRepo))
+	mgrOpts = append(mgrOpts, botmanager.WithLunch(lunchRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithEmoji(emojiPacksRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithSessionStore(botmanager.NewRedisSessionStore(rds.Client())))
 	mgrOpts = append(mgrOpts, botmanager.WithModuleSettings(botModuleSettingsRepo))

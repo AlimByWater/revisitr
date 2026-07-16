@@ -49,6 +49,10 @@ type moduleSettingsRepository interface {
 	Get(ctx context.Context, botID int, moduleKey string) (*entity.BotModuleSettings, error)
 }
 
+type lunchRepository interface {
+	GetFullProgramByBotID(ctx context.Context, botID int) (*entity.LunchProgram, error)
+}
+
 type emojiRepository interface {
 	GetSyncedItemsByOrgID(ctx context.Context, orgID int) ([]entity.EmojiItem, error)
 }
@@ -81,6 +85,7 @@ type Manager struct {
 	loyaltyRepo        loyaltyRepository
 	posRepo            posRepository
 	menusRepo          menusRepository
+	lunchRepo          lunchRepository
 	emojiRepo          emojiRepository
 	moduleSettingsRepo moduleSettingsRepository
 	sessions           sessionStore
@@ -119,6 +124,10 @@ func WithMenus(repo menusRepository) ManagerOption {
 
 func WithEmoji(repo emojiRepository) ManagerOption {
 	return func(m *Manager) { m.emojiRepo = repo }
+}
+
+func WithLunch(repo lunchRepository) ManagerOption {
+	return func(m *Manager) { m.lunchRepo = repo }
 }
 
 func WithSessionStore(store sessionStore) ManagerOption {

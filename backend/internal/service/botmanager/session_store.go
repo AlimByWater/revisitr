@@ -30,6 +30,17 @@ type FlowState struct {
 	// Registration flow
 	RegistrationField string            `json:"registration_field,omitempty"` // current field name being collected
 	RegistrationData  map[string]string `json:"registration_data,omitempty"` // collected field values
+
+	// Lunch flow
+	LunchFormatID   int         `json:"lunch_format_id,omitempty"`
+	LunchCourseIdx  int         `json:"lunch_course_idx,omitempty"`  // index into the format's ordered courses
+	LunchItemIdx    int         `json:"lunch_item_idx,omitempty"`    // carousel index within the current course
+	LunchSelections map[int]int `json:"lunch_selections,omitempty"` // course_id -> menu_item_id
+
+	// Table resolution step (reusable across modules; manual input is the
+	// only method for now, future ones pre-fill TableNum and skip the prompt)
+	AwaitingTableFor string `json:"awaiting_table_for,omitempty"` // flow that requested the table number
+	TableNum         string `json:"table_num,omitempty"`
 }
 
 type RedisSessionStore struct {
