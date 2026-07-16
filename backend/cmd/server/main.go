@@ -167,6 +167,7 @@ func main() {
 	promotionsUsecase := promotionsUC.New(promotionsRepo)
 	integrationsUsecase := integrationsUC.New(integrationsRepo, posSyncSvc)
 	pluginUsecase := pospluginUC.New(loyaltyUsecase, clientsRepo, pluginKeysRepo, pluginOpsRepo, integrationsRepo, posCodeSvc)
+	pluginUsecase.SetEventBus(evBus)
 
 	// Phase 4 usecases
 	billingUsecase := billingUC.New(billingRepo)

@@ -10,16 +10,24 @@ import (
 )
 
 const (
-	ChannelBotReload   = "revisitr:bot:reload"
-	ChannelBotStop     = "revisitr:bot:stop"
-	ChannelBotStart    = "revisitr:bot:start"
-	ChannelBotSettings = "revisitr:bot:settings"
+	ChannelBotReload    = "revisitr:bot:reload"
+	ChannelBotStop      = "revisitr:bot:stop"
+	ChannelBotStart     = "revisitr:bot:start"
+	ChannelBotSettings  = "revisitr:bot:settings"
+	ChannelNotifyClient = "revisitr:notify:client"
 )
 
 // BotEvent is the payload for bot-related events.
 type BotEvent struct {
 	BotID int    `json:"bot_id"`
 	Field string `json:"field,omitempty"` // "welcome", "buttons", "modules", ""
+}
+
+// NotifyClientEvent is the payload for a one-off message to a client's chat.
+type NotifyClientEvent struct {
+	BotID  int    `json:"bot_id"`
+	ChatID int64  `json:"chat_id"`
+	Text   string `json:"text"`
 }
 
 // EventBus publishes events to Redis Pub/Sub channels.
@@ -46,6 +54,39 @@ func (eb *EventBus) PublishBotStart(ctx context.Context, botID int) error {
 
 func (eb *EventBus) PublishBotSettings(ctx context.Context, botID int, field string) error {
 	return eb.publish(ctx, ChannelBotSettings, BotEvent{BotID: botID, Field: field})
+}
+
+// PublishNotifyClient asks the bot process to send a plain-text message to a
+// client's chat via the given bot. Best-effort: callers treat errors as non-fatal.
+func (eb *EventBus) PublishNotifyClient(ctx context.Context, botID int, chatID int64, text string) error {
+	if eb == nil || eb.rdsClient == nil {
+		return fmt.Errorf("eventbus: redis client getter is not configured")
+	}
+
+	rds := eb.rdsClient()
+	if rds == nil {
+		return fmt.Errorf("eventbus: redis client is not initialized")
+	}
+
+	data, err := json.Marshal(NotifyClientEvent{BotID: botID, ChatID: chatID, Text: text})
+	if err != nil {
+		return fmt.Errorf("eventbus: marshal notify event: %w", err)
+	}
+
+	if err := rds.Publish(ctx, ChannelNotifyClient, data).Err(); err != nil {
+		eb.logger.Error("eventbus: publish failed",
+			"channel", ChannelNotifyClient,
+			"bot_id", botID,
+			"error", err,
+		)
+		return fmt.Errorf("eventbus: publish to %s: %w", ChannelNotifyClient, err)
+	}
+
+	eb.logger.Debug("eventbus: published notify",
+		"bot_id", botID,
+		"chat_id", chatID,
+	)
+	return nil
 }
 
 func (eb *EventBus) publish(ctx context.Context, channel string, event BotEvent) error {

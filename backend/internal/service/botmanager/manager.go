@@ -14,6 +14,7 @@ import (
 	walletUC "revisitr/internal/usecase/wallet"
 
 	"github.com/mymmrac/telego"
+	tu "github.com/mymmrac/telego/telegoutil"
 )
 
 type botsRepository interface {
@@ -339,6 +340,28 @@ func (m *Manager) OnBotStop(ctx context.Context, botID int) error {
 func (m *Manager) OnBotStart(ctx context.Context, botID int) error {
 	m.logger.Info("event: bot start", "bot_id", botID)
 	return m.AddBot(ctx, botID)
+}
+
+// OnNotifyClient sends a plain-text message to a client's chat via the running
+// bot instance. Best-effort: no-ops if the bot is not running and never fails
+// the caller (the originating POS operation already succeeded).
+func (m *Manager) OnNotifyClient(_ context.Context, botID int, chatID int64, text string) error {
+	if text == "" {
+		return nil
+	}
+
+	m.mu.RLock()
+	inst, ok := m.instances[botID]
+	m.mu.RUnlock()
+	if !ok {
+		m.logger.Warn("notify client: bot not running", "bot_id", botID, "chat_id", chatID)
+		return nil
+	}
+
+	if _, err := inst.bot.SendMessage(context.Background(), tu.Message(tu.ID(chatID), text)); err != nil {
+		m.logger.Error("notify client: send failed", "bot_id", botID, "chat_id", chatID, "error", err)
+	}
+	return nil
 }
 
 // OnBotSettingsChanged performs a hot update of bot settings without restarting long polling.

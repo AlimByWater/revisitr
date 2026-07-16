@@ -63,6 +63,12 @@ type codeService interface {
 	AllowAttempt(ctx context.Context, scope string, limit int, window time.Duration) (bool, error)
 }
 
+// notifier delivers a one-off message to a client's chat (via the event bus).
+// Optional: when nil, POS operations skip guest notifications.
+type notifier interface {
+	PublishNotifyClient(ctx context.Context, botID int, chatID int64, text string) error
+}
+
 type Usecase struct {
 	logger       *slog.Logger
 	loyalty      loyaltyService
@@ -71,6 +77,7 @@ type Usecase struct {
 	ops          opsRepo
 	integrations integrationsRepo
 	code         codeService
+	notify       notifier
 }
 
 func New(loyalty loyaltyService, clients clientsRepo, keys keysRepo, ops opsRepo, integrations integrationsRepo, code codeService) *Usecase {
@@ -88,6 +95,9 @@ func (uc *Usecase) Init(_ context.Context, logger *slog.Logger) error {
 	uc.logger = logger
 	return nil
 }
+
+// SetEventBus wires the event bus used to notify guests after redeem/accrue.
+func (uc *Usecase) SetEventBus(n notifier) { uc.notify = n }
 
 // --- result structs (HTTP contract) ---
 
@@ -266,6 +276,12 @@ func (uc *Usecase) Redeem(ctx context.Context, key *entity.PluginKey, session, o
 		return nil, fmt.Errorf("insert operation: %w", err)
 	}
 
+	if uc.notify != nil {
+		cur := uc.programCurrency(ctx, sd.ProgramID, key.OrgID)
+		uc.notifyClient(ctx, key.OrgID, sd.ClientID,
+			fmt.Sprintf("➖ Списано %.0f %s. Остаток: %.0f %s.", amount, cur, cl.Balance, cur))
+	}
+
 	return &OpResult{OK: true, BalanceAfter: cl.Balance}, nil
 }
 
@@ -306,7 +322,35 @@ func (uc *Usecase) Accrue(ctx context.Context, key *entity.PluginKey, session, o
 		return nil, fmt.Errorf("insert operation: %w", err)
 	}
 
+	if uc.notify != nil && accrued > 0 {
+		cur := uc.programCurrency(ctx, sd.ProgramID, key.OrgID)
+		uc.notifyClient(ctx, key.OrgID, sd.ClientID,
+			fmt.Sprintf("➕ Начислено %.0f %s. Баланс: %.0f %s.", accrued, cur, cl.Balance, cur))
+	}
+
 	return &OpResult{OK: true, Accrued: accrued, BalanceAfter: cl.Balance}, nil
+}
+
+// programCurrency returns the program's currency label, defaulting to "бонусов".
+func (uc *Usecase) programCurrency(ctx context.Context, programID, orgID int) string {
+	prog, err := uc.loyalty.GetProgram(ctx, programID, orgID)
+	if err != nil || prog == nil || prog.Config.CurrencyName == "" {
+		return "бонусов"
+	}
+	return prog.Config.CurrencyName
+}
+
+// notifyClient resolves the guest's chat and publishes a best-effort Telegram
+// message. Failures are logged and swallowed — the POS operation already succeeded.
+func (uc *Usecase) notifyClient(ctx context.Context, orgID, clientID int, text string) {
+	profile, err := uc.clients.GetByID(ctx, orgID, clientID)
+	if err != nil {
+		uc.logger.Warn("notify client: get profile", "error", err, "client_id", clientID)
+		return
+	}
+	if err := uc.notify.PublishNotifyClient(ctx, profile.BotID, profile.TelegramID, text); err != nil {
+		uc.logger.Warn("notify client: publish", "error", err, "client_id", clientID)
+	}
 }
 
 func (uc *Usecase) Config(ctx context.Context, key *entity.PluginKey) (*ConfigResult, error) {

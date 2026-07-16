@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -108,6 +109,23 @@ type mockIntegrations struct {
 
 func (m *mockIntegrations) GetByID(ctx context.Context, id int) (*entity.Integration, error) {
 	return m.getByID(ctx, id)
+}
+
+// mockNotifier records PublishNotifyClient calls and can return a canned error.
+type mockNotifier struct {
+	calls []notifyCall
+	err   error
+}
+
+type notifyCall struct {
+	botID  int
+	chatID int64
+	text   string
+}
+
+func (m *mockNotifier) PublishNotifyClient(_ context.Context, botID int, chatID int64, text string) error {
+	m.calls = append(m.calls, notifyCall{botID: botID, chatID: chatID, text: text})
+	return m.err
 }
 
 // mockCode consumes codes via a hook and stores sessions in-memory so the
@@ -568,6 +586,147 @@ func TestAccrue_InvalidAmount(t *testing.T) {
 
 	if _, err := uc.Accrue(context.Background(), testKey(), session, "order-1", 0); !errors.Is(err, ErrInvalidAmount) {
 		t.Errorf("err = %v, want ErrInvalidAmount", err)
+	}
+}
+
+// --- Notifications (guest Telegram message after redeem/accrue) ---
+
+// notifyingClient returns a profile carrying the chat routing (bot + telegram id).
+func notifyingClient() *mockClients {
+	return &mockClients{getByID: func(_ context.Context, _, _ int) (*entity.ClientProfile, error) {
+		p := &entity.ClientProfile{}
+		p.BotID = 6
+		p.TelegramID = 251636949
+		return p, nil
+	}}
+}
+
+func TestRedeem_NotifiesGuestOnceIdempotent(t *testing.T) {
+	loyalty := &mockLoyalty{
+		getBalance: func(_ context.Context, _, _ int) (*entity.ClientLoyalty, error) {
+			return &entity.ClientLoyalty{Balance: 800}, nil
+		},
+		getProgram: func(_ context.Context, _, _ int) (*entity.LoyaltyProgram, error) {
+			return testProgram(100), nil // currency "баллов"
+		},
+		spendPoints: func(_ context.Context, _, _ int, amount float64, _ string) (*entity.ClientLoyalty, error) {
+			return &entity.ClientLoyalty{Balance: 800 - amount}, nil
+		},
+	}
+	code := newMockCode()
+	uc := newTestUC(t, loyalty, notifyingClient(), &mockKeys{}, newMockOps(), &mockIntegrations{}, code)
+	notif := &mockNotifier{}
+	uc.SetEventBus(notif)
+
+	session := identifiedSession(t, uc, code, 800, 100, 1000)
+
+	if _, err := uc.Redeem(context.Background(), testKey(), session, "order-1", 200); err != nil {
+		t.Fatalf("Redeem: %v", err)
+	}
+	// Idempotent replay must not send a second message.
+	if _, err := uc.Redeem(context.Background(), testKey(), session, "order-1", 200); err != nil {
+		t.Fatalf("Redeem replay: %v", err)
+	}
+
+	if len(notif.calls) != 1 {
+		t.Fatalf("notify calls = %d, want 1 (idempotent)", len(notif.calls))
+	}
+	c := notif.calls[0]
+	if c.botID != 6 || c.chatID != 251636949 {
+		t.Errorf("routing = bot %d chat %d, want bot 6 chat 251636949", c.botID, c.chatID)
+	}
+	if !strings.Contains(c.text, "Списано 200") || !strings.Contains(c.text, "600") {
+		t.Errorf("text = %q, want mention of списано 200 and остаток 600", c.text)
+	}
+}
+
+func TestAccrue_NotifiesGuest(t *testing.T) {
+	loyalty := &mockLoyalty{
+		getBalance: func(_ context.Context, _, _ int) (*entity.ClientLoyalty, error) {
+			return &entity.ClientLoyalty{Balance: 100}, nil
+		},
+		getProgram: func(_ context.Context, _, _ int) (*entity.LoyaltyProgram, error) {
+			return testProgram(100), nil
+		},
+		calculateBonus: func(_ context.Context, _, _ int, checkAmount float64) (float64, error) {
+			return checkAmount * 0.1, nil
+		},
+		earnFromCheck: func(_ context.Context, _, _ int, checkAmount float64) (*entity.ClientLoyalty, error) {
+			return &entity.ClientLoyalty{Balance: 100 + checkAmount*0.1}, nil
+		},
+	}
+	code := newMockCode()
+	uc := newTestUC(t, loyalty, notifyingClient(), &mockKeys{}, newMockOps(), &mockIntegrations{}, code)
+	notif := &mockNotifier{}
+	uc.SetEventBus(notif)
+
+	session := identifiedSession(t, uc, code, 100, 100, 1000)
+
+	if _, err := uc.Accrue(context.Background(), testKey(), session, "order-1", 800); err != nil {
+		t.Fatalf("Accrue: %v", err)
+	}
+	if len(notif.calls) != 1 {
+		t.Fatalf("notify calls = %d, want 1", len(notif.calls))
+	}
+	if !strings.Contains(notif.calls[0].text, "Начислено 80") || !strings.Contains(notif.calls[0].text, "180") {
+		t.Errorf("text = %q, want mention of начислено 80 and баланс 180", notif.calls[0].text)
+	}
+}
+
+func TestAccrue_NoNotifyOnZeroAccrual(t *testing.T) {
+	loyalty := &mockLoyalty{
+		getBalance: func(_ context.Context, _, _ int) (*entity.ClientLoyalty, error) {
+			return &entity.ClientLoyalty{Balance: 100}, nil
+		},
+		getProgram: func(_ context.Context, _, _ int) (*entity.LoyaltyProgram, error) {
+			return testProgram(100), nil
+		},
+		calculateBonus: func(_ context.Context, _, _ int, _ float64) (float64, error) {
+			return 0, nil // accrual_percent 0 => nothing earned
+		},
+		earnFromCheck: func(_ context.Context, _, _ int, _ float64) (*entity.ClientLoyalty, error) {
+			return &entity.ClientLoyalty{Balance: 100}, nil
+		},
+	}
+	code := newMockCode()
+	uc := newTestUC(t, loyalty, notifyingClient(), &mockKeys{}, newMockOps(), &mockIntegrations{}, code)
+	notif := &mockNotifier{}
+	uc.SetEventBus(notif)
+
+	session := identifiedSession(t, uc, code, 100, 100, 1000)
+
+	if _, err := uc.Accrue(context.Background(), testKey(), session, "order-1", 800); err != nil {
+		t.Fatalf("Accrue: %v", err)
+	}
+	if len(notif.calls) != 0 {
+		t.Errorf("notify calls = %d, want 0 on zero accrual", len(notif.calls))
+	}
+}
+
+func TestNotifyFailureDoesNotBreakRedeem(t *testing.T) {
+	loyalty := &mockLoyalty{
+		getBalance: func(_ context.Context, _, _ int) (*entity.ClientLoyalty, error) {
+			return &entity.ClientLoyalty{Balance: 800}, nil
+		},
+		getProgram: func(_ context.Context, _, _ int) (*entity.LoyaltyProgram, error) {
+			return testProgram(100), nil
+		},
+		spendPoints: func(_ context.Context, _, _ int, amount float64, _ string) (*entity.ClientLoyalty, error) {
+			return &entity.ClientLoyalty{Balance: 800 - amount}, nil
+		},
+	}
+	code := newMockCode()
+	uc := newTestUC(t, loyalty, notifyingClient(), &mockKeys{}, newMockOps(), &mockIntegrations{}, code)
+	uc.SetEventBus(&mockNotifier{err: errors.New("bus down")})
+
+	session := identifiedSession(t, uc, code, 800, 100, 1000)
+
+	res, err := uc.Redeem(context.Background(), testKey(), session, "order-1", 200)
+	if err != nil {
+		t.Fatalf("Redeem must succeed despite notify failure: %v", err)
+	}
+	if !res.OK || res.BalanceAfter != 600 {
+		t.Errorf("res = %+v, want OK balance 600", res)
 	}
 }
 
