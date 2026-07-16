@@ -22,6 +22,7 @@ import (
 	"revisitr/internal/controller/http/group/health"
 	integrationsGroup "revisitr/internal/controller/http/group/integrations"
 	loyaltyGroup "revisitr/internal/controller/http/group/loyalty"
+	lunchGroup "revisitr/internal/controller/http/group/lunch"
 	marketplaceGroup "revisitr/internal/controller/http/group/marketplace"
 	masterbotGroup "revisitr/internal/controller/http/group/masterbot"
 	menusGroup "revisitr/internal/controller/http/group/menus"
@@ -55,6 +56,7 @@ import (
 	emojipacksUC "revisitr/internal/usecase/emojipacks"
 	integrationsUC "revisitr/internal/usecase/integrations"
 	loyaltyUC "revisitr/internal/usecase/loyalty"
+	lunchUC "revisitr/internal/usecase/lunch"
 	marketplaceUC "revisitr/internal/usecase/marketplace"
 	menusUC "revisitr/internal/usecase/menus"
 	modulepresetsUC "revisitr/internal/usecase/modulepresets"
@@ -121,6 +123,7 @@ func main() {
 
 	// Phase 3 repos
 	menusRepo := pgRepo.NewMenus(pg)
+	lunchRepo := pgRepo.NewLunch(pg)
 	rfmRepo := pgRepo.NewRFM(pg)
 	onboardingRepo := pgRepo.NewOnboarding(pg)
 
@@ -188,6 +191,7 @@ func main() {
 
 	// Phase 3 usecases
 	menusUsecase := menusUC.New(menusRepo)
+	lunchUsecase := lunchUC.New(lunchRepo, botsRepo)
 	rfmUsecase := rfmUC.New(rfmRepo, segmentsRepo, rfmSvc)
 	onboardingUsecase := onboardingUC.New(onboardingRepo)
 
@@ -268,6 +272,7 @@ func main() {
 
 	// Phase 3 groups
 	menusGrp := menusGroup.New(menusUsecase, jwtSecret)
+	lunchGrp := lunchGroup.New(lunchUsecase, jwtSecret)
 	rfmGrp := rfmGroup.New(rfmUsecase, jwtSecret,
 		rfmGroup.WithFeatureGate(rfmGate),
 	)
@@ -279,7 +284,7 @@ func main() {
 		analyticsGrp, segmentsGrp, promotionsGrp, integrationsGrp,
 		pluginGrp, pluginAdminGrp,
 		filesGrp,
-		menusGrp, rfmGrp, onboardingGrp,
+		menusGrp, lunchGrp, rfmGrp, onboardingGrp,
 		billingGrp, masterbotGrp, walletGrp, marketplaceGrp, postsGrp,
 		emojiPacksGrp,
 		modulepresetsGrp,
@@ -348,7 +353,7 @@ func main() {
 			clientsUsecase, dashboardUsecase, campaignsUsecase,
 			analyticsUsecase, segmentsUsecase, promotionsUsecase, integrationsUsecase,
 			pluginUsecase,
-			menusUsecase, rfmUsecase, onboardingUsecase,
+			menusUsecase, lunchUsecase, rfmUsecase, onboardingUsecase,
 			billingUsecase, walletUsecase, marketplaceUsecase,
 			emojiPacksUsecase,
 		},
