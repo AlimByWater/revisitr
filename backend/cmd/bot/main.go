@@ -79,6 +79,7 @@ func main() {
 	mgrOpts = append(mgrOpts, botmanager.WithTelegramSender(tgSender))
 	mgrOpts = append(mgrOpts, botmanager.WithMenus(menusRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithLunch(lunchRepo))
+	mgrOpts = append(mgrOpts, botmanager.WithLunchEvents(eventbus.New(rds.Client, logger)))
 	mgrOpts = append(mgrOpts, botmanager.WithEmoji(emojiPacksRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithSessionStore(botmanager.NewRedisSessionStore(rds.Client())))
 	mgrOpts = append(mgrOpts, botmanager.WithModuleSettings(botModuleSettingsRepo))

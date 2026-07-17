@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"revisitr/internal/entity"
+	"revisitr/internal/service/eventbus"
 	"revisitr/internal/service/poscode"
 	tgService "revisitr/internal/service/telegram"
 	walletUC "revisitr/internal/usecase/wallet"
@@ -51,6 +52,11 @@ type moduleSettingsRepository interface {
 
 type lunchRepository interface {
 	GetFullProgramByBotID(ctx context.Context, botID int) (*entity.LunchProgram, error)
+	CreateOrder(ctx context.Context, order *entity.LunchOrder) error
+}
+
+type lunchEventPublisher interface {
+	PublishLunchOrderCreated(ctx context.Context, event eventbus.LunchOrderEvent) error
 }
 
 type emojiRepository interface {
@@ -86,6 +92,7 @@ type Manager struct {
 	posRepo            posRepository
 	menusRepo          menusRepository
 	lunchRepo          lunchRepository
+	lunchEvents        lunchEventPublisher
 	emojiRepo          emojiRepository
 	moduleSettingsRepo moduleSettingsRepository
 	sessions           sessionStore
@@ -128,6 +135,10 @@ func WithEmoji(repo emojiRepository) ManagerOption {
 
 func WithLunch(repo lunchRepository) ManagerOption {
 	return func(m *Manager) { m.lunchRepo = repo }
+}
+
+func WithLunchEvents(pub lunchEventPublisher) ManagerOption {
+	return func(m *Manager) { m.lunchEvents = pub }
 }
 
 func WithSessionStore(store sessionStore) ManagerOption {

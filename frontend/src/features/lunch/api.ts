@@ -55,7 +55,8 @@ export const lunchApi = {
     const response = await api.get<LunchOrder[]>(`/lunch/bots/${botId}/orders`, {
       params: status ? { status } : undefined,
     })
-    return response.data
+    // Backend returns JSON null when there are no orders.
+    return response.data ?? []
   },
 
   updateOrderStatus: async (orderId: number, status: string): Promise<void> => {

@@ -5,11 +5,12 @@ import { cn } from '@/lib/utils'
 import { useBotQuery } from '@/features/bots/queries'
 import { normalizeTimeInput } from '@/features/bots/settings'
 import { lunchApi } from '@/features/lunch/api'
-import { useLunchProgramQuery } from '@/features/lunch/queries'
+import { useLunchOrdersQuery, useLunchProgramQuery } from '@/features/lunch/queries'
 import type {
   LunchAvailabilitySlot,
   LunchCourse,
   LunchFormat,
+  LunchOrder,
   LunchPriceMode,
   LunchProgram,
   SaveLunchCourseRequest,
@@ -555,6 +556,108 @@ function FormatEditor({
   )
 }
 
+// ── Orders section ────────────────────────────────────────────────────────
+
+const ORDER_STATUS_LABELS: Record<LunchOrder['status'], string> = {
+  new: 'Новый',
+  sent: 'Отработан',
+  cancelled: 'Отменён',
+}
+
+const ORDER_STATUS_STYLES: Record<LunchOrder['status'], string> = {
+  new: 'bg-accent/10 text-accent',
+  sent: 'bg-green-100 text-green-700',
+  cancelled: 'bg-neutral-100 text-neutral-500',
+}
+
+function OrdersSection({ botId }: { botId: number }) {
+  const [showAll, setShowAll] = useState(false)
+  const { data: orders = [], isError, mutate } = useLunchOrdersQuery(botId, showAll ? undefined : 'new')
+  const [busyOrderId, setBusyOrderId] = useState<number | null>(null)
+
+  const changeStatus = async (orderId: number, status: string) => {
+    setBusyOrderId(orderId)
+    try {
+      await lunchApi.updateOrderStatus(orderId, status)
+      await mutate()
+    } finally {
+      setBusyOrderId(null)
+    }
+  }
+
+  return (
+    <SectionCard
+      eyebrow="Заказы"
+      title={showAll ? 'Все заказы' : 'Новые заказы'}
+      description="Гость оформил ланч в боте — заказ появляется здесь. Список обновляется автоматически."
+      actions={
+        <button
+          type="button"
+          onClick={() => setShowAll((current) => !current)}
+          className="inline-flex min-h-11 shrink-0 items-center rounded text-sm font-medium text-accent hover:text-accent/80 transition-colors"
+        >
+          {showAll ? 'Только новые' : 'Показать все'}
+        </button>
+      }
+    >
+      <div className="space-y-2">
+        {isError && (
+          <p className="text-sm text-red-600">Не удалось загрузить заказы. Обновите страницу или войдите заново.</p>
+        )}
+        {!isError && orders.length === 0 && (
+          <p className="text-sm text-neutral-500">{showAll ? 'Заказов пока нет.' : 'Новых заказов нет.'}</p>
+        )}
+        {orders.map((order) => (
+          <div key={order.id} className="rounded border border-neutral-200 bg-white px-3 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-neutral-900">
+                    №{order.id} · Стол {order.table_num} · {formatPrice(order.total_price)}
+                  </span>
+                  <span className={cn('rounded px-1.5 py-0.5 text-xs font-medium', ORDER_STATUS_STYLES[order.status])}>
+                    {ORDER_STATUS_LABELS[order.status]}
+                  </span>
+                </div>
+                <div className="mt-1 text-xs text-neutral-500">
+                  {order.format_name} · {new Date(order.created_at).toLocaleString('ru-RU')}
+                </div>
+                <div className="mt-1 text-xs text-neutral-500">
+                  {order.items.map((item) => `${item.course_title}: ${item.item_name}`).join(' · ')}
+                </div>
+              </div>
+              {order.status === 'new' && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={busyOrderId === order.id}
+                    onClick={() => changeStatus(order.id, 'sent')}
+                    className={cn(
+                      'inline-flex min-h-11 items-center rounded px-3 text-sm font-medium',
+                      'bg-accent text-white hover:bg-accent/90 transition-colors',
+                      'disabled:cursor-not-allowed disabled:opacity-50',
+                    )}
+                  >
+                    Отработан
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyOrderId === order.id}
+                    onClick={() => changeStatus(order.id, 'cancelled')}
+                    className="inline-flex min-h-11 items-center rounded px-3 text-sm text-neutral-500 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
+                  >
+                    Отменить
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────
 
 interface ProgramDraft {
@@ -684,6 +787,8 @@ export default function BotLunchSettingsPage() {
       </div>
 
       <div className="space-y-6">
+        <OrdersSection botId={safeId} />
+
         <SectionCard
           eyebrow="Программа"
           title="Название и статус"

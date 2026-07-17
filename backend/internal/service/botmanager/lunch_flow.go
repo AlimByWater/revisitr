@@ -2,11 +2,13 @@ package botmanager
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"revisitr/internal/entity"
+	"revisitr/internal/service/eventbus"
 	lunchUC "revisitr/internal/usecase/lunch"
 
 	"github.com/mymmrac/telego"
@@ -163,13 +165,6 @@ func (h *handler) handleLunchCallback(ctx context.Context, query *telego.Callbac
 		h.cancelLunchFlow(ctx, chatID)
 		return
 	}
-	if data == callbackLunchConfirm {
-		// WP7: checkout is not implemented yet — the order pipeline is
-		// pending a stakeholder decision.
-		h.answerCallback(query.ID, "Оформление скоро появится 🛠")
-		return
-	}
-
 	program := h.lunchData(ctx)
 	if program == nil || len(program.Formats) == 0 {
 		h.answerCallback(query.ID, "Ланч сейчас недоступен")
@@ -281,6 +276,9 @@ func (h *handler) handleLunchCallback(ctx context.Context, query *telego.Callbac
 		state.TableNum = ""
 		h.startTableResolve(ctx, chatID, state, "lunch")
 
+	case data == callbackLunchConfirm:
+		h.finalizeLunchOrder(ctx, query, program, state)
+
 	default:
 		h.answerCallback(query.ID, "Действие устарело")
 	}
@@ -354,6 +352,144 @@ func (h *handler) renderLunchConfirm(ctx context.Context, chatID int64, program 
 	}
 
 	state.FlowMessageID = h.replaceFlowMessage(ctx, chatID, state, lunchConfirmContent(format, courses, state, total))
+	_ = h.saveFlowState(ctx, chatID, state)
+}
+
+// buildLunchOrder assembles an order with text snapshots and the calculated
+// total from the guest's selections. Pure — unit-testable.
+func buildLunchOrder(botID, clientID int, format *entity.LunchFormat, courses []entity.LunchCourse, selections map[int]int, tableNum string) (*entity.LunchOrder, error) {
+	total, err := lunchUC.CalculateTotal(lunchPriceInput(format, courses, selections))
+	if err != nil {
+		return nil, err
+	}
+
+	formatID := format.ID
+	order := &entity.LunchOrder{
+		BotID:       botID,
+		BotClientID: clientID,
+		FormatID:    &formatID,
+		FormatName:  format.Name,
+		TableNum:    tableNum,
+		TotalPrice:  total,
+		Status:      entity.LunchOrderStatusNew,
+	}
+
+	for _, course := range courses {
+		itemID, ok := selections[course.ID]
+		if !ok {
+			return nil, fmt.Errorf("course %q has no selection", course.Title)
+		}
+		var selected *entity.LunchCourseItem
+		for i := range course.Items {
+			if course.Items[i].MenuItemID == itemID {
+				selected = &course.Items[i]
+				break
+			}
+		}
+		if selected == nil || selected.MenuItem == nil {
+			return nil, fmt.Errorf("selected item %d is gone from course %q", itemID, course.Title)
+		}
+		courseID := course.ID
+		menuItemID := selected.MenuItemID
+		order.Items = append(order.Items, entity.LunchOrderItem{
+			CourseID:    &courseID,
+			CourseTitle: course.Title,
+			MenuItemID:  &menuItemID,
+			ItemName:    selected.MenuItem.Name,
+			Price:       selected.MenuItem.Price,
+			Surcharge:   selected.Surcharge,
+		})
+	}
+
+	return order, nil
+}
+
+// finalizeLunchOrder re-validates the assembly and persists the order with a
+// price snapshot. The order lands in the admin panel (status "new"); Telegram
+// delivery to staff is a future upgrade pending the waiters-chat decision.
+func (h *handler) finalizeLunchOrder(ctx context.Context, query *telego.CallbackQuery, program *entity.LunchProgram, state FlowState) {
+	chatID := query.Message.GetChat().ID
+
+	format := lunchFormatByID(program, state.LunchFormatID)
+	if format == nil {
+		h.answerCallback(query.ID, "Действие устарело")
+		return
+	}
+	courses := lunchFormatCourses(program, format)
+
+	// The window may have closed while the guest was assembling.
+	if !lunchUC.IsAvailableAt(program.Availability, time.Now()) {
+		h.answerCallback(query.ID, "Ланч уже закрылся")
+		if schedule := lunchUC.FormatSchedule(program.Availability); schedule != "" {
+			h.sendText(chatID, "Ланч уже закрылся. Расписание: "+schedule+".")
+		}
+		return
+	}
+
+	if state.TableNum == "" {
+		h.answerCallback(query.ID, "")
+		h.startTableResolve(ctx, chatID, state, "lunch")
+		return
+	}
+
+	// Stop-list race: a selected item may have become unavailable —
+	// lunchData already filtered it out, so buildLunchOrder will catch it.
+	if h.mgr.lunchRepo == nil {
+		h.answerCallback(query.ID, "Ланч сейчас недоступен")
+		return
+	}
+
+	client, err := h.mgr.clientsRepo.GetByTelegramID(ctx, h.info.ID, query.From.ID)
+	if err != nil || client == nil {
+		h.answerCallback(query.ID, "")
+		h.sendText(chatID, "Не нашли вашу регистрацию — отправьте /start и соберите заказ заново.")
+		return
+	}
+
+	order, err := buildLunchOrder(h.info.ID, client.ID, format, courses, state.LunchSelections, state.TableNum)
+	if err != nil {
+		h.logger.Warn("lunch order build failed", "error", err, "chat_id", chatID)
+		h.answerCallback(query.ID, "Часть позиций стала недоступна — проверьте состав")
+		state.LunchCourseIdx = 0
+		state.LunchItemIdx = 0
+		h.renderLunchCourse(ctx, chatID, program, state, true)
+		return
+	}
+
+	if err := h.mgr.lunchRepo.CreateOrder(ctx, order); err != nil {
+		h.logger.Error("lunch order create failed", "error", err, "chat_id", chatID)
+		h.answerCallback(query.ID, "Не удалось оформить заказ, попробуйте ещё раз")
+		return
+	}
+
+	if h.mgr.lunchEvents != nil {
+		if err := h.mgr.lunchEvents.PublishLunchOrderCreated(ctx, eventbus.LunchOrderEvent{
+			OrderID:  order.ID,
+			BotID:    order.BotID,
+			TableNum: order.TableNum,
+			Total:    order.TotalPrice,
+		}); err != nil {
+			// Never block the guest on event delivery.
+			h.logger.Error("lunch order event publish failed", "error", err, "order_id", order.ID)
+		}
+	}
+
+	h.answerCallback(query.ID, "")
+	h.logger.Info("lunch order created", "order_id", order.ID, "table", order.TableNum, "total", order.TotalPrice)
+
+	confirmation := fmt.Sprintf(
+		"✅ <b>Заказ №%d оформлен!</b>\n\nСтол: <b>%s</b>\nСумма: <b>%s</b>\n\nОфициант скоро подойдёт.",
+		order.ID, order.TableNum, formatMenuPrice(order.TotalPrice),
+	)
+	h.resetLunchState(&state)
+	state.Flow = ""
+	state.FlowMessageID = h.updateFlowMessage(ctx, chatID, state, entity.MessageContent{
+		Parts: []entity.MessagePart{{
+			Type:      entity.PartText,
+			Text:      confirmation,
+			ParseMode: "HTML",
+		}},
+	})
 	_ = h.saveFlowState(ctx, chatID, state)
 }
 
