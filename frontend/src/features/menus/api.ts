@@ -9,7 +9,8 @@ import type {
 export const menusApi = {
   list: async (): Promise<Menu[]> => {
     const response = await api.get<Menu[]>('/menus')
-    return response.data
+    // Backend returns JSON null for an org without menus.
+    return response.data ?? []
   },
 
   getById: async (id: number): Promise<Menu> => {
