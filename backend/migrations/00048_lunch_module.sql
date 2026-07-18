@@ -62,41 +62,11 @@ CREATE TABLE lunch_availability (
 
 CREATE INDEX idx_lunch_availability_program ON lunch_availability(program_id);
 
-CREATE TABLE lunch_orders (
-    id            SERIAL PRIMARY KEY,
-    bot_id        INT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
-    bot_client_id INT NOT NULL REFERENCES bot_clients(id) ON DELETE CASCADE,
-    format_id     INT REFERENCES lunch_formats(id) ON DELETE SET NULL,
-    format_name   VARCHAR(255) NOT NULL DEFAULT '',
-    table_num     VARCHAR(16) NOT NULL,
-    total_price   NUMERIC(10,2) NOT NULL,
-    status        VARCHAR(16) NOT NULL DEFAULT 'new'
-                  CHECK (status IN ('new', 'sent', 'cancelled')),
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_lunch_orders_bot_status ON lunch_orders(bot_id, status);
-
-CREATE TABLE lunch_order_items (
-    id             SERIAL PRIMARY KEY,
-    lunch_order_id INT NOT NULL REFERENCES lunch_orders(id) ON DELETE CASCADE,
-    course_id      INT REFERENCES lunch_courses(id) ON DELETE SET NULL,
-    course_title   VARCHAR(255) NOT NULL DEFAULT '',
-    menu_item_id   INT REFERENCES menu_items(id) ON DELETE SET NULL,
-    item_name      VARCHAR(255) NOT NULL DEFAULT '',
-    price          NUMERIC(10,2) NOT NULL DEFAULT 0,
-    surcharge      NUMERIC(10,2) NOT NULL DEFAULT 0
-);
-
-CREATE INDEX idx_lunch_order_items_order ON lunch_order_items(lunch_order_id);
-
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
 
-DROP TABLE IF EXISTS lunch_order_items;
-DROP TABLE IF EXISTS lunch_orders;
 DROP TABLE IF EXISTS lunch_availability;
 DROP TABLE IF EXISTS lunch_format_courses;
 DROP TABLE IF EXISTS lunch_formats;

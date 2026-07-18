@@ -52,7 +52,10 @@ type moduleSettingsRepository interface {
 
 type lunchRepository interface {
 	GetFullProgramByBotID(ctx context.Context, botID int) (*entity.LunchProgram, error)
-	CreateOrder(ctx context.Context, order *entity.LunchOrder) error
+}
+
+type ordersRepository interface {
+	Create(ctx context.Context, order *entity.Order) error
 }
 
 type lunchEventPublisher interface {
@@ -92,6 +95,7 @@ type Manager struct {
 	posRepo            posRepository
 	menusRepo          menusRepository
 	lunchRepo          lunchRepository
+	ordersRepo         ordersRepository
 	lunchEvents        lunchEventPublisher
 	emojiRepo          emojiRepository
 	moduleSettingsRepo moduleSettingsRepository
@@ -135,6 +139,10 @@ func WithEmoji(repo emojiRepository) ManagerOption {
 
 func WithLunch(repo lunchRepository) ManagerOption {
 	return func(m *Manager) { m.lunchRepo = repo }
+}
+
+func WithOrders(repo ordersRepository) ManagerOption {
+	return func(m *Manager) { m.ordersRepo = repo }
 }
 
 func WithLunchEvents(pub lunchEventPublisher) ManagerOption {

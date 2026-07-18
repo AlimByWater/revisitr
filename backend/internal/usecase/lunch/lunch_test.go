@@ -29,9 +29,6 @@ type mockLunchRepo struct {
 	getFormatFn             func(ctx context.Context, id int) (*entity.LunchFormat, error)
 	getFormatOrgIDFn        func(ctx context.Context, formatID int) (int, error)
 	replaceAvailabilityFn   func(ctx context.Context, programID int, slots []entity.LunchAvailability) error
-	listOrdersFn            func(ctx context.Context, botID int, status string) ([]entity.LunchOrder, error)
-	updateOrderStatusFn     func(ctx context.Context, orderID int, status string) error
-	getOrderOrgIDFn         func(ctx context.Context, orderID int) (int, error)
 }
 
 func (m *mockLunchRepo) GetProgramByBotID(ctx context.Context, botID int) (*entity.LunchProgram, error) {
@@ -124,25 +121,6 @@ func (m *mockLunchRepo) ReplaceAvailability(ctx context.Context, programID int, 
 	}
 	return nil
 }
-func (m *mockLunchRepo) ListOrders(ctx context.Context, botID int, status string) ([]entity.LunchOrder, error) {
-	if m.listOrdersFn != nil {
-		return m.listOrdersFn(ctx, botID, status)
-	}
-	return nil, nil
-}
-func (m *mockLunchRepo) UpdateOrderStatus(ctx context.Context, orderID int, status string) error {
-	if m.updateOrderStatusFn != nil {
-		return m.updateOrderStatusFn(ctx, orderID, status)
-	}
-	return nil
-}
-func (m *mockLunchRepo) GetOrderOrgID(ctx context.Context, orderID int) (int, error) {
-	if m.getOrderOrgIDFn != nil {
-		return m.getOrderOrgIDFn(ctx, orderID)
-	}
-	return 0, nil
-}
-
 type mockBotsGetter struct {
 	getByIDFn func(ctx context.Context, id int) (*entity.Bot, error)
 }
@@ -418,38 +396,5 @@ func TestSetAvailabilityOK(t *testing.T) {
 	}
 	if savedProgramID != 5 {
 		t.Errorf("saved to program %d, want 5", savedProgramID)
-	}
-}
-
-// --- orders ---
-
-func TestUpdateOrderStatusInvalid(t *testing.T) {
-	uc := newTestUsecase(t, &mockLunchRepo{}, nil)
-	err := uc.UpdateOrderStatus(context.Background(), 1, 3, "cooking")
-	if !errors.Is(err, ErrValidation) {
-		t.Errorf("unknown status: expected ErrValidation, got %v", err)
-	}
-}
-
-func TestUpdateOrderStatusForeignOrg(t *testing.T) {
-	repo := &mockLunchRepo{
-		getOrderOrgIDFn: func(_ context.Context, _ int) (int, error) { return 99, nil },
-	}
-	uc := newTestUsecase(t, repo, nil)
-	err := uc.UpdateOrderStatus(context.Background(), 1, 3, entity.LunchOrderStatusCancelled)
-	if !errors.Is(err, ErrNotOwner) {
-		t.Errorf("expected ErrNotOwner, got %v", err)
-	}
-}
-
-func TestListOrdersForeignBot(t *testing.T) {
-	bots := &mockBotsGetter{
-		getByIDFn: func(_ context.Context, id int) (*entity.Bot, error) {
-			return &entity.Bot{ID: id, OrgID: 99}, nil
-		},
-	}
-	uc := newTestUsecase(t, nil, bots)
-	if _, err := uc.ListOrders(context.Background(), 1, 10, ""); !errors.Is(err, ErrNotOwner) {
-		t.Errorf("expected ErrNotOwner, got %v", err)
 	}
 }

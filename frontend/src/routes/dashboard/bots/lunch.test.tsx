@@ -9,7 +9,6 @@ vi.mock('@/features/bots/queries', () => ({
 
 vi.mock('@/features/lunch/queries', () => ({
   useLunchProgramQuery: vi.fn(),
-  useLunchOrdersQuery: vi.fn(),
 }))
 
 vi.mock('@/features/lunch/api', () => ({
@@ -22,6 +21,15 @@ vi.mock('@/features/lunch/api', () => ({
     createFormat: vi.fn(),
     updateFormat: vi.fn(),
     deleteFormat: vi.fn(),
+  },
+}))
+
+vi.mock('@/features/orders/queries', () => ({
+  useOrdersQuery: vi.fn(),
+}))
+
+vi.mock('@/features/orders/api', () => ({
+  ordersApi: {
     listOrders: vi.fn(),
     updateOrderStatus: vi.fn(),
   },
@@ -39,15 +47,17 @@ vi.mock('@/features/menus/queries', () => ({
 }))
 
 import { useBotQuery } from '@/features/bots/queries'
-import { useLunchOrdersQuery, useLunchProgramQuery } from '@/features/lunch/queries'
+import { useLunchProgramQuery } from '@/features/lunch/queries'
 import { lunchApi } from '@/features/lunch/api'
+import { ordersApi } from '@/features/orders/api'
+import { useOrdersQuery } from '@/features/orders/queries'
 import { menusApi } from '@/features/menus/api'
 import { useMenuQuery, useMenusQuery } from '@/features/menus/queries'
 import BotLunchSettingsPage from './lunch'
 
 const mockUseBotQuery = vi.mocked(useBotQuery)
 const mockUseLunchProgramQuery = vi.mocked(useLunchProgramQuery)
-const mockUseLunchOrdersQuery = vi.mocked(useLunchOrdersQuery)
+const mockUseOrdersQuery = vi.mocked(useOrdersQuery)
 const mockUseMenusQuery = vi.mocked(useMenusQuery)
 const mockUseMenuQuery = vi.mocked(useMenuQuery)
 const mockGetBotPOSLocations = vi.mocked(menusApi.getBotPOSLocations)
@@ -132,6 +142,7 @@ const orderFixture = {
   id: 3,
   bot_id: 1,
   bot_client_id: 42,
+  source: 'lunch' as const,
   format_id: 7,
   format_name: 'Только первое',
   table_num: '7',
@@ -141,7 +152,7 @@ const orderFixture = {
   items: [
     {
       id: 1,
-      lunch_order_id: 3,
+      order_id: 3,
       course_id: 10,
       course_title: 'Первое',
       menu_item_id: 100,
@@ -187,17 +198,17 @@ describe('BotLunchSettingsPage', () => {
       isLoading: false,
       isError: false,
     } as unknown as ReturnType<typeof useMenuQuery>)
-    mockUseLunchOrdersQuery.mockReturnValue({
+    mockUseOrdersQuery.mockReturnValue({
       data: [orderFixture],
       isLoading: false,
       isError: false,
       mutate: vi.fn(),
-    } as unknown as ReturnType<typeof useLunchOrdersQuery>)
+    } as unknown as ReturnType<typeof useOrdersQuery>)
     mockGetBotPOSLocations.mockResolvedValue({ pos_ids: [] })
     vi.mocked(lunchApi.updateProgram).mockResolvedValue(programFixture)
     vi.mocked(lunchApi.setAvailability).mockResolvedValue()
     vi.mocked(lunchApi.updateFormat).mockResolvedValue()
-    vi.mocked(lunchApi.updateOrderStatus).mockResolvedValue()
+    vi.mocked(ordersApi.updateOrderStatus).mockResolvedValue()
   })
 
   it('renders program, courses and formats', async () => {
@@ -246,7 +257,7 @@ describe('BotLunchSettingsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Отработан' }))
 
     await waitFor(() => {
-      expect(lunchApi.updateOrderStatus).toHaveBeenCalledWith(3, 'sent')
+      expect(ordersApi.updateOrderStatus).toHaveBeenCalledWith(3, 'sent')
     })
   })
 

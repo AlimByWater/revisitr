@@ -357,21 +357,22 @@ func (h *handler) renderLunchConfirm(ctx context.Context, chatID int64, program 
 
 // buildLunchOrder assembles an order with text snapshots and the calculated
 // total from the guest's selections. Pure — unit-testable.
-func buildLunchOrder(botID, clientID int, format *entity.LunchFormat, courses []entity.LunchCourse, selections map[int]int, tableNum string) (*entity.LunchOrder, error) {
+func buildLunchOrder(botID, clientID int, format *entity.LunchFormat, courses []entity.LunchCourse, selections map[int]int, tableNum string) (*entity.Order, error) {
 	total, err := lunchUC.CalculateTotal(lunchPriceInput(format, courses, selections))
 	if err != nil {
 		return nil, err
 	}
 
 	formatID := format.ID
-	order := &entity.LunchOrder{
+	order := &entity.Order{
 		BotID:       botID,
 		BotClientID: clientID,
+		Source:      entity.OrderSourceLunch,
 		FormatID:    &formatID,
 		FormatName:  format.Name,
 		TableNum:    tableNum,
 		TotalPrice:  total,
-		Status:      entity.LunchOrderStatusNew,
+		Status:      entity.OrderStatusNew,
 	}
 
 	for _, course := range courses {
@@ -391,7 +392,7 @@ func buildLunchOrder(botID, clientID int, format *entity.LunchFormat, courses []
 		}
 		courseID := course.ID
 		menuItemID := selected.MenuItemID
-		order.Items = append(order.Items, entity.LunchOrderItem{
+		order.Items = append(order.Items, entity.OrderLine{
 			CourseID:    &courseID,
 			CourseTitle: course.Title,
 			MenuItemID:  &menuItemID,
@@ -434,7 +435,7 @@ func (h *handler) finalizeLunchOrder(ctx context.Context, query *telego.Callback
 
 	// Stop-list race: a selected item may have become unavailable —
 	// lunchData already filtered it out, so buildLunchOrder will catch it.
-	if h.mgr.lunchRepo == nil {
+	if h.mgr.ordersRepo == nil {
 		h.answerCallback(query.ID, "Ланч сейчас недоступен")
 		return
 	}
@@ -456,7 +457,7 @@ func (h *handler) finalizeLunchOrder(ctx context.Context, query *telego.Callback
 		return
 	}
 
-	if err := h.mgr.lunchRepo.CreateOrder(ctx, order); err != nil {
+	if err := h.mgr.ordersRepo.Create(ctx, order); err != nil {
 		h.logger.Error("lunch order create failed", "error", err, "chat_id", chatID)
 		h.answerCallback(query.ID, "Не удалось оформить заказ, попробуйте ещё раз")
 		return

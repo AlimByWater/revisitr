@@ -6,10 +6,6 @@ const (
 	LunchPriceFixed             = "fixed"
 	LunchPriceSumOfItems        = "sum_of_items"
 	LunchPriceBasePlusSurcharge = "base_plus_surcharge"
-
-	LunchOrderStatusNew       = "new"
-	LunchOrderStatusSent      = "sent"
-	LunchOrderStatusCancelled = "cancelled"
 )
 
 type LunchProgram struct {
@@ -65,31 +61,6 @@ type LunchAvailability struct {
 	TimeTo    string `db:"time_to"    json:"time_to"`
 }
 
-type LunchOrder struct {
-	ID          int       `db:"id"            json:"id"`
-	BotID       int       `db:"bot_id"        json:"bot_id"`
-	BotClientID int       `db:"bot_client_id" json:"bot_client_id"`
-	FormatID    *int      `db:"format_id"     json:"format_id,omitempty"`
-	FormatName  string    `db:"format_name"   json:"format_name"`
-	TableNum    string    `db:"table_num"     json:"table_num"`
-	TotalPrice  float64   `db:"total_price"   json:"total_price"`
-	Status      string    `db:"status"        json:"status"`
-	CreatedAt   time.Time `db:"created_at"    json:"created_at"`
-
-	Items []LunchOrderItem `db:"-" json:"items"`
-}
-
-type LunchOrderItem struct {
-	ID           int     `db:"id"             json:"id"`
-	LunchOrderID int     `db:"lunch_order_id" json:"lunch_order_id"`
-	CourseID     *int    `db:"course_id"      json:"course_id,omitempty"`
-	CourseTitle  string  `db:"course_title"   json:"course_title"`
-	MenuItemID   *int    `db:"menu_item_id"   json:"menu_item_id,omitempty"`
-	ItemName     string  `db:"item_name"      json:"item_name"`
-	Price        float64 `db:"price"          json:"price"`
-	Surcharge    float64 `db:"surcharge"      json:"surcharge"`
-}
-
 type UpsertLunchProgramRequest struct {
 	Name        *string `json:"name,omitempty"`
 	Description *string `json:"description,omitempty"`
@@ -137,8 +108,4 @@ type UpdateLunchFormatRequest struct {
 
 type SetLunchAvailabilityRequest struct {
 	Slots []LunchAvailability `json:"slots"`
-}
-
-type UpdateLunchOrderStatusRequest struct {
-	Status string `json:"status" binding:"required"`
 }

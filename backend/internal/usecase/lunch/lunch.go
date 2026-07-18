@@ -32,9 +32,6 @@ type lunchRepo interface {
 	GetFormat(ctx context.Context, id int) (*entity.LunchFormat, error)
 	GetFormatOrgID(ctx context.Context, formatID int) (int, error)
 	ReplaceAvailability(ctx context.Context, programID int, slots []entity.LunchAvailability) error
-	ListOrders(ctx context.Context, botID int, status string) ([]entity.LunchOrder, error)
-	UpdateOrderStatus(ctx context.Context, orderID int, status string) error
-	GetOrderOrgID(ctx context.Context, orderID int) (int, error)
 }
 
 type botsGetter interface {
@@ -364,30 +361,4 @@ func (uc *Usecase) SetAvailability(ctx context.Context, orgID, botID int, slots 
 		return fmt.Errorf("set lunch availability: %w", err)
 	}
 	return nil
-}
-
-func (uc *Usecase) ListOrders(ctx context.Context, orgID, botID int, status string) ([]entity.LunchOrder, error) {
-	if err := uc.checkBot(ctx, orgID, botID); err != nil {
-		return nil, err
-	}
-	return uc.repo.ListOrders(ctx, botID, status)
-}
-
-func (uc *Usecase) UpdateOrderStatus(ctx context.Context, orgID, orderID int, status string) error {
-	switch status {
-	case entity.LunchOrderStatusNew, entity.LunchOrderStatusSent, entity.LunchOrderStatusCancelled:
-	default:
-		return fmt.Errorf("%w: unknown status %q", ErrValidation, status)
-	}
-	orderOrg, err := uc.repo.GetOrderOrgID(ctx, orderID)
-	if err != nil {
-		return err
-	}
-	if orderOrg == 0 {
-		return ErrNotFound
-	}
-	if orderOrg != orgID {
-		return ErrNotOwner
-	}
-	return uc.repo.UpdateOrderStatus(ctx, orderID, status)
 }

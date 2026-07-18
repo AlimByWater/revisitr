@@ -5,17 +5,19 @@ import { cn } from '@/lib/utils'
 import { useBotQuery } from '@/features/bots/queries'
 import { normalizeTimeInput } from '@/features/bots/settings'
 import { lunchApi } from '@/features/lunch/api'
-import { useLunchOrdersQuery, useLunchProgramQuery } from '@/features/lunch/queries'
+import { useLunchProgramQuery } from '@/features/lunch/queries'
 import type {
   LunchAvailabilitySlot,
   LunchCourse,
   LunchFormat,
-  LunchOrder,
   LunchPriceMode,
   LunchProgram,
   SaveLunchCourseRequest,
   SaveLunchFormatRequest,
 } from '@/features/lunch/types'
+import { ordersApi } from '@/features/orders/api'
+import { ORDER_STATUS_LABELS, ORDER_STATUS_STYLES } from '@/features/orders/labels'
+import { useOrdersQuery } from '@/features/orders/queries'
 import { menusApi } from '@/features/menus/api'
 import { useMenuQuery, useMenusQuery } from '@/features/menus/queries'
 import type { Menu, MenuCategory } from '@/features/menus/types'
@@ -558,27 +560,15 @@ function FormatEditor({
 
 // ── Orders section ────────────────────────────────────────────────────────
 
-const ORDER_STATUS_LABELS: Record<LunchOrder['status'], string> = {
-  new: 'Новый',
-  sent: 'Отработан',
-  cancelled: 'Отменён',
-}
-
-const ORDER_STATUS_STYLES: Record<LunchOrder['status'], string> = {
-  new: 'bg-accent/10 text-accent',
-  sent: 'bg-green-100 text-green-700',
-  cancelled: 'bg-neutral-100 text-neutral-500',
-}
-
 function OrdersSection({ botId }: { botId: number }) {
   const [showAll, setShowAll] = useState(false)
-  const { data: orders = [], isError, mutate } = useLunchOrdersQuery(botId, showAll ? undefined : 'new')
+  const { data: orders = [], isError, mutate } = useOrdersQuery(botId, 'lunch', showAll ? undefined : 'new')
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null)
 
   const changeStatus = async (orderId: number, status: string) => {
     setBusyOrderId(orderId)
     try {
-      await lunchApi.updateOrderStatus(orderId, status)
+      await ordersApi.updateOrderStatus(orderId, status)
       await mutate()
     } finally {
       setBusyOrderId(null)

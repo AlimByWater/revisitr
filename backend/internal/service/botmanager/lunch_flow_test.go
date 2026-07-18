@@ -19,8 +19,11 @@ func TestBuildLunchOrderSnapshots(t *testing.T) {
 	if order.BotID != 2 || order.BotClientID != 42 || order.TableNum != "7" {
 		t.Errorf("order identity mismatch: %+v", order)
 	}
-	if order.Status != entity.LunchOrderStatusNew {
+	if order.Status != entity.OrderStatusNew {
 		t.Errorf("new order must have status new, got %q", order.Status)
+	}
+	if order.Source != entity.OrderSourceLunch {
+		t.Errorf("lunch flow must stamp source lunch, got %q", order.Source)
 	}
 	if order.FormatID == nil || *order.FormatID != 5 || order.FormatName != "Первое + Второе" {
 		t.Errorf("format snapshot mismatch: %+v", order)

@@ -24,8 +24,6 @@ type lunchUsecase interface {
 	UpdateFormat(ctx context.Context, orgID, formatID int, req entity.UpdateLunchFormatRequest) error
 	DeleteFormat(ctx context.Context, orgID, formatID int) error
 	SetAvailability(ctx context.Context, orgID, botID int, slots []entity.LunchAvailability) error
-	ListOrders(ctx context.Context, orgID, botID int, status string) ([]entity.LunchOrder, error)
-	UpdateOrderStatus(ctx context.Context, orgID, orderID int, status string) error
 }
 
 type Group struct {
@@ -59,8 +57,6 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handleUpdateFormat,
 		g.handleDeleteFormat,
 		g.handleSetAvailability,
-		g.handleListOrders,
-		g.handleUpdateOrderStatus,
 	}
 }
 
@@ -250,45 +246,6 @@ func (g *Group) handleSetAvailability() (string, string, gin.HandlerFunc) {
 		}
 
 		if err := g.uc.SetAvailability(c.Request.Context(), orgID.(int), botID, req.Slots); err != nil {
-			handleError(c, err)
-			return
-		}
-		c.Status(http.StatusNoContent)
-	}
-}
-
-func (g *Group) handleListOrders() (string, string, gin.HandlerFunc) {
-	return http.MethodGet, "/bots/:id/orders", func(c *gin.Context) {
-		orgID, _ := c.Get("org_id")
-		botID, ok := pathID(c, "bot")
-		if !ok {
-			return
-		}
-
-		orders, err := g.uc.ListOrders(c.Request.Context(), orgID.(int), botID, c.Query("status"))
-		if err != nil {
-			handleError(c, err)
-			return
-		}
-		c.JSON(http.StatusOK, orders)
-	}
-}
-
-func (g *Group) handleUpdateOrderStatus() (string, string, gin.HandlerFunc) {
-	return http.MethodPatch, "/orders/:id", func(c *gin.Context) {
-		orgID, _ := c.Get("org_id")
-		orderID, ok := pathID(c, "order")
-		if !ok {
-			return
-		}
-
-		var req entity.UpdateLunchOrderStatusRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		if err := g.uc.UpdateOrderStatus(c.Request.Context(), orgID.(int), orderID, req.Status); err != nil {
 			handleError(c, err)
 			return
 		}

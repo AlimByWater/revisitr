@@ -51,30 +51,6 @@ export interface LunchProgram {
   availability: LunchAvailabilitySlot[]
 }
 
-export interface LunchOrderItem {
-  id: number
-  lunch_order_id: number
-  course_id?: number
-  course_title: string
-  menu_item_id?: number
-  item_name: string
-  price: number
-  surcharge: number
-}
-
-export interface LunchOrder {
-  id: number
-  bot_id: number
-  bot_client_id: number
-  format_id?: number
-  format_name: string
-  table_num: string
-  total_price: number
-  status: 'new' | 'sent' | 'cancelled'
-  created_at: string
-  items: LunchOrderItem[]
-}
-
 export interface UpsertLunchProgramRequest {
   name?: string
   description?: string

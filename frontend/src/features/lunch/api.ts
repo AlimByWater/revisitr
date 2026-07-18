@@ -3,7 +3,6 @@ import type {
   LunchAvailabilitySlot,
   LunchCourse,
   LunchFormat,
-  LunchOrder,
   LunchProgram,
   SaveLunchCourseRequest,
   SaveLunchFormatRequest,
@@ -49,17 +48,5 @@ export const lunchApi = {
 
   setAvailability: async (botId: number, slots: LunchAvailabilitySlot[]): Promise<void> => {
     await api.put(`/lunch/bots/${botId}/availability`, { slots })
-  },
-
-  listOrders: async (botId: number, status?: string): Promise<LunchOrder[]> => {
-    const response = await api.get<LunchOrder[]>(`/lunch/bots/${botId}/orders`, {
-      params: status ? { status } : undefined,
-    })
-    // Backend returns JSON null when there are no orders.
-    return response.data ?? []
-  },
-
-  updateOrderStatus: async (orderId: number, status: string): Promise<void> => {
-    await api.patch(`/lunch/orders/${orderId}`, { status })
   },
 }
