@@ -1,0 +1,21 @@
+name: Infrastructure (dev)
+
+on:
+  push:
+    branches: [dev]
+    paths: ['backend/migrations/**', 'infra/scripts/migrate-dev.sh', '.github/workflows/infrastructure-dev.yml']
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'migrate action'
+        required: true
+        type: choice
+        options: [up, down, status]
+
+jobs:
+  migrate:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run dev migrations
+        run: bash infra/scripts/migrate-dev.sh ${{ github.event.inputs.action || 'up' }}

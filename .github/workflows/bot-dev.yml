@@ -1,0 +1,51 @@
+name: Bot (dev)
+
+on:
+  push:
+    branches: [dev]
+    paths: ['backend/**', '.github/workflows/bot-dev.yml']
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  lint:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+      - name: Lint
+        working-directory: backend
+        run: go vet ./...
+
+  build-deploy:
+    runs-on: self-hosted
+    needs: lint
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set image name
+        run: echo "IMAGE_NAME=$(echo '${{ github.repository }}/bot' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile.bot
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev
+      - name: Deploy
+        run: |
+          cd /opt/revisitr/infra
+          export DEV_BOT_TAG=dev
+          docker compose -f docker-compose.dev.yml pull dev-bot
+          docker compose -f docker-compose.dev.yml up -d --no-deps dev-bot
