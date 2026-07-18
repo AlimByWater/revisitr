@@ -12,14 +12,17 @@ import {
   useChangePasswordMutation,
   useBillingDetailsQuery,
   useUpdateBillingDetailsMutation,
+  useOrganizationQuery,
+  useUpdateOrganizationMutation,
 } from '@/features/account/queries'
+import { TIMEZONE_OPTIONS } from '@/features/account/timezones'
 import {
   ENTITY_TYPE_LABELS,
   ENTITY_FIELDS,
   type LegalEntityType,
   type BillingDetails,
 } from '@/features/account/types'
-import { User, Shield, FileText, LogOut, Check, X, Pencil } from 'lucide-react'
+import { User, Shield, FileText, LogOut, Check, X, Pencil, Building2 } from 'lucide-react'
 
 const inputClassName = cn(
   'w-full px-4 py-2.5 rounded border border-neutral-200',
@@ -28,6 +31,68 @@ const inputClassName = cn(
   'transition-colors',
   'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:border-neutral-300 disabled:text-neutral-500',
 )
+
+// ---------------------------------------------------------------------------
+// Organization Section
+// ---------------------------------------------------------------------------
+
+function OrganizationSection() {
+  const { data: org, isLoading, isError } = useOrganizationQuery()
+  const updateOrganization = useUpdateOrganizationMutation()
+  const [saved, setSaved] = useState(false)
+
+  const handleTimezoneChange = async (timezone: string) => {
+    if (!org || timezone === org.timezone) return
+    setSaved(false)
+    await updateOrganization.mutate({ timezone })
+    setSaved(true)
+  }
+
+  if (isLoading) {
+    return <div className="border border-neutral-900 rounded bg-white p-6 h-32 animate-pulse" />
+  }
+  if (isError || !org) {
+    return null
+  }
+
+  return (
+    <div className="border border-neutral-900 rounded bg-white p-6 animate-in">
+      <div className="flex items-center gap-2 mb-5">
+        <Building2 className="w-5 h-5 text-neutral-900" />
+        <h2 className="text-lg font-semibold text-neutral-900">Организация</h2>
+      </div>
+
+      <div className="space-y-5">
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1.5">Название</label>
+          <input type="text" value={org.name} disabled className={inputClassName} />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1.5">Часовой пояс</label>
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <CustomSelect
+                value={org.timezone}
+                onChange={handleTimezoneChange}
+                options={TIMEZONE_OPTIONS}
+              />
+            </div>
+            {saved && (
+              <span className="shrink-0 inline-flex items-center gap-1 text-sm text-green-600">
+                <Check className="w-4 h-4" />
+                Сохранено
+              </span>
+            )}
+          </div>
+          <p className="mt-1.5 text-xs text-neutral-400">
+            Используется для расписаний модулей — например, окна доступности бизнес-ланча.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Profile Section
@@ -504,6 +569,7 @@ export default function AccountPage() {
       </div>
 
       <ProfileSection />
+      <OrganizationSection />
       <SecuritySection />
       <BillingDetailsSection />
 

@@ -6,6 +6,8 @@ import type {
   ChangePhoneRequest,
   ChangePasswordRequest,
   BillingDetails,
+  Organization,
+  UpdateOrganizationRequest,
 } from './types'
 import type { User } from '@/features/auth/types'
 
@@ -39,6 +41,18 @@ export function useChangePasswordMutation() {
   return useApiMutation<void, ChangePasswordRequest>(
     'account/change-password',
     accountApi.changePassword,
+  )
+}
+
+export function useOrganizationQuery() {
+  return useApiQuery<Organization>('account/org', accountApi.getOrganization)
+}
+
+export function useUpdateOrganizationMutation() {
+  return useApiMutation<Organization, UpdateOrganizationRequest>(
+    'account/org/update',
+    accountApi.updateOrganization,
+    ['account/org'],
   )
 }
 

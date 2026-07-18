@@ -6,6 +6,8 @@ import type {
   ChangePhoneRequest,
   ChangePasswordRequest,
   BillingDetails,
+  Organization,
+  UpdateOrganizationRequest,
 } from './types'
 
 export const accountApi = {
@@ -29,6 +31,16 @@ export const accountApi = {
 
   changePassword: async (data: ChangePasswordRequest): Promise<void> => {
     await api.post('/account/change-password', data)
+  },
+
+  getOrganization: async (): Promise<Organization> => {
+    const response = await api.get<Organization>('/account/org')
+    return response.data
+  },
+
+  updateOrganization: async (data: UpdateOrganizationRequest): Promise<Organization> => {
+    const response = await api.patch<Organization>('/account/org', data)
+    return response.data
   },
 
   getBillingDetails: async (): Promise<BillingDetails> => {

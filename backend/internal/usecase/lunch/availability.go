@@ -19,8 +19,8 @@ func isoWeekday(t time.Time) int {
 
 // IsAvailableAt reports whether t falls inside any availability slot.
 // Slot start is inclusive, end is exclusive (12:00–16:00 admits 12:00, not 16:00).
-// Times are evaluated in t's location; the system has no org timezone yet,
-// so callers pass server-local time.
+// Times are evaluated in t's location; callers pass the current time in the
+// organization's timezone (see handler.orgNow in botmanager).
 func IsAvailableAt(slots []entity.LunchAvailability, t time.Time) bool {
 	weekday := isoWeekday(t)
 	minutes := t.Hour()*60 + t.Minute()

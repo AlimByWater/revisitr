@@ -58,6 +58,7 @@ func main() {
 	menusRepo := pgRepo.NewMenus(pg)
 	lunchRepo := pgRepo.NewLunch(pg)
 	ordersRepo := pgRepo.NewOrders(pg)
+	orgsRepo := pgRepo.NewOrganizations(pg)
 	emojiPacksRepo := pgRepo.NewEmojiPacks(pg)
 	botModuleSettingsRepo := pgRepo.NewBotModuleSettings(pg)
 
@@ -81,6 +82,7 @@ func main() {
 	mgrOpts = append(mgrOpts, botmanager.WithMenus(menusRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithLunch(lunchRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithOrders(ordersRepo))
+	mgrOpts = append(mgrOpts, botmanager.WithOrganizations(orgsRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithLunchEvents(eventbus.New(rds.Client, logger)))
 	mgrOpts = append(mgrOpts, botmanager.WithEmoji(emojiPacksRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithSessionStore(botmanager.NewRedisSessionStore(rds.Client())))

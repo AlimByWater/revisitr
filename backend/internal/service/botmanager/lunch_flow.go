@@ -94,13 +94,35 @@ func (h *handler) lunchData(ctx context.Context) *entity.LunchProgram {
 	return program
 }
 
+// orgNow returns the current time in the organization's timezone, falling
+// back to server time when the timezone is unknown or unresolvable.
+func (h *handler) orgNow(ctx context.Context) time.Time {
+	now := time.Now()
+	if h.mgr.orgsRepo == nil {
+		return now
+	}
+	tz, err := h.mgr.orgsRepo.GetTimezone(ctx, h.info.OrgID)
+	if err != nil || tz == "" {
+		if err != nil {
+			h.logger.Warn("org timezone lookup failed", "error", err, "org_id", h.info.OrgID)
+		}
+		return now
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		h.logger.Warn("org timezone invalid", "timezone", tz, "org_id", h.info.OrgID)
+		return now
+	}
+	return now.In(loc)
+}
+
 // lunchAvailableNow reports whether the lunch module should be visible:
-// program active, has formats and the current server-local time is inside
-// an availability window (no org timezone exists in the system yet).
+// program active, has formats and the current org-local time is inside
+// an availability window.
 func (h *handler) lunchAvailableNow(ctx context.Context) bool {
 	program := h.lunchData(ctx)
 	return program != nil && len(program.Formats) > 0 &&
-		lunchUC.IsAvailableAt(program.Availability, time.Now())
+		lunchUC.IsAvailableAt(program.Availability, h.orgNow(ctx))
 }
 
 // mainMenuKeyboard builds the main reply keyboard, hiding the lunch button
@@ -136,7 +158,7 @@ func (h *handler) handleLunch(ctx context.Context, msg *telego.Message) {
 		h.sendText(chatID, "Ланч сейчас недоступен.")
 		return
 	}
-	if !lunchUC.IsAvailableAt(program.Availability, time.Now()) {
+	if !lunchUC.IsAvailableAt(program.Availability, h.orgNow(ctx)) {
 		if schedule := lunchUC.FormatSchedule(program.Availability); schedule != "" {
 			h.sendText(chatID, "Ланч доступен: "+schedule+". Ждём вас!")
 		} else {
@@ -419,7 +441,7 @@ func (h *handler) finalizeLunchOrder(ctx context.Context, query *telego.Callback
 	courses := lunchFormatCourses(program, format)
 
 	// The window may have closed while the guest was assembling.
-	if !lunchUC.IsAvailableAt(program.Availability, time.Now()) {
+	if !lunchUC.IsAvailableAt(program.Availability, h.orgNow(ctx)) {
 		h.answerCallback(query.ID, "Ланч уже закрылся")
 		if schedule := lunchUC.FormatSchedule(program.Availability); schedule != "" {
 			h.sendText(chatID, "Ланч уже закрылся. Расписание: "+schedule+".")

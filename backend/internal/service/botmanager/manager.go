@@ -58,6 +58,10 @@ type ordersRepository interface {
 	Create(ctx context.Context, order *entity.Order) error
 }
 
+type organizationsRepository interface {
+	GetTimezone(ctx context.Context, orgID int) (string, error)
+}
+
 type lunchEventPublisher interface {
 	PublishLunchOrderCreated(ctx context.Context, event eventbus.LunchOrderEvent) error
 }
@@ -96,6 +100,7 @@ type Manager struct {
 	menusRepo          menusRepository
 	lunchRepo          lunchRepository
 	ordersRepo         ordersRepository
+	orgsRepo           organizationsRepository
 	lunchEvents        lunchEventPublisher
 	emojiRepo          emojiRepository
 	moduleSettingsRepo moduleSettingsRepository
@@ -143,6 +148,10 @@ func WithLunch(repo lunchRepository) ManagerOption {
 
 func WithOrders(repo ordersRepository) ManagerOption {
 	return func(m *Manager) { m.ordersRepo = repo }
+}
+
+func WithOrganizations(repo organizationsRepository) ManagerOption {
+	return func(m *Manager) { m.orgsRepo = repo }
 }
 
 func WithLunchEvents(pub lunchEventPublisher) ManagerOption {

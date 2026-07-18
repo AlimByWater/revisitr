@@ -28,6 +28,7 @@ import (
 	menusGroup "revisitr/internal/controller/http/group/menus"
 	modulepresetsGroup "revisitr/internal/controller/http/group/modulepresets"
 	onboardingGroup "revisitr/internal/controller/http/group/onboarding"
+	accountGroup "revisitr/internal/controller/http/group/account"
 	ordersGroup "revisitr/internal/controller/http/group/orders"
 	posGroup "revisitr/internal/controller/http/group/pos"
 	pospluginGroup "revisitr/internal/controller/http/group/posplugin"
@@ -62,6 +63,7 @@ import (
 	menusUC "revisitr/internal/usecase/menus"
 	modulepresetsUC "revisitr/internal/usecase/modulepresets"
 	onboardingUC "revisitr/internal/usecase/onboarding"
+	accountUC "revisitr/internal/usecase/account"
 	ordersUC "revisitr/internal/usecase/orders"
 	posUC "revisitr/internal/usecase/pos"
 	pospluginUC "revisitr/internal/usecase/posplugin"
@@ -127,6 +129,7 @@ func main() {
 	menusRepo := pgRepo.NewMenus(pg)
 	lunchRepo := pgRepo.NewLunch(pg)
 	ordersRepo := pgRepo.NewOrders(pg)
+	orgsRepo := pgRepo.NewOrganizations(pg)
 	rfmRepo := pgRepo.NewRFM(pg)
 	onboardingRepo := pgRepo.NewOnboarding(pg)
 
@@ -196,6 +199,7 @@ func main() {
 	menusUsecase := menusUC.New(menusRepo)
 	lunchUsecase := lunchUC.New(lunchRepo, botsRepo)
 	ordersUsecase := ordersUC.New(ordersRepo, botsRepo)
+	accountUsecase := accountUC.New(orgsRepo)
 	rfmUsecase := rfmUC.New(rfmRepo, segmentsRepo, rfmSvc)
 	onboardingUsecase := onboardingUC.New(onboardingRepo)
 
@@ -278,6 +282,7 @@ func main() {
 	menusGrp := menusGroup.New(menusUsecase, jwtSecret)
 	lunchGrp := lunchGroup.New(lunchUsecase, jwtSecret)
 	ordersGrp := ordersGroup.New(ordersUsecase, jwtSecret)
+	accountGrp := accountGroup.New(accountUsecase, jwtSecret)
 	rfmGrp := rfmGroup.New(rfmUsecase, jwtSecret,
 		rfmGroup.WithFeatureGate(rfmGate),
 	)
@@ -289,7 +294,7 @@ func main() {
 		analyticsGrp, segmentsGrp, promotionsGrp, integrationsGrp,
 		pluginGrp, pluginAdminGrp,
 		filesGrp,
-		menusGrp, lunchGrp, ordersGrp, rfmGrp, onboardingGrp,
+		menusGrp, lunchGrp, ordersGrp, accountGrp, rfmGrp, onboardingGrp,
 		billingGrp, masterbotGrp, walletGrp, marketplaceGrp, postsGrp,
 		emojiPacksGrp,
 		modulepresetsGrp,
@@ -358,7 +363,7 @@ func main() {
 			clientsUsecase, dashboardUsecase, campaignsUsecase,
 			analyticsUsecase, segmentsUsecase, promotionsUsecase, integrationsUsecase,
 			pluginUsecase,
-			menusUsecase, lunchUsecase, ordersUsecase, rfmUsecase, onboardingUsecase,
+			menusUsecase, lunchUsecase, ordersUsecase, accountUsecase, rfmUsecase, onboardingUsecase,
 			billingUsecase, walletUsecase, marketplaceUsecase,
 			emojiPacksUsecase,
 		},

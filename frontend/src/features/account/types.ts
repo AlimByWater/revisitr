@@ -2,6 +2,16 @@ export interface UpdateProfileRequest {
   name: string
 }
 
+export interface Organization {
+  id: number
+  name: string
+  timezone: string
+}
+
+export interface UpdateOrganizationRequest {
+  timezone?: string
+}
+
 export interface ChangeEmailRequest {
   new_email: string
 }
