@@ -14,6 +14,7 @@ import {
   Workflow,
   CreditCard,
   ChevronDown,
+  ShoppingBag,
   Smile,
   type LucideIcon,
 } from 'lucide-react'
@@ -36,6 +37,11 @@ const navigation: NavItem[] = [
     label: 'Дашборд',
     icon: LayoutDashboard,
     href: '/dashboard',
+  },
+  {
+    label: 'Заказы',
+    icon: ShoppingBag,
+    href: '/dashboard/orders',
   },
   {
     label: 'Аналитика',
@@ -117,10 +123,10 @@ const navigation: NavItem[] = [
 
 // Group indices for default theme ordering:
 // Group 1 (top): Дашборд (index 0)
-// Group 2 (business): Аналитика(1), Клиенты(2), Лояльность(3), Рассылки(4), Акции(5)
-// Group 3 (config): Мои боты(6), Точки продаж(7), Интеграции(8), Биллинг(9), Эмодзи(10)
-const groupBusiness = [1, 2, 3, 4, 5]
-const groupConfig = [6, 7, 8, 9, 10]
+// Group 2 (business): Заказы(1), Аналитика(2), Клиенты(3), Лояльность(4), Рассылки(5), Акции(6)
+// Group 3 (config): Мои боты(7), Точки продаж(8), Интеграции(9), Биллинг(10), Эмодзи(11)
+const groupBusiness = [1, 2, 3, 4, 5, 6]
+const groupConfig = [7, 8, 9, 10, 11]
 
 // Collect ALL child hrefs across all nav groups for global best-match logic
 const allNavHrefs = navigation.flatMap(item =>

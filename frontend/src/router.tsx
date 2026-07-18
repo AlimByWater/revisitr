@@ -17,6 +17,7 @@ const BotBookingSettingsPage = lazy(() => import('./routes/dashboard/bots/bookin
 const BotLunchSettingsPage = lazy(() => import('./routes/dashboard/bots/lunch'))
 const BotFeedbackSettingsPage = lazy(() => import('./routes/dashboard/bots/feedback'))
 const BotMenuSettingsPage = lazy(() => import('./routes/dashboard/bots/menu'))
+const OrdersPage = lazy(() => import('./routes/dashboard/orders'))
 const ClientsPage = lazy(() => import('./routes/dashboard/clients/index'))
 const ClientDetailPage = lazy(() => import('./routes/dashboard/clients/$clientId'))
 const LoyaltyProgramsPage = lazy(() => import('./routes/dashboard/loyalty/index'))
@@ -127,6 +128,7 @@ export const router = createBrowserRouter(
             { path: 'bots/:botId/lunch', element: lazyElement(BotLunchSettingsPage) },
             { path: 'bots/:botId/menu', element: lazyElement(BotMenuSettingsPage) },
             { path: 'bots/:botId', element: lazyElement(BotDetailPage) },
+            { path: 'orders', element: lazyElement(OrdersPage) },
             { path: 'clients', element: lazyElement(ClientsPage) },
             { path: 'clients/segments', element: lazyElement(SegmentsPage) },
             { path: 'clients/custom-segments', element: lazyElement(CustomSegmentsPage) },

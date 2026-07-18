@@ -8,6 +8,7 @@ import {
   Mail,
   Bot,
   Store,
+  ShoppingBag,
   Smile,
   X,
   LogOut,
@@ -23,6 +24,7 @@ interface MobileNavItem {
 
 const mobileNav: MobileNavItem[] = [
   { label: 'Дашборд', icon: LayoutDashboard, href: '/dashboard' },
+  { label: 'Заказы', icon: ShoppingBag, href: '/dashboard/orders' },
   { label: 'Клиенты', icon: Users, href: '/dashboard/clients' },
   { label: 'Лояльность', icon: Heart, href: '/dashboard/loyalty' },
   { label: 'Рассылки', icon: Mail, href: '/dashboard/campaigns' },
