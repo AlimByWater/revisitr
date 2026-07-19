@@ -149,20 +149,6 @@ func (h *handler) sendWelcomeWithMenu(ctx context.Context, chatID int64, client 
 	values := templateValues(client, user)
 	replyKB := h.mainMenuKeyboard(ctx)
 
-	// Debug: log the keyboard buttons being sent
-	labels := make([]string, 0)
-	for _, row := range replyKB.Keyboard {
-		for _, btn := range row {
-			labels = append(labels, btn.Text)
-		}
-	}
-	h.logger.Info("main menu keyboard built",
-		"chat_id", chatID,
-		"modules", settings.Modules,
-		"buttons", labels,
-		"lunch_enabled", h.lunchModuleEnabled(),
-	)
-
 	// Composite welcome content — send with reply keyboard on last part
 	if h.tgSender != nil && h.hasWelcomeContent() {
 		content := personalizeMessageContent(*settings.WelcomeContent, values)
