@@ -43,6 +43,7 @@ func (h *handler) lunchModuleEnabled() bool {
 // formats or formats referencing a dropped course are dropped.
 func (h *handler) lunchData(ctx context.Context) *entity.LunchProgram {
 	if h.mgr.lunchRepo == nil {
+		h.logger.Warn("lunchData: lunchRepo is nil")
 		return nil
 	}
 	program, err := h.mgr.lunchRepo.GetFullProgramByBotID(ctx, h.info.ID)
@@ -50,7 +51,12 @@ func (h *handler) lunchData(ctx context.Context) *entity.LunchProgram {
 		h.logger.Error("load lunch program", "error", err)
 		return nil
 	}
-	if program == nil || !program.IsActive {
+	if program == nil {
+		h.logger.Warn("lunchData: program is nil for bot", "bot_id", h.info.ID)
+		return nil
+	}
+	if !program.IsActive {
+		h.logger.Warn("lunchData: program is not active", "bot_id", h.info.ID)
 		return nil
 	}
 
@@ -99,8 +105,17 @@ func (h *handler) lunchData(ctx context.Context) *entity.LunchProgram {
 // an availability window (no org timezone exists in the system yet).
 func (h *handler) lunchAvailableNow(ctx context.Context) bool {
 	program := h.lunchData(ctx)
-	return program != nil && len(program.Formats) > 0 &&
+	avail := program != nil && len(program.Formats) > 0 &&
 		lunchUC.IsAvailableAt(program.Availability, time.Now())
+	if !avail {
+		h.logger.Warn("lunchAvailableNow: not available",
+			"bot_id", h.info.ID,
+			"program_nil", program == nil,
+			"formats", func() int { if program != nil { return len(program.Formats) }; return 0 }(),
+			"avail_slots", func() int { if program != nil { return len(program.Availability) }; return 0 }(),
+		)
+	}
+	return avail
 }
 
 // mainMenuKeyboard builds the main reply keyboard, hiding the lunch button
