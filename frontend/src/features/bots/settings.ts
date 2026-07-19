@@ -141,6 +141,9 @@ export function getSystemButtons(modules: string[]): SystemButtonMeta[] {
   if (modules.includes('menu')) {
     buttons.push({ label: 'Меню', managed_by_module: 'menu', configureLabel: 'Меню', isExpandable: false })
   }
+  if (modules.includes('lunch')) {
+    buttons.push({ label: 'Ланч', managed_by_module: 'lunch', configureLabel: 'Ланч', isExpandable: true })
+  }
   if (modules.includes('booking')) {
     buttons.push({ label: 'Забронировать', managed_by_module: 'booking', configureLabel: 'Бронирование', isExpandable: true })
   }
