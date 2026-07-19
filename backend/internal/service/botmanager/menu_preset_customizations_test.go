@@ -1,6 +1,7 @@
 package botmanager
 
 import (
+	"strings"
 	"testing"
 
 	"revisitr/internal/entity"
@@ -85,6 +86,39 @@ func TestBuildCategoryTabRowsMarksActiveCategory(t *testing.T) {
 	}
 }
 
+func TestBuildCategoryTabRowsIsolatesLongLabels(t *testing.T) {
+	rows := buildCategoryTabRows([]menuCategoryPresentation{
+		{Category: entity.MenuCategory{ID: 1}, ButtonText: "Закуски"},
+		{Category: entity.MenuCategory{ID: 2}, ButtonText: "Основные блюда"},
+		{Category: entity.MenuCategory{ID: 3}, ButtonText: "Десерты"},
+		{Category: entity.MenuCategory{ID: 4}, ButtonText: "Напитки"},
+	}, 0)
+
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 rows, got %d: %#v", len(rows), rows)
+	}
+	if len(rows[0]) != 2 || len(rows[1]) != 2 {
+		t.Fatalf("expected long label to cap rows at 2 columns, got row sizes %d/%d", len(rows[0]), len(rows[1]))
+	}
+	if rows[0][1].Text != "Основные блюда" {
+		t.Fatalf("expected long label to share a row with only one sibling, got %#v", rows[0])
+	}
+}
+
+func TestBuildCategoryTabRowsPacksShortLabelsFour(t *testing.T) {
+	rows := buildCategoryTabRows([]menuCategoryPresentation{
+		{Category: entity.MenuCategory{ID: 1}, ButtonText: "Закуски"},
+		{Category: entity.MenuCategory{ID: 2}, ButtonText: "Салаты"},
+		{Category: entity.MenuCategory{ID: 3}, ButtonText: "Горячее"},
+		{Category: entity.MenuCategory{ID: 4}, ButtonText: "Напитки"},
+		{Category: entity.MenuCategory{ID: 5}, ButtonText: "Десерты"},
+	}, 0)
+
+	if len(rows) != 2 || len(rows[0]) != 4 || len(rows[1]) != 1 {
+		t.Fatalf("expected 4-per-row packing for short labels, got %#v", rows)
+	}
+}
+
 func TestPresentMenuCategoriesSupportsEmojiOnlyTabs(t *testing.T) {
 	h := &handler{}
 	icon := "🍰"
@@ -127,6 +161,92 @@ func TestMenuListTextModes(t *testing.T) {
 	}
 	if got := menuCategoryItemsTextWithDensity(category, menuListDensityDetail); got != "Grand Line Bruschetta — 149 ₽ • 120 г\nХрустящий багет" {
 		t.Fatalf("detailed = %q", got)
+	}
+}
+
+func TestFormatMenuItemCardText(t *testing.T) {
+	t.Run("full item", func(t *testing.T) {
+		item := entity.MenuItem{
+			Name:        "Blinis Demidoff",
+			Price:       1390,
+			Weight:      strPtr("140 г"),
+			Description: strPtr("Гречневые блины с крем-фрешем и икрой осетра, подаются в холодной подаче."),
+			IsAvailable: true,
+		}
+		got := formatMenuItemCardText("Закуски", item)
+		want := "/// Закуски\n<b>Blinis Demidoff — 1390 ₽</b>\n<i>140 г</i>\n\nГречневые блины с крем-фрешем и икрой осетра, подаются в холодной подаче."
+		if got != want {
+			t.Fatalf("got:\n%s\n\nwant:\n%s", got, want)
+		}
+	})
+
+	t.Run("no weight", func(t *testing.T) {
+		item := entity.MenuItem{
+			Name:        "Espresso",
+			Price:       250,
+			Description: strPtr("Классический эспрессо 30 мл"),
+			IsAvailable: true,
+		}
+		got := formatMenuItemCardText("Напитки", item)
+		want := "/// Напитки\n<b>Espresso — 250 ₽</b>\n\nКлассический эспрессо 30 мл"
+		if got != want {
+			t.Fatalf("got:\n%s\n\nwant:\n%s", got, want)
+		}
+	})
+
+	t.Run("no description", func(t *testing.T) {
+		item := entity.MenuItem{
+			Name:        "Water",
+			Price:       100,
+			Weight:      strPtr("500 мл"),
+			IsAvailable: true,
+		}
+		got := formatMenuItemCardText("Напитки", item)
+		want := "/// Напитки\n<b>Water — 100 ₽</b>\n<i>500 мл</i>"
+		if got != want {
+			t.Fatalf("got:\n%s\n\nwant:\n%s", got, want)
+		}
+	})
+
+	t.Run("name and description HTML chars are escaped", func(t *testing.T) {
+		item := entity.MenuItem{
+			Name:        "Fish & Chips",
+			Price:       590,
+			Description: strPtr("<b>Test</b>"),
+			IsAvailable: true,
+		}
+		got := formatMenuItemCardText("Main", item)
+		if !strings.Contains(got, "Fish &amp; Chips") {
+			t.Fatalf("expected name HTML escaped, got: %s", got)
+		}
+		if !strings.Contains(got, "&lt;b&gt;Test&lt;/b&gt;") {
+			t.Fatalf("expected description HTML escaped, got: %s", got)
+		}
+	})
+
+	t.Run("heading with HTML chars is escaped", func(t *testing.T) {
+		item := entity.MenuItem{
+			Name:        "Espresso",
+			Price:       250,
+			IsAvailable: true,
+		}
+		got := formatMenuItemCardText("Бар & Гриль", item)
+		if strings.Contains(got, "Бар & Гриль") || !strings.Contains(got, "Бар &amp; Гриль") {
+			t.Fatalf("expected heading HTML escaped, got: %s", got)
+		}
+	})
+}
+
+func TestTruncateMenuCaption(t *testing.T) {
+	long := strings.Repeat("a", menuCaptionMaxLen+500)
+	got := truncateMenuCaption(long)
+	if len([]rune(got)) > menuCaptionMaxLen {
+		t.Fatalf("caption exceeds Telegram's %d char limit: got %d chars", menuCaptionMaxLen, len([]rune(got)))
+	}
+
+	short := "short text"
+	if got := truncateMenuCaption(short); got != short {
+		t.Fatalf("short text should be unchanged, got: %s", got)
 	}
 }
 

@@ -36,15 +36,25 @@ type repository interface {
 	UpdateReserve(ctx context.Context, reserve *entity.BalanceReserve) error
 	GetPendingReserves(ctx context.Context, clientID, programID int) ([]entity.BalanceReserve, error)
 	ExpireOldReserves(ctx context.Context) (int, error)
+	GetLevelByID(ctx context.Context, id int) (*entity.LoyaltyLevel, error)
+}
+
+type walletUpdater interface {
+	RefreshPassBalance(ctx context.Context, clientID int, balance int, level string) error
 }
 
 type Usecase struct {
 	repo   repository
 	logger *slog.Logger
+	wallet walletUpdater
 }
 
 func New(repo repository) *Usecase {
 	return &Usecase{repo: repo}
+}
+
+func NewWithWallet(repo repository, wallet walletUpdater) *Usecase {
+	return &Usecase{repo: repo, wallet: wallet}
 }
 
 func (uc *Usecase) Init(_ context.Context, logger *slog.Logger) error {
@@ -195,6 +205,8 @@ func (uc *Usecase) EarnPoints(ctx context.Context, clientID, programID int, amou
 		return nil, fmt.Errorf("usecase.EarnPoints upsert: %w", err)
 	}
 
+	uc.notifyWallet(ctx, clientID, cl.Balance, cl.LevelID)
+
 	return cl, nil
 }
 
@@ -227,6 +239,8 @@ func (uc *Usecase) SpendPoints(ctx context.Context, clientID, programID int, amo
 	if err := uc.repo.UpsertClientLoyalty(ctx, cl); err != nil {
 		return nil, fmt.Errorf("usecase.SpendPoints upsert: %w", err)
 	}
+
+	uc.notifyWallet(ctx, clientID, cl.Balance, cl.LevelID)
 
 	return cl, nil
 }
@@ -318,4 +332,25 @@ func (uc *Usecase) determineLevelID(ctx context.Context, programID int, totalEar
 		return &bestLevel.ID
 	}
 	return nil
+}
+
+func (uc *Usecase) getLevelName(ctx context.Context, levelID *int) string {
+	if levelID == nil {
+		return ""
+	}
+	level, err := uc.repo.GetLevelByID(ctx, *levelID)
+	if err != nil || level == nil {
+		return ""
+	}
+	return level.Name
+}
+
+func (uc *Usecase) notifyWallet(ctx context.Context, clientID int, balance float64, levelID *int) {
+	if uc.wallet == nil {
+		return
+	}
+	levelName := uc.getLevelName(ctx, levelID)
+	if err := uc.wallet.RefreshPassBalance(ctx, clientID, int(balance), levelName); err != nil {
+		uc.logger.Warn("wallet refresh failed", "client_id", clientID, "error", err)
+	}
 }

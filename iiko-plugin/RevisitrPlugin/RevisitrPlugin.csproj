@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Revisitr iiko loyalty plugin (iikoFront Front.Net).
+    Target API: V8 (host iikoFront 9.4 ships Resto.Front.Api.V7/V8/V9 → V8 supported).
+    See docs/integrations/iiko/PLUGIN_DESIGN.md §1.1.
+
+    Build discipline: the Resto.Front.Api.Vx contract is COMPILE-TIME ONLY and
+    must NOT be shipped — iikoFront supplies it at runtime. We enforce this with
+    ExcludeAssets=runtime on the contract package. The plugin folder also needs a
+    hand-written manifest.xml (FileName/TypeName/ApiVersion) — see README/deploy.
+
+    Build (on Windows, needs .NET SDK):
+      dotnet build RevisitrPlugin.csproj -c Release
+  -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <AssemblyName>Resto.Front.Api.RevisitrPlugin</AssemblyName>
+    <RootNamespace>Revisitr.IikoPlugin</RootNamespace>
+    <Company>Revisitr</Company>
+    <Product>Revisitr iiko Loyalty Plugin</Product>
+    <Copyright>Copyright © Revisitr</Copyright>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- HttpClient + built-in JSON (JavaScriptSerializer). No third-party deps. -->
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Web.Extensions" />
+    <!-- Required by the Front.Net API surface (dialogs / view manager). -->
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- net472 reference assemblies via NuGet (no dev-pack/targeting-pack needed on the build host). -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- Contract: compile-time only; ExcludeAssets=runtime keeps it out of the output. -->
+    <PackageReference Include="Resto.Front.Api.V8" Version="8.7.6032">
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="revisitr.plugin.config.example.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- iikoFront requires a manifest.xml (FileName/TypeName/ApiVersion) in the plugin folder. -->
+    <None Include="manifest.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

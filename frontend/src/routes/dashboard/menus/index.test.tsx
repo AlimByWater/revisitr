@@ -205,4 +205,42 @@ describe('MenusPage', () => {
     })
     expect(screen.getByRole('status')).toHaveTextContent('Копия создана. Точки продаж не привязаны.')
   })
+
+  it('requires confirmation before deleting a menu', async () => {
+    const deleteMutate = vi.fn().mockResolvedValue(undefined)
+    const refetchMenus = vi.fn()
+    mockUseDeleteMenuMutation.mockReturnValue({
+      ...mutationStub(),
+      mutate: deleteMutate,
+    } as unknown as ReturnType<typeof useDeleteMenuMutation>)
+    mockUseMenusQuery.mockReturnValue({
+      data: [
+        {
+          id: 1,
+          org_id: 1,
+          name: 'Основное меню',
+          source: 'manual',
+          created_at: '2026-04-18T00:00:00Z',
+          updated_at: '2026-04-18T00:00:00Z',
+          categories: [],
+          bindings: [],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+      mutate: refetchMenus,
+      error: undefined,
+      isValidating: false,
+    } as unknown as ReturnType<typeof useMenusQuery>)
+
+    renderPage()
+
+    fireEvent.click(screen.getByRole('button', { name: /Удалить меню/i }))
+    expect(deleteMutate).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: /^Удалить$/i }))
+    await waitFor(() => {
+      expect(deleteMutate).toHaveBeenCalledWith(1)
+    })
+  })
 })

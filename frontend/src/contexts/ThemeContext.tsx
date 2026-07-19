@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 
-export type Theme = 'default' | 'aurora'
+export type Theme = 'light' | 'dark'
 
 interface ThemeContextType {
   theme: Theme
@@ -13,7 +13,7 @@ const ThemeContext = createContext<ThemeContextType | null>(null)
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     const saved = localStorage.getItem('revisitr-theme')
-    return (saved === 'aurora' ? 'aurora' : 'default') as Theme
+    return (saved === 'dark' ? 'dark' : 'light') as Theme
   })
 
   const setTheme = (t: Theme) => {
@@ -22,7 +22,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }
 
   const toggleTheme = () => {
-    setTheme(theme === 'default' ? 'aurora' : 'default')
+    setTheme(theme === 'light' ? 'dark' : 'light')
   }
 
   useEffect(() => {

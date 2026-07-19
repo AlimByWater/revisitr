@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { useAddCategoryMutation, useAddItemMutation, useDeleteItemMutation, useMenuQuery, useUpdateCategoryMutation, useUpdateItemMutation, useUpdateMenuMutation } from '@/features/menus/queries'
+import { useAddCategoryMutation, useAddItemMutation, useDeleteCategoryMutation, useDeleteItemMutation, useMenuQuery, useUpdateCategoryMutation, useUpdateItemMutation, useUpdateMenuMutation } from '@/features/menus/queries'
 import { menusApi } from '@/features/menus/api'
 import type {
   CreateMenuItemRequest,
@@ -140,6 +140,12 @@ export default function MenuDetailPage() {
     setNewCategory({ name: '', icon_emoji: '', icon_image_url: '' })
     setShowAddCategory(false)
     mutate()
+  }
+
+  const handleNewCategoryIconUpload = async (file?: File | null) => {
+    if (!file) return
+    const uploaded = await campaignsApi.uploadFile(file)
+    setNewCategory((current) => ({ ...current, icon_image_url: uploaded }))
   }
 
   if (isLoading || !draft) {
@@ -372,6 +378,29 @@ export default function MenuDetailPage() {
               placeholder="Название категории"
               className={cn(inputClassName, 'flex-1 min-w-[240px]')}
             />
+            <input
+              type="text"
+              value={newCategory.icon_emoji}
+              onChange={(event) => setNewCategory((current) => ({ ...current, icon_emoji: event.target.value }))}
+              placeholder="Эмодзи (например ☕)"
+              className={cn(inputClassName, 'w-40')}
+            />
+            <input
+              type="text"
+              value={newCategory.icon_image_url}
+              onChange={(event) => setNewCategory((current) => ({ ...current, icon_image_url: event.target.value }))}
+              placeholder="URL иконки"
+              className={cn(inputClassName, 'flex-1 min-w-[200px]')}
+            />
+            <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded border border-dashed border-neutral-200 px-3 text-sm text-neutral-600 hover:border-accent hover:text-accent">
+              Загрузить иконку
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => void handleNewCategoryIconUpload(event.target.files?.[0])}
+              />
+            </label>
           </div>
           <div className="mt-4 flex gap-3">
             <button
@@ -448,6 +477,8 @@ function CategorySection({
 
   const addItem = useAddItemMutation(menuId, category.id)
   const updateCategory = useUpdateCategoryMutation()
+  const deleteCategory = useDeleteCategoryMutation()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
     setDraftCategory({
@@ -462,10 +493,21 @@ function CategorySection({
       categoryId: category.id,
       data: {
         name: draftCategory.name,
-        icon_emoji: draftCategory.icon_emoji || undefined,
-        icon_image_url: draftCategory.icon_image_url || undefined,
+        icon_emoji: draftCategory.icon_emoji,
+        icon_image_url: draftCategory.icon_image_url,
       },
     })
+    onUpdate()
+  }
+
+  const handleCategoryIconUpload = async (file?: File | null) => {
+    if (!file) return
+    const uploaded = await campaignsApi.uploadFile(file)
+    setDraftCategory((current) => ({ ...current, icon_image_url: uploaded }))
+  }
+
+  const handleDeleteCategory = async () => {
+    await deleteCategory.mutate(category.id)
     onUpdate()
   }
 
@@ -520,6 +562,31 @@ function CategorySection({
           <div className="flex flex-wrap items-center gap-3">
             <input
               type="text"
+              value={draftCategory.icon_emoji}
+              onChange={(event) => setDraftCategory((current) => ({ ...current, icon_emoji: event.target.value }))}
+              placeholder="Эмодзи (например ☕)"
+              className={cn(inputClassName, 'w-40')}
+            />
+            <input
+              type="text"
+              value={draftCategory.icon_image_url}
+              onChange={(event) => setDraftCategory((current) => ({ ...current, icon_image_url: event.target.value }))}
+              placeholder="URL иконки"
+              className={cn(inputClassName, 'flex-1 min-w-[200px]')}
+            />
+            <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded border border-dashed border-neutral-200 px-3 text-sm text-neutral-600 hover:border-accent hover:text-accent">
+              Загрузить иконку
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => void handleCategoryIconUpload(event.target.files?.[0])}
+              />
+            </label>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="text"
               value={draftCategory.name}
               onChange={(event) => setDraftCategory((current) => ({ ...current, name: event.target.value }))}
               placeholder="Название категории"
@@ -532,6 +599,35 @@ function CategorySection({
             >
               Сохранить
             </button>
+            {showDeleteConfirm ? (
+              <div className="flex items-center gap-2 animate-in">
+                <button
+                  type="button"
+                  onClick={handleDeleteCategory}
+                  disabled={deleteCategory.isPending}
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded bg-red-500 px-3 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {items.length > 0 ? `Удалить категорию и ${items.length} позиций` : 'Удалить категорию'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-neutral-500 hover:bg-neutral-100"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-neutral-400 hover:bg-red-50 hover:text-red-500"
+                title="Удалить категорию"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           {items.length === 0 ? (
@@ -675,10 +771,10 @@ function MenuItemRow({ item, onUpdate }: { item: MenuItem; onUpdate: () => void 
       itemId: item.id,
       data: {
         name: draft.name,
-        description: draft.description || undefined,
+        description: draft.description,
         price: Number(draft.price),
-        weight: draft.weight || undefined,
-        image_url: draft.image_url || undefined,
+        weight: draft.weight,
+        image_url: draft.image_url,
         is_available: draft.is_available,
       },
     })

@@ -9,9 +9,13 @@ import (
 	"sync"
 
 	"revisitr/internal/entity"
+	"revisitr/internal/service/eventbus"
+	"revisitr/internal/service/poscode"
 	tgService "revisitr/internal/service/telegram"
+	walletUC "revisitr/internal/usecase/wallet"
 
 	"github.com/mymmrac/telego"
+	tu "github.com/mymmrac/telego/telegoutil"
 )
 
 type botsRepository interface {
@@ -46,6 +50,15 @@ type moduleSettingsRepository interface {
 	Get(ctx context.Context, botID int, moduleKey string) (*entity.BotModuleSettings, error)
 }
 
+type lunchRepository interface {
+	GetFullProgramByBotID(ctx context.Context, botID int) (*entity.LunchProgram, error)
+	CreateOrder(ctx context.Context, order *entity.LunchOrder) error
+}
+
+type lunchEventPublisher interface {
+	PublishLunchOrderCreated(ctx context.Context, event eventbus.LunchOrderEvent) error
+}
+
 type emojiRepository interface {
 	GetSyncedItemsByOrgID(ctx context.Context, orgID int) ([]entity.EmojiItem, error)
 }
@@ -56,6 +69,16 @@ type sessionStore interface {
 	Delete(ctx context.Context, botID int, chatID int64) error
 }
 
+type walletUsecase interface {
+	GetConfig(ctx context.Context, orgID int, platform string) (*entity.WalletConfig, error)
+	IssuePass(ctx context.Context, orgID int, req entity.IssueWalletPassRequest) (*entity.WalletPass, error)
+	GetClientPasses(ctx context.Context, clientID int) ([]entity.WalletPass, error)
+	RefreshPassBalance(ctx context.Context, clientID int, balance int, level string) error
+	GetClientsQRCode(ctx context.Context, clientID int) (string, error)
+	GetOrgName(ctx context.Context, orgID int) (string, error)
+	GenerateGoogleSaveURL(ctx context.Context, orgID int, pass *entity.WalletPass) (string, error)
+}
+
 type botInstance struct {
 	bot    *telego.Bot
 	cancel context.CancelFunc
@@ -63,20 +86,26 @@ type botInstance struct {
 }
 
 type Manager struct {
-	botsRepo      botsRepository
-	clientsRepo   botClientsRepository
-	loyaltyRepo   loyaltyRepository
-	posRepo       posRepository
-	menusRepo     menusRepository
-	emojiRepo           emojiRepository
-	moduleSettingsRepo  moduleSettingsRepository
-	sessions            sessionStore
-	tgSender      *tgService.Sender
-	logger        *slog.Logger
-	apiServer     string // custom Telegram Bot API server URL (empty = default)
-	proxyURL      string // HTTP proxy URL for Telegram API (empty = direct)
-	adminBotToken string
-	adminBot      *telego.Bot
+	botsRepo           botsRepository
+	clientsRepo        botClientsRepository
+	loyaltyRepo        loyaltyRepository
+	posRepo            posRepository
+	menusRepo          menusRepository
+	lunchRepo          lunchRepository
+	lunchEvents        lunchEventPublisher
+	emojiRepo          emojiRepository
+	moduleSettingsRepo moduleSettingsRepository
+	sessions           sessionStore
+	wallet             walletUsecase
+	passGen            *walletUC.PassGenerator
+	posCode            *poscode.Service
+	baseURL            string
+	tgSender           *tgService.Sender
+	logger             *slog.Logger
+	apiServer          string // custom Telegram Bot API server URL (empty = default)
+	proxyURL           string // HTTP proxy URL for Telegram API (empty = direct)
+	adminBotToken      string
+	adminBot           *telego.Bot
 
 	mu        sync.RWMutex
 	instances map[int]*botInstance
@@ -104,6 +133,14 @@ func WithEmoji(repo emojiRepository) ManagerOption {
 	return func(m *Manager) { m.emojiRepo = repo }
 }
 
+func WithLunch(repo lunchRepository) ManagerOption {
+	return func(m *Manager) { m.lunchRepo = repo }
+}
+
+func WithLunchEvents(pub lunchEventPublisher) ManagerOption {
+	return func(m *Manager) { m.lunchEvents = pub }
+}
+
 func WithSessionStore(store sessionStore) ManagerOption {
 	return func(m *Manager) { m.sessions = store }
 }
@@ -112,8 +149,20 @@ func WithModuleSettings(repo moduleSettingsRepository) ManagerOption {
 	return func(m *Manager) { m.moduleSettingsRepo = repo }
 }
 
+func WithPOSCode(svc *poscode.Service) ManagerOption {
+	return func(m *Manager) { m.posCode = svc }
+}
+
 func WithAdminBotToken(token string) ManagerOption {
 	return func(m *Manager) { m.adminBotToken = token }
+}
+
+func WithWallet(uc walletUsecase) ManagerOption {
+	return func(m *Manager) { m.wallet = uc }
+}
+
+func WithBaseURL(url string) ManagerOption {
+	return func(m *Manager) { m.baseURL = url }
 }
 
 // botOpts returns telego options configured with API server and proxy.
@@ -147,6 +196,7 @@ func New(
 		loyaltyRepo: loyaltyRepo,
 		posRepo:     posRepo,
 		logger:      logger,
+		passGen:     walletUC.NewPassGenerator(),
 		instances:   make(map[int]*botInstance),
 	}
 	for _, opt := range opts {
@@ -310,6 +360,28 @@ func (m *Manager) OnBotStop(ctx context.Context, botID int) error {
 func (m *Manager) OnBotStart(ctx context.Context, botID int) error {
 	m.logger.Info("event: bot start", "bot_id", botID)
 	return m.AddBot(ctx, botID)
+}
+
+// OnNotifyClient sends a plain-text message to a client's chat via the running
+// bot instance. Best-effort: no-ops if the bot is not running and never fails
+// the caller (the originating POS operation already succeeded).
+func (m *Manager) OnNotifyClient(_ context.Context, botID int, chatID int64, text string) error {
+	if text == "" {
+		return nil
+	}
+
+	m.mu.RLock()
+	inst, ok := m.instances[botID]
+	m.mu.RUnlock()
+	if !ok {
+		m.logger.Warn("notify client: bot not running", "bot_id", botID, "chat_id", chatID)
+		return nil
+	}
+
+	if _, err := inst.bot.SendMessage(context.Background(), tu.Message(tu.ID(chatID), text)); err != nil {
+		m.logger.Error("notify client: send failed", "bot_id", botID, "chat_id", chatID, "error", err)
+	}
+	return nil
 }
 
 // OnBotSettingsChanged performs a hot update of bot settings without restarting long polling.

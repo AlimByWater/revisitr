@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"revisitr/internal/entity"
+	"revisitr/internal/service/poscode"
 
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
@@ -38,6 +39,10 @@ const (
 	callbackBookingPickTime  = "booking:pick-time:"
 	callbackBookingPartyPage = "booking:party-page"
 	callbackBookingPickParty = "booking:pick-party:"
+	callbackWalletAddApple   = "wallet:apple"
+	callbackWalletAddGoogle  = "wallet:google"
+	callbackPOSCode          = "loyalty:poscode"
+	callbackPOSCodeRefresh   = "loyalty:poscode:refresh"
 )
 
 func (h *handler) loadFlowState(ctx context.Context, chatID int64) (*FlowState, error) {
@@ -245,8 +250,97 @@ func (h *handler) handleCallbackQuery(ctx context.Context, query *telego.Callbac
 	case strings.HasPrefix(data, callbackBookingPickParty):
 		h.answerCallback(query.ID, "")
 		h.handleBookingPartySelection(ctx, chatID, strings.TrimPrefix(data, callbackBookingPickParty))
+	case strings.HasPrefix(data, callbackLunchPrefix):
+		h.handleLunchCallback(ctx, query)
+	case data == callbackWalletAddApple:
+		h.answerCallback(query.ID, "")
+		h.handleWalletAddApple(ctx, query)
+	case data == callbackWalletAddGoogle:
+		h.answerCallback(query.ID, "")
+		h.handleWalletAddGoogle(ctx, query)
+	case data == callbackPOSCode:
+		h.handlePOSCode(ctx, query, false)
+	case data == callbackPOSCodeRefresh:
+		h.handlePOSCode(ctx, query, true)
 	default:
 		h.answerCallback(query.ID, "Действие устарело")
+	}
+}
+
+// handlePOSCode issues a fresh one-time word-code for the guest to name at the
+// till. It keeps a single active code message: any previously tracked code
+// message is deleted before sending the new one.
+func (h *handler) handlePOSCode(ctx context.Context, query *telego.CallbackQuery, refresh bool) {
+	chatID := query.Message.GetChat().ID
+
+	if h.mgr.posCode == nil {
+		h.answerCallback(query.ID, "Код для кассы недоступен")
+		return
+	}
+
+	client, err := h.mgr.clientsRepo.GetByTelegramID(ctx, h.info.ID, query.From.ID)
+	if err != nil || client == nil {
+		h.answerCallback(query.ID, "Сначала зарегистрируйтесь через /start")
+		return
+	}
+
+	programs, err := h.mgr.loyaltyRepo.GetProgramsByOrgID(ctx, h.info.OrgID)
+	if err != nil {
+		h.answerCallback(query.ID, "Программа лояльности недоступна")
+		return
+	}
+	var prog *entity.LoyaltyProgram
+	for i := range programs {
+		if programs[i].IsActive {
+			prog = &programs[i]
+			break
+		}
+	}
+	if prog == nil {
+		h.answerCallback(query.ID, "Программа лояльности недоступна")
+		return
+	}
+
+	word, err := h.mgr.posCode.Issue(ctx, poscode.Grant{
+		ClientID:  client.ID,
+		ProgramID: prog.ID,
+		OrgID:     h.info.OrgID,
+	})
+	if err != nil {
+		h.logger.Error("issue pos code", "error", err, "client_id", client.ID)
+		h.answerCallback(query.ID, "Не удалось выдать код. Попробуйте позже.")
+		return
+	}
+
+	state := h.currentFlowState(ctx, chatID)
+	// Always remove the previously tracked code message so only one is live.
+	if state.CodeMessageID != 0 {
+		_ = h.deleteMessage(chatID, state.CodeMessageID)
+	}
+	if refresh {
+		// The button lives on the current message; drop it too.
+		_ = h.deleteMessage(chatID, query.Message.GetMessageID())
+	}
+
+	text := fmt.Sprintf(
+		"Назовите кассиру код для начисления и списания бонусов:\n\n🔑 <b>%s</b>\n\nКод действует 5 минут и одноразовый. Нажмите «Обновить», если код истёк.",
+		html.EscapeString(strings.ToUpper(word)),
+	)
+
+	content := entity.MessageContent{
+		Parts: []entity.MessagePart{{Type: entity.PartText, Text: text, ParseMode: "HTML"}},
+		Buttons: [][]entity.InlineButton{{
+			{Text: "🔄 Обновить", Data: callbackPOSCodeRefresh},
+		}},
+	}
+
+	state.CodeMessageID = h.sendContentMessage(ctx, chatID, content)
+	_ = h.saveFlowState(ctx, chatID, state)
+
+	if refresh {
+		h.answerCallback(query.ID, "Код обновлён")
+	} else {
+		h.answerCallback(query.ID, "")
 	}
 }
 
@@ -519,7 +613,7 @@ func (h *handler) handleMenuItemCallback(ctx context.Context, chatID int64, valu
 			}
 			text += fmt.Sprintf("\n\nЦена: %.0f ₽", item.Price)
 			if item.Weight != nil && *item.Weight != "" {
-				text += "\nГраммаж: " + html.EscapeString(*item.Weight)
+				text += "\nГраммаж: <i>" + html.EscapeString(*item.Weight) + "</i>"
 			}
 
 			content := entity.MessageContent{

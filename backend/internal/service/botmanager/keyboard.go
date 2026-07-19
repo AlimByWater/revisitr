@@ -12,6 +12,7 @@ const (
 	btnMenu     = "Меню"
 	btnBooking  = "Забронировать"
 	btnFeedback = "Связаться"
+	btnLunch    = "Ланч"
 	btnContacts = "Контакты"
 	btnHome     = "На главную"
 	btnAbout    = "ℹ️ О нас"
@@ -19,10 +20,19 @@ const (
 )
 
 func buildMainMenu(settings entity.BotSettings) *telego.ReplyKeyboardMarkup {
+	return buildMainMenuFiltered(settings, nil)
+}
+
+// buildMainMenuFiltered builds the main menu, skipping module buttons whose
+// module key is in hidden (e.g. lunch outside its availability window).
+func buildMainMenuFiltered(settings entity.BotSettings, hidden map[string]bool) *telego.ReplyKeyboardMarkup {
 	var rows [][]telego.KeyboardButton
 	var currentRow []telego.KeyboardButton
 
 	for _, button := range orderedMainMenuButtons(settings) {
+		if button.ManagedByModule != nil && hidden[*button.ManagedByModule] {
+			continue
+		}
 		kb := makeKeyboardButton(button)
 		if button.Label == btnHome {
 			if len(currentRow) > 0 {
@@ -94,6 +104,8 @@ func moduleButtonLabels(modules []string) []string {
 			add(btnBooking)
 		case "feedback":
 			add(btnFeedback)
+		case "lunch":
+			add(btnLunch)
 		}
 	}
 
@@ -127,6 +139,9 @@ func orderedMainMenuButtons(settings entity.BotSettings) []entity.BotButton {
 		case "feedback":
 			moduleName := "feedback"
 			addRequired(btnFeedback, &moduleName, true)
+		case "lunch":
+			moduleName := "lunch"
+			addRequired(btnLunch, &moduleName, true)
 		}
 	}
 

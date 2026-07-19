@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import {
   useWalletConfigsQuery,
@@ -7,7 +7,8 @@ import {
   useSaveWalletConfigMutation,
   useRevokeWalletPassMutation,
 } from '@/features/wallet/queries'
-import { Smartphone, Apple, CreditCard, Shield, Palette, Users, Ban, SlidersHorizontal, ChevronDown } from 'lucide-react'
+import { walletApi } from '@/features/wallet/api'
+import { Smartphone, Apple, CreditCard, Shield, Palette, Users, Ban, SlidersHorizontal, ChevronDown, Download } from 'lucide-react'
 import { ErrorState } from '@/components/common/ErrorState'
 import { TableSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -150,16 +151,32 @@ export default function WalletPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {pass.status === 'active' && (
-                          <button
-                            onClick={() => revokePass.trigger(pass.id)}
-                            type="button"
-                            className="inline-flex items-center gap-1 rounded border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
-                          >
-                            <Ban className="h-3 w-3" />
-                            Отозвать
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-1">
+                          {pass.status === 'active' && pass.platform === 'apple' && (
+                            <a
+                              href={walletApi.getDownloadURL(pass.serial_number)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded border border-neutral-200 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-50 transition-colors"
+                            >
+                              <Download className="h-3 w-3" />
+                              Скачать
+                            </a>
+                          )}
+                          {pass.status === 'active' && pass.platform === 'google' && (
+                            <GoogleSaveButton serial={pass.serial_number} />
+                          )}
+                          {pass.status === 'active' && (
+                            <button
+                              onClick={() => revokePass.trigger(pass.id)}
+                              type="button"
+                              className="inline-flex items-center gap-1 rounded border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                            >
+                              <Ban className="h-3 w-3" />
+                              Отозвать
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )
@@ -169,6 +186,39 @@ export default function WalletPage() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function GoogleSaveButton({ serial }: { serial: string }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleClick = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const url = await walletApi.getGoogleSaveURL(serial)
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch {
+      setError('Не удалось сгенерировать ссылку')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={handleClick}
+        disabled={loading}
+        type="button"
+        className="inline-flex items-center gap-1 rounded border border-blue-200 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+      >
+        <Smartphone className="h-3 w-3" />
+        {loading ? 'Загрузка...' : 'Save to Wallet'}
+      </button>
+      {error && <span className="text-xs text-red-500">{error}</span>}
     </div>
   )
 }
@@ -267,6 +317,22 @@ function ConfigForm({
   const [isEnabled, setIsEnabled] = useState(config?.is_enabled ?? false)
   const [design, setDesign] = useState<WalletDesign>(config?.design ?? {})
   const [credentials, setCredentials] = useState<WalletCredentials>({})
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const url = await walletApi.uploadLogo(file)
+      setDesign({ ...design, logo_url: url })
+    } catch {
+      // silent
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const plt = platformConfig[platform]
 
@@ -345,11 +411,55 @@ function ConfigForm({
         </h4>
         <input
           type="text"
+          placeholder="Название организации (отображается на карте)"
+          value={design.organization_name ?? ''}
+          onChange={(e) => setDesign({ ...design, organization_name: e.target.value })}
+          className={inputClass}
+        />
+        <input
+          type="text"
           placeholder="Описание на карте"
           value={design.description ?? ''}
           onChange={(e) => setDesign({ ...design, description: e.target.value })}
           className={inputClass}
         />
+        {/* Logo upload */}
+        <div>
+          <label className="block text-xs text-neutral-400 mb-1">Логотип</label>
+          <div className="flex items-center gap-3">
+            {design.logo_url && (
+              <img src={design.logo_url} alt="logo" className="h-10 w-10 rounded object-contain border border-neutral-200" />
+            )}
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className={cn(
+                'px-3 py-1.5 rounded text-xs font-medium cursor-pointer border',
+                'border-neutral-200 text-neutral-600 hover:bg-neutral-50',
+                'transition-colors',
+              )}
+            >
+              {uploading ? 'Загрузка...' : design.logo_url ? 'Заменить' : 'Загрузить'}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg"
+              className="hidden"
+              onChange={handleLogoUpload}
+            />
+            {design.logo_url && (
+              <button
+                type="button"
+                onClick={() => setDesign({ ...design, logo_url: undefined })}
+                className="text-xs text-red-500 hover:text-red-700 transition-colors"
+              >
+                Удалить
+              </button>
+            )}
+          </div>
+        </div>
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-xs text-neutral-400 mb-1">Фон</label>

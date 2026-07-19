@@ -36,11 +36,13 @@ func (c *WalletCredentials) Scan(src interface{}) error {
 
 // WalletDesign stores pass appearance settings (JSONB).
 type WalletDesign struct {
-	LogoURL         string `json:"logo_url,omitempty"`
-	BackgroundColor string `json:"background_color,omitempty"`
-	ForegroundColor string `json:"foreground_color,omitempty"`
-	LabelColor      string `json:"label_color,omitempty"`
-	Description     string `json:"description,omitempty"`
+	LogoURL          string `json:"logo_url,omitempty"`
+	BackgroundColor  string `json:"background_color,omitempty"`
+	ForegroundColor  string `json:"foreground_color,omitempty"`
+	LabelColor       string `json:"label_color,omitempty"`
+	Description      string `json:"description,omitempty"`
+	OrganizationName string `json:"organization_name,omitempty"`
+	WebServiceURL    string `json:"web_service_url,omitempty"`
 }
 
 func (d WalletDesign) Value() (driver.Value, error) {

@@ -153,6 +153,19 @@ func (r *Loyalty) GetClientsWithLevels(ctx context.Context) ([]entity.ClientLoya
 	return clients, nil
 }
 
+func (r *Loyalty) GetLevelByID(ctx context.Context, id int) (*entity.LoyaltyLevel, error) {
+	var level entity.LoyaltyLevel
+	err := r.pg.DB().GetContext(ctx, &level,
+		"SELECT * FROM loyalty_levels WHERE id = $1", id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("loyalty.GetLevelByID: %w", err)
+	}
+	return &level, nil
+}
+
 func (r *Loyalty) DeleteLevel(ctx context.Context, id int) error {
 	result, err := r.pg.DB().ExecContext(ctx, "DELETE FROM loyalty_levels WHERE id = $1", id)
 	if err != nil {

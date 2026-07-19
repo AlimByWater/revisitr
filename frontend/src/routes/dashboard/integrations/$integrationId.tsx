@@ -24,6 +24,7 @@ import {
   useUpdateIntegrationMutation,
 } from '@/features/integrations/queries'
 import { ErrorState } from '@/components/common/ErrorState'
+import { PluginKeysSection } from '@/components/integrations/PluginKeysSection'
 import type { Integration } from '@/features/integrations/types'
 
 const TYPE_LABELS: Record<string, string> = {
@@ -595,6 +596,9 @@ function SettingsTab({
           </p>
         )}
       </div>
+
+      {/* Plugin keys (POS plugin auth, per integration) */}
+      <PluginKeysSection integrationId={integration.id} />
 
       {/* Status toggle */}
       <div className="flex items-center justify-between bg-white rounded border border-neutral-900 p-4">

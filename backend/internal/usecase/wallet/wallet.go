@@ -37,20 +37,30 @@ type passRepo interface {
 	RevokePass(ctx context.Context, id int) error
 	GetStats(ctx context.Context, orgID int) (*entity.WalletStats, error)
 	GetPassesWithPushToken(ctx context.Context, orgID int) ([]entity.WalletPass, error)
+	GetClientQRCode(ctx context.Context, clientID int) (string, error)
+	GetOrgName(ctx context.Context, orgID int) (string, error)
 }
 
 type Usecase struct {
-	logger  *slog.Logger
-	configs configRepo
-	passes  passRepo
+	logger   *slog.Logger
+	configs  configRepo
+	passes   passRepo
+	googleGW *GoogleSaveGenerator
+	googleAPI *GoogleWalletAPI
 }
 
 func New(configs configRepo, passes passRepo) *Usecase {
-	return &Usecase{configs: configs, passes: passes}
+	return &Usecase{
+		configs:  configs,
+		passes:   passes,
+		googleGW: NewGoogleSaveGenerator(),
+		googleAPI: NewGoogleWalletAPI(),
+	}
 }
 
 func (uc *Usecase) Init(_ context.Context, logger *slog.Logger) error {
 	uc.logger = logger
+	uc.googleAPI.Init(logger)
 	return nil
 }
 
@@ -75,7 +85,25 @@ func (uc *Usecase) SaveConfig(ctx context.Context, orgID int, req entity.SaveWal
 	if req.Platform != "apple" && req.Platform != "google" {
 		return nil, ErrInvalidPlatform
 	}
-	return uc.configs.SaveConfig(ctx, orgID, req)
+
+	cfg, err := uc.configs.SaveConfig(ctx, orgID, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Platform == "google" && req.IsEnabled && cfg.Credentials["issuer_id"] != "" && cfg.Credentials["service_account_key"] != "" {
+		orgName := req.Design.OrganizationName
+		if orgName == "" {
+			orgName, _ = uc.passes.GetOrgName(ctx, orgID)
+		}
+		go func() {
+			if err := uc.googleAPI.EnsureClass(context.Background(), cfg.Credentials, orgID, orgName, req.Design); err != nil {
+				uc.logger.Error("google wallet: ensure class", "error", err, "org_id", orgID)
+			}
+		}()
+	}
+
+	return cfg, nil
 }
 
 func (uc *Usecase) DeleteConfig(ctx context.Context, orgID int, platform string) error {
@@ -129,6 +157,14 @@ func (uc *Usecase) IssuePass(ctx context.Context, orgID int, req entity.IssueWal
 
 	if err := uc.passes.CreatePass(ctx, pass); err != nil {
 		return nil, err
+	}
+
+	if req.Platform == "google" {
+		clientQR, _ := uc.passes.GetClientQRCode(ctx, req.ClientID)
+		orgName, _ := uc.passes.GetOrgName(ctx, orgID)
+		if err := uc.googleAPI.CreateObject(ctx, cfg.Credentials, orgID, pass, clientQR, orgName, cfg.Design); err != nil {
+			uc.logger.Error("google wallet: create object", "error", err, "org_id", orgID, "client_id", req.ClientID)
+		}
 	}
 
 	uc.logger.Info("wallet pass issued",
@@ -195,6 +231,36 @@ func (uc *Usecase) RefreshPassBalance(ctx context.Context, clientID int, balance
 		}
 	}
 	return nil
+}
+
+// GetClientsQRCode returns the QR code string for a client.
+func (uc *Usecase) GetClientsQRCode(ctx context.Context, clientID int) (string, error) {
+	return uc.passes.GetClientQRCode(ctx, clientID)
+}
+
+// GetOrgName returns the organization name by ID.
+func (uc *Usecase) GetOrgName(ctx context.Context, orgID int) (string, error) {
+	return uc.passes.GetOrgName(ctx, orgID)
+}
+
+// GenerateGoogleSaveURL creates a signed "Add to Google Wallet" JWT link.
+func (uc *Usecase) GenerateGoogleSaveURL(ctx context.Context, orgID int, pass *entity.WalletPass) (string, error) {
+	if pass.Platform != "google" {
+		return "", ErrInvalidPlatform
+	}
+	if pass.Status != "active" {
+		return "", ErrPassNotFound
+	}
+
+	cfg, err := uc.configs.GetConfig(ctx, orgID, "google")
+	if err != nil {
+		return "", fmt.Errorf("get google config: %w", err)
+	}
+	if cfg == nil || !cfg.IsEnabled {
+		return "", ErrPlatformDisabled
+	}
+
+	return uc.googleAPI.GenerateSaveURL(cfg.Credentials, orgID, pass)
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

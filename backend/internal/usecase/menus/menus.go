@@ -217,6 +217,27 @@ func (uc *Usecase) UpdateCategory(ctx context.Context, orgID, categoryID int, re
 	return category, nil
 }
 
+func (uc *Usecase) DeleteCategory(ctx context.Context, orgID, categoryID int) error {
+	category, err := uc.repo.GetCategory(ctx, categoryID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	menu, err := uc.repo.GetByID(ctx, category.MenuID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	if menu.OrgID != orgID {
+		return ErrNotOwner
+	}
+	return uc.repo.DeleteCategory(ctx, categoryID)
+}
+
 func (uc *Usecase) AddItem(ctx context.Context, orgID, menuID, categoryID int, req entity.CreateMenuItemRequest) (*entity.MenuItem, error) {
 	m, err := uc.repo.GetByID(ctx, menuID)
 	if err != nil {

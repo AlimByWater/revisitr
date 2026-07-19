@@ -14,7 +14,9 @@ import (
 	"revisitr/internal/service/botmanager"
 	"revisitr/internal/service/campaign"
 	"revisitr/internal/service/eventbus"
+	"revisitr/internal/service/poscode"
 	tgService "revisitr/internal/service/telegram"
+	walletUC "revisitr/internal/usecase/wallet"
 )
 
 func main() {
@@ -54,11 +56,19 @@ func main() {
 	loyaltyRepo := pgRepo.NewLoyalty(pg)
 	posRepo := pgRepo.NewPOS(pg)
 	menusRepo := pgRepo.NewMenus(pg)
+	lunchRepo := pgRepo.NewLunch(pg)
 	emojiPacksRepo := pgRepo.NewEmojiPacks(pg)
 	botModuleSettingsRepo := pgRepo.NewBotModuleSettings(pg)
 
 	campaignsRepo := pgRepo.NewCampaigns(pg)
 	scenariosRepo := pgRepo.NewAutoScenarios(pg)
+
+	walletRepo := pgRepo.NewWallet(pg)
+	walletUsecase := walletUC.New(walletRepo, walletRepo)
+	if err := walletUsecase.Init(ctx, logger); err != nil {
+		logger.Error("wallet usecase init failed", "error", err)
+		os.Exit(1)
+	}
 
 	// Create Telegram sender for rich messages
 	baseURL := cfg.GetBaseURL()
@@ -68,10 +78,15 @@ func main() {
 	var mgrOpts []botmanager.ManagerOption
 	mgrOpts = append(mgrOpts, botmanager.WithTelegramSender(tgSender))
 	mgrOpts = append(mgrOpts, botmanager.WithMenus(menusRepo))
+	mgrOpts = append(mgrOpts, botmanager.WithLunch(lunchRepo))
+	mgrOpts = append(mgrOpts, botmanager.WithLunchEvents(eventbus.New(rds.Client, logger)))
 	mgrOpts = append(mgrOpts, botmanager.WithEmoji(emojiPacksRepo))
 	mgrOpts = append(mgrOpts, botmanager.WithSessionStore(botmanager.NewRedisSessionStore(rds.Client())))
 	mgrOpts = append(mgrOpts, botmanager.WithModuleSettings(botModuleSettingsRepo))
+	mgrOpts = append(mgrOpts, botmanager.WithPOSCode(poscode.New(rds.Client)))
 	mgrOpts = append(mgrOpts, botmanager.WithAdminBotToken(cfg.MasterBot.Token))
+	mgrOpts = append(mgrOpts, botmanager.WithWallet(walletUsecase))
+	mgrOpts = append(mgrOpts, botmanager.WithBaseURL(baseURL))
 	if cfg.TelegramAPIURL != "" {
 		logger.Info("using custom Telegram API server", "url", cfg.TelegramAPIURL)
 		mgrOpts = append(mgrOpts, botmanager.WithAPIServer(cfg.TelegramAPIURL))

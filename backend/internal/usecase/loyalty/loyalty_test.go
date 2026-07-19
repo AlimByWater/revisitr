@@ -18,6 +18,7 @@ type mockRepo struct {
 	UpdateProgramFn        func(ctx context.Context, program *entity.LoyaltyProgram) error
 	CreateLevelFn          func(ctx context.Context, level *entity.LoyaltyLevel) error
 	GetLevelsByProgramIDFn func(ctx context.Context, programID int) ([]entity.LoyaltyLevel, error)
+	GetLevelByIDFn        func(ctx context.Context, id int) (*entity.LoyaltyLevel, error)
 	UpdateLevelFn          func(ctx context.Context, level *entity.LoyaltyLevel) error
 	DeleteLevelFn          func(ctx context.Context, id int) error
 	GetClientLoyaltyFn     func(ctx context.Context, clientID, programID int) (*entity.ClientLoyalty, error)
@@ -48,6 +49,9 @@ func (m *mockRepo) CreateLevel(ctx context.Context, level *entity.LoyaltyLevel) 
 }
 func (m *mockRepo) GetLevelsByProgramID(ctx context.Context, programID int) ([]entity.LoyaltyLevel, error) {
 	return m.GetLevelsByProgramIDFn(ctx, programID)
+}
+func (m *mockRepo) GetLevelByID(ctx context.Context, id int) (*entity.LoyaltyLevel, error) {
+	return m.GetLevelByIDFn(ctx, id)
 }
 func (m *mockRepo) UpdateLevel(ctx context.Context, level *entity.LoyaltyLevel) error {
 	return m.UpdateLevelFn(ctx, level)
@@ -84,7 +88,7 @@ func (m *mockRepo) ExpireOldReserves(ctx context.Context) (int, error) {
 }
 
 func newTestUsecase(repo *mockRepo) *Usecase {
-	uc := New(repo)
+	uc := NewWithWallet(repo, nil)
 	_ = uc.Init(context.Background(), slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})))
 	return uc
 }

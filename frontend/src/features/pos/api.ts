@@ -3,7 +3,8 @@ import type { POSLocation, CreatePOSRequest } from './types'
 
 export async function list(): Promise<POSLocation[]> {
   const { data } = await api.get<POSLocation[]>('/pos')
-  return data
+  // Backend returns JSON null for an org without POS locations.
+  return data ?? []
 }
 
 export async function getById(id: number): Promise<POSLocation> {

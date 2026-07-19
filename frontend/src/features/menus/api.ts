@@ -9,7 +9,8 @@ import type {
 export const menusApi = {
   list: async (): Promise<Menu[]> => {
     const response = await api.get<Menu[]>('/menus')
-    return response.data
+    // Backend returns JSON null for an org without menus.
+    return response.data ?? []
   },
 
   getById: async (id: number): Promise<Menu> => {
@@ -43,6 +44,10 @@ export const menusApi = {
   updateCategory: async (categoryId: number, data: UpdateMenuCategoryRequest): Promise<MenuCategory> => {
     const response = await api.patch<MenuCategory>(`/menus/categories/${categoryId}`, data)
     return response.data
+  },
+
+  deleteCategory: async (categoryId: number): Promise<void> => {
+    await api.delete(`/menus/categories/${categoryId}`)
   },
 
   addItem: async (menuId: number, categoryId: number, data: CreateMenuItemRequest): Promise<MenuItem> => {

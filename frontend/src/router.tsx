@@ -4,9 +4,6 @@ import { Sidebar } from './components/layout/Sidebar'
 import { Footer } from './components/layout/Footer'
 import { Header } from './components/layout/Header'
 import { MobileNav } from './components/layout/MobileNav'
-import { AuroraSidebar } from './components/layout/AuroraSidebar'
-import { AuroraHeader } from './components/layout/AuroraHeader'
-import { useTheme } from './contexts/ThemeContext'
 
 const LoginPage = lazy(() => import('./routes/auth/login'))
 const RegisterPage = lazy(() => import('./routes/auth/register'))
@@ -17,6 +14,7 @@ const BotsPage = lazy(() => import('./routes/dashboard/bots/index'))
 const BotDetailPage = lazy(() => import('./routes/dashboard/bots/$botId'))
 const CreateBotPage = lazy(() => import('./routes/dashboard/bots/create'))
 const BotBookingSettingsPage = lazy(() => import('./routes/dashboard/bots/booking'))
+const BotLunchSettingsPage = lazy(() => import('./routes/dashboard/bots/lunch'))
 const BotFeedbackSettingsPage = lazy(() => import('./routes/dashboard/bots/feedback'))
 const BotMenuSettingsPage = lazy(() => import('./routes/dashboard/bots/menu'))
 const ClientsPage = lazy(() => import('./routes/dashboard/clients/index'))
@@ -74,27 +72,11 @@ function lazyElement(Component: LazyExoticComponent<ComponentType<any>>) {
 
 function DashboardLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const { theme } = useTheme()
   const location = useLocation()
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [location.pathname])
-
-  if (theme === 'aurora') {
-    return (
-      <div className="flex min-h-screen">
-        <AuroraSidebar />
-        <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-        <div className="flex-1 flex flex-col min-w-0">
-          <AuroraHeader />
-          <main className="flex-1 p-6 md:p-10 max-w-7xl">
-            <Outlet />
-          </main>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen">
@@ -142,6 +124,7 @@ export const router = createBrowserRouter(
             { path: 'bots/create', element: lazyElement(CreateBotPage) },
             { path: 'bots/:botId/booking', element: lazyElement(BotBookingSettingsPage) },
             { path: 'bots/:botId/feedback', element: lazyElement(BotFeedbackSettingsPage) },
+            { path: 'bots/:botId/lunch', element: lazyElement(BotLunchSettingsPage) },
             { path: 'bots/:botId/menu', element: lazyElement(BotMenuSettingsPage) },
             { path: 'bots/:botId', element: lazyElement(BotDetailPage) },
             { path: 'clients', element: lazyElement(ClientsPage) },

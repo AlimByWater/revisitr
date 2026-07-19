@@ -22,12 +22,14 @@ import (
 	"revisitr/internal/controller/http/group/health"
 	integrationsGroup "revisitr/internal/controller/http/group/integrations"
 	loyaltyGroup "revisitr/internal/controller/http/group/loyalty"
+	lunchGroup "revisitr/internal/controller/http/group/lunch"
 	marketplaceGroup "revisitr/internal/controller/http/group/marketplace"
 	masterbotGroup "revisitr/internal/controller/http/group/masterbot"
 	menusGroup "revisitr/internal/controller/http/group/menus"
 	modulepresetsGroup "revisitr/internal/controller/http/group/modulepresets"
 	onboardingGroup "revisitr/internal/controller/http/group/onboarding"
 	posGroup "revisitr/internal/controller/http/group/pos"
+	pospluginGroup "revisitr/internal/controller/http/group/posplugin"
 	postsGroup "revisitr/internal/controller/http/group/posts"
 	promotionsGroup "revisitr/internal/controller/http/group/promotions"
 	rfmGroup "revisitr/internal/controller/http/group/rfm"
@@ -42,6 +44,7 @@ import (
 	emojisyncService "revisitr/internal/service/emojisync"
 	"revisitr/internal/service/eventbus"
 	posService "revisitr/internal/service/pos"
+	"revisitr/internal/service/poscode"
 	rfmService "revisitr/internal/service/rfm"
 	analyticsUC "revisitr/internal/usecase/analytics"
 	authUC "revisitr/internal/usecase/auth"
@@ -53,11 +56,13 @@ import (
 	emojipacksUC "revisitr/internal/usecase/emojipacks"
 	integrationsUC "revisitr/internal/usecase/integrations"
 	loyaltyUC "revisitr/internal/usecase/loyalty"
+	lunchUC "revisitr/internal/usecase/lunch"
 	marketplaceUC "revisitr/internal/usecase/marketplace"
 	menusUC "revisitr/internal/usecase/menus"
 	modulepresetsUC "revisitr/internal/usecase/modulepresets"
 	onboardingUC "revisitr/internal/usecase/onboarding"
 	posUC "revisitr/internal/usecase/pos"
+	pospluginUC "revisitr/internal/usecase/posplugin"
 	promotionsUC "revisitr/internal/usecase/promotions"
 	rfmUC "revisitr/internal/usecase/rfm"
 	segmentsUC "revisitr/internal/usecase/segments"
@@ -97,6 +102,8 @@ func main() {
 	segmentsRepo := pgRepo.NewSegments(pg)
 	promotionsRepo := pgRepo.NewPromotions(pg)
 	integrationsRepo := pgRepo.NewIntegrations(pg)
+	pluginKeysRepo := pgRepo.NewPluginKeys(pg)
+	pluginOpsRepo := pgRepo.NewPluginOperations(pg)
 
 	// Phase 4 repos
 	billingRepo := pgRepo.NewBilling(pg)
@@ -116,6 +123,7 @@ func main() {
 
 	// Phase 3 repos
 	menusRepo := pgRepo.NewMenus(pg)
+	lunchRepo := pgRepo.NewLunch(pg)
 	rfmRepo := pgRepo.NewRFM(pg)
 	onboardingRepo := pgRepo.NewOnboarding(pg)
 
@@ -125,6 +133,7 @@ func main() {
 		posService.WithMenus(menusRepo),
 	)
 	rfmSvc := rfmService.New(botClientsRepo, loyaltyRepo, rfmRepo, logger)
+	posCodeSvc := poscode.New(rds.Client)
 
 	// Auto-action services
 	actionExecutor := autoactionService.NewActionExecutor(scenariosRepo, logger)
@@ -139,7 +148,11 @@ func main() {
 	authUsecase := authUC.New(&authConfig{cfg: cfg}, usersRepo, sessionsRepo)
 	botsUsecase := botsUC.New(botsRepo, botClientsRepo)
 	botsUsecase.SetEventBus(evBus)
-	loyaltyUsecase := loyaltyUC.New(loyaltyRepo)
+
+	// Phase 4 usecases (needed by loyalty)
+	walletUsecase := walletUC.New(walletRepo, walletRepo)
+
+	loyaltyUsecase := loyaltyUC.NewWithWallet(loyaltyRepo, walletUsecase)
 	clientsUsecase := clientsUC.New(clientsRepo, clientsUC.WithBotClients(botClientsRepo))
 	dashboardUsecase := dashboardUC.New(dashboardRepo)
 	campaignsUsecase := campaignsUC.New(campaignsRepo, scenariosRepo, clientsRepo,
@@ -156,11 +169,12 @@ func main() {
 	)
 	promotionsUsecase := promotionsUC.New(promotionsRepo)
 	integrationsUsecase := integrationsUC.New(integrationsRepo, posSyncSvc)
+	pluginUsecase := pospluginUC.New(loyaltyUsecase, clientsRepo, pluginKeysRepo, pluginOpsRepo, integrationsRepo, posCodeSvc)
+	pluginUsecase.SetEventBus(evBus)
 
 	// Phase 4 usecases
 	billingUsecase := billingUC.New(billingRepo)
 	managedBotAdapter := botsUC.NewManagedBotAdapter(botsUsecase, masterBotAuthRepo)
-	walletUsecase := walletUC.New(walletRepo, walletRepo)
 	marketplaceUsecase := marketplaceUC.New(marketplaceRepo, marketplaceRepo, loyaltyUsecase)
 
 	// Emoji packs usecase
@@ -177,6 +191,7 @@ func main() {
 
 	// Phase 3 usecases
 	menusUsecase := menusUC.New(menusRepo)
+	lunchUsecase := lunchUC.New(lunchRepo, botsRepo)
 	rfmUsecase := rfmUC.New(rfmRepo, segmentsRepo, rfmSvc)
 	onboardingUsecase := onboardingUC.New(onboardingRepo)
 
@@ -239,6 +254,8 @@ func main() {
 	integrationsGrp := integrationsGroup.New(integrationsUsecase, jwtSecret,
 		integrationsGroup.WithFeatureGate(integrationsGate),
 	)
+	pluginGrp := pospluginGroup.New(pluginUsecase)
+	pluginAdminGrp := pospluginGroup.NewAdmin(pluginUsecase, jwtSecret)
 
 	// Phase 4 groups
 	billingGrp := billingGroup.New(billingUsecase, jwtSecret)
@@ -255,6 +272,7 @@ func main() {
 
 	// Phase 3 groups
 	menusGrp := menusGroup.New(menusUsecase, jwtSecret)
+	lunchGrp := lunchGroup.New(lunchUsecase, jwtSecret)
 	rfmGrp := rfmGroup.New(rfmUsecase, jwtSecret,
 		rfmGroup.WithFeatureGate(rfmGate),
 	)
@@ -264,8 +282,9 @@ func main() {
 		healthGrp, authGrp, botsGrp, loyaltyGrp, posGrp, clientsGrp,
 		dashboardGrp, campaignsGrp,
 		analyticsGrp, segmentsGrp, promotionsGrp, integrationsGrp,
+		pluginGrp, pluginAdminGrp,
 		filesGrp,
-		menusGrp, rfmGrp, onboardingGrp,
+		menusGrp, lunchGrp, rfmGrp, onboardingGrp,
 		billingGrp, masterbotGrp, walletGrp, marketplaceGrp, postsGrp,
 		emojiPacksGrp,
 		modulepresetsGrp,
@@ -333,7 +352,8 @@ func main() {
 			authUsecase, botsUsecase, loyaltyUsecase, posUsecase,
 			clientsUsecase, dashboardUsecase, campaignsUsecase,
 			analyticsUsecase, segmentsUsecase, promotionsUsecase, integrationsUsecase,
-			menusUsecase, rfmUsecase, onboardingUsecase,
+			pluginUsecase,
+			menusUsecase, lunchUsecase, rfmUsecase, onboardingUsecase,
 			billingUsecase, walletUsecase, marketplaceUsecase,
 			emojiPacksUsecase,
 		},

@@ -14,6 +14,7 @@ type BotEventHandler interface {
 	OnBotStop(ctx context.Context, botID int) error
 	OnBotStart(ctx context.Context, botID int) error
 	OnBotSettingsChanged(ctx context.Context, botID int, field string) error
+	OnNotifyClient(ctx context.Context, botID int, chatID int64, text string) error
 }
 
 // Subscriber listens to Redis Pub/Sub channels and dispatches events.
@@ -34,6 +35,7 @@ func (s *Subscriber) Listen(ctx context.Context, handler BotEventHandler) {
 		ChannelBotStop,
 		ChannelBotStart,
 		ChannelBotSettings,
+		ChannelNotifyClient,
 	)
 	defer pubsub.Close()
 
@@ -55,6 +57,26 @@ func (s *Subscriber) Listen(ctx context.Context, handler BotEventHandler) {
 }
 
 func (s *Subscriber) dispatch(ctx context.Context, msg *goredis.Message, handler BotEventHandler) {
+	// The notify channel carries a distinct payload.
+	if msg.Channel == ChannelNotifyClient {
+		var event NotifyClientEvent
+		if err := json.Unmarshal([]byte(msg.Payload), &event); err != nil {
+			s.logger.Error("eventbus: unmarshal notify event",
+				"payload", msg.Payload,
+				"error", err,
+			)
+			return
+		}
+		if err := handler.OnNotifyClient(ctx, event.BotID, event.ChatID, event.Text); err != nil {
+			s.logger.Error("eventbus: notify handler error",
+				"bot_id", event.BotID,
+				"chat_id", event.ChatID,
+				"error", err,
+			)
+		}
+		return
+	}
+
 	var event BotEvent
 	if err := json.Unmarshal([]byte(msg.Payload), &event); err != nil {
 		s.logger.Error("eventbus: unmarshal event",

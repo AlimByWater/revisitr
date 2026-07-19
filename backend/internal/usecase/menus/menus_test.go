@@ -433,6 +433,50 @@ func TestUpdateCategory_NotOwner(t *testing.T) {
 	}
 }
 
+func TestDeleteCategory_Success(t *testing.T) {
+	deleteCalled := false
+	repo := &mockMenusRepo{
+		getCategoryFn: func(_ context.Context, _ int) (*entity.MenuCategory, error) {
+			return &entity.MenuCategory{ID: 5, MenuID: 1, Name: "Coffee"}, nil
+		},
+		getByIDFn: func(_ context.Context, _ int) (*entity.Menu, error) {
+			return &entity.Menu{ID: 1, OrgID: 10}, nil
+		},
+		deleteCategoryFn: func(_ context.Context, id int) error {
+			deleteCalled = true
+			if id != 5 {
+				t.Errorf("expected delete category id=5, got %d", id)
+			}
+			return nil
+		},
+	}
+	uc := New(repo)
+
+	if err := uc.DeleteCategory(context.Background(), 10, 5); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !deleteCalled {
+		t.Error("expected repo.DeleteCategory to be called")
+	}
+}
+
+func TestDeleteCategory_NotOwner(t *testing.T) {
+	repo := &mockMenusRepo{
+		getCategoryFn: func(_ context.Context, _ int) (*entity.MenuCategory, error) {
+			return &entity.MenuCategory{ID: 5, MenuID: 9, Name: "Coffee"}, nil
+		},
+		getByIDFn: func(_ context.Context, id int) (*entity.Menu, error) {
+			return &entity.Menu{ID: id, OrgID: 77}, nil
+		},
+	}
+	uc := New(repo)
+
+	err := uc.DeleteCategory(context.Background(), 10, 5)
+	if err != ErrNotOwner {
+		t.Fatalf("expected ErrNotOwner, got %v", err)
+	}
+}
+
 func TestUpdateItem_NotOwner(t *testing.T) {
 	repo := &mockMenusRepo{
 		getItemFn: func(_ context.Context, _ int) (*entity.MenuItem, error) {

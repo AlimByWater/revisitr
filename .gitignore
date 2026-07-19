@@ -38,6 +38,7 @@ docker-compose.override.yml
 
 # Logs
 *.log
+google-sa-key*.json
 
 # Test coverage
 coverage/
@@ -66,3 +67,6 @@ backups/
 # Graphify ephemeral files
 graphify-out/cache/
 graphify-out/.graphify_*
+
+# Local instructions
+run.md

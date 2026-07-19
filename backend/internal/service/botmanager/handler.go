@@ -67,6 +67,12 @@ func (h *handler) Handle(ctx context.Context, update telego.Update) {
 		return
 	}
 
+	// Table resolution step: intercept the typed table number.
+	if state != nil && state.AwaitingTableFor != "" && text != "" && !strings.HasPrefix(text, "/") {
+		h.handleTableInput(ctx, msg, text, *state)
+		return
+	}
+
 	switch {
 	case text == "/start":
 		h.handleStart(ctx, msg)
@@ -80,6 +86,8 @@ func (h *handler) Handle(ctx context.Context, update telego.Update) {
 		h.handleMenu(ctx, msg)
 	case text == btnBooking:
 		h.handleBooking(ctx, msg)
+	case text == btnLunch:
+		h.handleLunch(ctx, msg)
 	case text == btnFeedback:
 		h.handleFeedback(ctx, msg)
 	case text == btnAbout:
@@ -139,7 +147,7 @@ func (h *handler) handleStart(ctx context.Context, msg *telego.Message) {
 func (h *handler) sendWelcomeWithMenu(ctx context.Context, chatID int64, client *entity.BotClient, user *telego.User) {
 	settings := h.info.Settings
 	values := templateValues(client, user)
-	replyKB := buildMainMenu(settings)
+	replyKB := h.mainMenuKeyboard(ctx)
 
 	// Composite welcome content — send with reply keyboard on last part
 	if h.tgSender != nil && h.hasWelcomeContent() {
@@ -531,7 +539,14 @@ func (h *handler) handleBalance(ctx context.Context, msg *telego.Message) {
 		}
 	}
 
-	h.sendText(chatID, sb.String())
+	rows := append(h.appleWalletButtonRow(ctx), h.googleWalletButtonRow(ctx)...)
+	if h.mgr.posCode != nil {
+		rows = append(rows, []entity.InlineButton{
+			{Text: "🎫 Код для кассы", Data: callbackPOSCode},
+		})
+	}
+	markup := h.inlineKeyboard(rows)
+	h.sendTextWithInlineKeyboard(chatID, sb.String(), markup)
 }
 
 func (h *handler) handleLocations(ctx context.Context, msg *telego.Message) {
@@ -666,8 +681,8 @@ func (h *handler) awardWelcomeBonus(ctx context.Context, client *entity.BotClien
 	}
 }
 
-func (h *handler) sendMainMenu(_ context.Context, chatID int64, text string) {
-	h.sendWithKeyboard(chatID, text, buildMainMenu(h.info.Settings))
+func (h *handler) sendMainMenu(ctx context.Context, chatID int64, text string) {
+	h.sendWithKeyboard(chatID, text, h.mainMenuKeyboard(ctx))
 }
 
 func personalizeMessageContent(content entity.MessageContent, values map[string]string) entity.MessageContent {

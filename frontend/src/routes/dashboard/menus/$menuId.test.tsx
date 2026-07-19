@@ -7,7 +7,9 @@ vi.mock('@/features/menus/queries', () => ({
   useAddCategoryMutation: vi.fn(),
   useAddItemMutation: vi.fn(),
   useUpdateCategoryMutation: vi.fn(),
+  useDeleteCategoryMutation: vi.fn(),
   useUpdateItemMutation: vi.fn(),
+  useDeleteItemMutation: vi.fn(),
   useUpdateMenuMutation: vi.fn(),
 }))
 
@@ -30,7 +32,9 @@ import {
   useAddItemMutation,
   useMenuQuery,
   useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
   useUpdateItemMutation,
+  useDeleteItemMutation,
   useUpdateMenuMutation,
 } from '@/features/menus/queries'
 import { usePOSQuery } from '@/features/pos/queries'
@@ -40,7 +44,9 @@ const mockUseMenuQuery = vi.mocked(useMenuQuery)
 const mockUseAddCategoryMutation = vi.mocked(useAddCategoryMutation)
 const mockUseAddItemMutation = vi.mocked(useAddItemMutation)
 const mockUseUpdateCategoryMutation = vi.mocked(useUpdateCategoryMutation)
+const mockUseDeleteCategoryMutation = vi.mocked(useDeleteCategoryMutation)
 const mockUseUpdateItemMutation = vi.mocked(useUpdateItemMutation)
+const mockUseDeleteItemMutation = vi.mocked(useDeleteItemMutation)
 const mockUseUpdateMenuMutation = vi.mocked(useUpdateMenuMutation)
 const mockUsePOSQuery = vi.mocked(usePOSQuery)
 
@@ -85,9 +91,17 @@ describe('MenuDetailPage', () => {
       ...mutationStub(),
     } as unknown as ReturnType<typeof useUpdateCategoryMutation>)
 
+    mockUseDeleteCategoryMutation.mockReturnValue({
+      ...mutationStub(),
+    } as unknown as ReturnType<typeof useDeleteCategoryMutation>)
+
     mockUseUpdateItemMutation.mockReturnValue({
       ...mutationStub(),
     } as unknown as ReturnType<typeof useUpdateItemMutation>)
+
+    mockUseDeleteItemMutation.mockReturnValue({
+      ...mutationStub(),
+    } as unknown as ReturnType<typeof useDeleteItemMutation>)
 
     mockUseUpdateMenuMutation.mockReturnValue({
       ...mutationStub(),
@@ -173,6 +187,51 @@ describe('MenuDetailPage', () => {
     // Categories are collapsed by default — expand to see items
     fireEvent.click(screen.getByText('Кофе'))
     expect(screen.getByText('250 мл')).toBeInTheDocument()
-    expect(screen.getByText('Есть фото')).toBeInTheDocument()
+    expect(screen.getByAltText('Капучино')).toHaveAttribute('src', 'https://cdn.test/cappuccino.png')
+  })
+
+  it('submits icon fields when adding a new category', () => {
+    const addCategoryMutate = vi.fn().mockResolvedValue(undefined)
+    mockUseAddCategoryMutation.mockReturnValue({
+      ...mutationStub(),
+      mutate: addCategoryMutate,
+    } as unknown as ReturnType<typeof useAddCategoryMutation>)
+    mockUseMenuQuery.mockReturnValue({
+      data: {
+        id: 5,
+        org_id: 1,
+        name: 'Основное меню',
+        source: 'manual',
+        created_at: '2026-04-18T00:00:00Z',
+        updated_at: '2026-04-18T00:00:00Z',
+        bindings: [],
+        categories: [],
+      },
+      isLoading: false,
+      isError: false,
+      mutate: vi.fn(),
+      error: undefined,
+      isValidating: false,
+    } as unknown as ReturnType<typeof useMenuQuery>)
+
+    renderPage()
+
+    fireEvent.click(screen.getByRole('button', { name: /^Категория$/i }))
+    fireEvent.change(screen.getByPlaceholderText('Название категории'), {
+      target: { value: 'Десерты' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('Эмодзи (например ☕)'), {
+      target: { value: '🍰' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('URL иконки'), {
+      target: { value: 'https://cdn.test/dessert-icon.png' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^Добавить$/i }))
+
+    expect(addCategoryMutate).toHaveBeenCalledWith({
+      name: 'Десерты',
+      icon_emoji: '🍰',
+      icon_image_url: 'https://cdn.test/dessert-icon.png',
+    })
   })
 })

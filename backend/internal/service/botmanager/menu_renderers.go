@@ -15,6 +15,12 @@ import (
 const menuTabsPerRow = 4
 const menuItemButtonsPerRow = 1
 
+// A single long category label forces Telegram to split the row's width evenly,
+// truncating every other button in that row too. Capping rows containing a long
+// label to fewer columns keeps short labels readable instead of getting squeezed.
+const menuTabLongLabelChars = 10
+const menuTabsPerRowWithLongLabel = 2
+
 func (h *handler) renderMenuTabs(ctx context.Context, chatID int64, selectedCategoryID int) {
 	h.logger.Info("renderMenuTabs called", "chat_id", chatID, "selected_category_id", selectedCategoryID)
 
@@ -80,7 +86,16 @@ func (h *handler) menuBasePart(menu *entity.Menu) entity.MessagePart {
 
 func buildCategoryTabRows(categories []menuCategoryPresentation, activeCategoryID int) [][]entity.InlineButton {
 	rows := make([][]entity.InlineButton, 0, (len(categories)+menuTabsPerRow-1)/menuTabsPerRow)
-	current := make([]entity.InlineButton, 0, menuTabsPerRow)
+	var current []entity.InlineButton
+	rowHasLongLabel := false
+
+	flush := func() {
+		if len(current) > 0 {
+			rows = append(rows, current)
+			current = nil
+			rowHasLongLabel = false
+		}
+	}
 
 	for _, category := range categories {
 		text := category.ButtonText
@@ -89,22 +104,26 @@ func buildCategoryTabRows(categories []menuCategoryPresentation, activeCategoryI
 			style = "success"
 		}
 
+		isLong := len([]rune(text)) > menuTabLongLabelChars
+		rowCap := menuTabsPerRow
+		if rowHasLongLabel || isLong {
+			rowCap = menuTabsPerRowWithLongLabel
+		}
+		if len(current) >= rowCap {
+			flush()
+		}
+
 		current = append(current, entity.InlineButton{
 			Text:              text,
 			Data:              callbackMenuTabPref + strconv.Itoa(category.Category.ID),
 			Style:             style,
 			IconCustomEmojiID: category.ButtonIconCustomEmojiID,
 		})
-
-		if len(current) == menuTabsPerRow {
-			rows = append(rows, current)
-			current = make([]entity.InlineButton, 0, menuTabsPerRow)
+		if isLong {
+			rowHasLongLabel = true
 		}
 	}
-
-	if len(current) > 0 {
-		rows = append(rows, current)
-	}
+	flush()
 
 	return rows
 }
@@ -264,13 +283,7 @@ func (h *handler) carouselContent(items []carouselItem, index int, custom menuPr
 	item := items[index]
 	total := len(items)
 
-	text := menuSections(
-		item.CategoryHeading,
-		item.Name+" — "+formatMenuPrice(item.Price),
-		strings.TrimSpace(valueOrEmpty(item.Weight)),
-		strings.TrimSpace(valueOrEmpty(item.Description)),
-	)
-	text = truncateMenuText(text)
+	rawText := formatMenuItemCardText(item.CategoryHeading, item.MenuItem)
 
 	var nav []entity.InlineButton
 	if index > 0 {
@@ -304,13 +317,13 @@ func (h *handler) carouselContent(items []carouselItem, index int, custom menuPr
 		content.Parts = []entity.MessagePart{{
 			Type:      entity.PartPhoto,
 			MediaURL:  *item.ImageURL,
-			Text:      text,
+			Text:      truncateMenuCaption(rawText),
 			ParseMode: "HTML",
 		}}
 	} else {
 		content.Parts = []entity.MessagePart{{
 			Type:      entity.PartText,
-			Text:      text,
+			Text:      truncateMenuText(rawText),
 			ParseMode: "HTML",
 		}}
 	}
@@ -323,19 +336,46 @@ func (h *handler) sendCarouselItem(ctx context.Context, chatID int64, items []ca
 	return h.sendContentMessage(ctx, chatID, h.carouselContent(items, index, custom))
 }
 
-func truncateMenuText(text string) string {
-	runes := []rune(strings.TrimSpace(text))
-	if len(runes) <= 4000 {
-		return string(runes)
+func formatMenuItemCardText(heading string, item entity.MenuItem) string {
+	lines := []string{
+		"/// " + html.EscapeString(heading),
+		"<b>" + html.EscapeString(item.Name) + " — " + formatMenuPrice(item.Price) + "</b>",
 	}
-	return string(runes[:4000]) + "\n\n... ещё позиции"
+	if item.Weight != nil && strings.TrimSpace(*item.Weight) != "" {
+		lines = append(lines, "<i>"+html.EscapeString(strings.TrimSpace(*item.Weight))+"</i>")
+	}
+	text := strings.Join(lines, "\n")
+	if item.Description != nil && strings.TrimSpace(*item.Description) != "" {
+		text += "\n\n" + html.EscapeString(strings.TrimSpace(*item.Description))
+	}
+	return text
 }
 
-func valueOrEmpty(value *string) string {
-	if value == nil {
-		return ""
+const menuTextMaxLen = 4000
+
+// menuCaptionMaxLen is Telegram's hard limit for photo captions (1024 chars),
+// unlike the 4096-char limit for plain text messages.
+const menuCaptionMaxLen = 1024
+
+func truncateMenuText(text string) string {
+	return truncateMenuTextTo(text, menuTextMaxLen)
+}
+
+func truncateMenuCaption(text string) string {
+	return truncateMenuTextTo(text, menuCaptionMaxLen)
+}
+
+func truncateMenuTextTo(text string, max int) string {
+	const suffix = "\n\n... ещё позиции"
+	runes := []rune(strings.TrimSpace(text))
+	if len(runes) <= max {
+		return string(runes)
 	}
-	return *value
+	cut := max - len([]rune(suffix))
+	if cut < 0 {
+		cut = 0
+	}
+	return string(runes[:cut]) + suffix
 }
 
 func renderMenuASCIIBlock(items []entity.MenuItem) string {
@@ -426,7 +466,10 @@ func (h *handler) handleMenuCardNavigationCallback(ctx context.Context, query *t
 		return
 	}
 
-	_ = h.updateMessageByID(ctx, chatID, query.Message.GetMessageID(), content)
+	state := h.currentFlowState(ctx, chatID)
+	state.Flow = "menu"
+	state.FlowMessageID = h.replaceFlowMessage(ctx, chatID, state, content)
+	_ = h.saveFlowState(ctx, chatID, state)
 }
 
 func parseMenuCardValue(value string) (itemID int, categoryID int, ok bool) {
@@ -469,12 +512,7 @@ func (h *handler) menuItemCardContent(ctx context.Context, chatID int64, itemID 
 	h.logger.Info("menuItemCardContent: item found", "chat_id", chatID, "category_name", category.Category.Name, "item_index", index, "total_items", len(items))
 
 	item := items[index]
-	text := menuSections(
-		category.Heading,
-		html.EscapeString(item.Name)+" — "+formatMenuPrice(item.Price),
-		html.EscapeString(strings.TrimSpace(valueOrEmpty(item.Weight))),
-		html.EscapeString(strings.TrimSpace(valueOrEmpty(item.Description))),
-	)
+	text := formatMenuItemCardText(category.Heading, item)
 
 	var rows [][]entity.InlineButton
 	var nav []entity.InlineButton
@@ -517,7 +555,7 @@ func (h *handler) menuItemCardContent(ctx context.Context, chatID int64, itemID 
 		content.Parts = []entity.MessagePart{{
 			Type:      entity.PartPhoto,
 			MediaURL:  *item.ImageURL,
-			Text:      truncateMenuText(text),
+			Text:      truncateMenuCaption(text),
 			ParseMode: "HTML",
 		}}
 	} else {

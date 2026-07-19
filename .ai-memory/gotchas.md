@@ -70,7 +70,7 @@ ssh -i ~/.ssh/elysium root@80.93.187.209 'docker exec infra-backend-1 goose -dir
 
 These features exist as stubs — UI may be present but backend logic is incomplete:
 - **Billing**: ~40% done, payment provider integration missing, `ProcessPayment` returns hardcoded "succeeded"
-- **Wallet**: ~30% done, `RefreshPassBalance` not called from loyalty flow, pass generation not implemented
+- **Wallet**: ~60-70% done, pass generation and `RefreshPassBalance` called from loyalty flow are implemented. See `docs/wallet/README.md` for details and deferred items.
 - **Marketplace**: ~35% done, bot interface and loyalty integration missing
 - **Campaigns+**: ~30% done, A/B statistics incomplete
 - **Segmentation+**: ~40% done, `ComputePredictions` is a stub

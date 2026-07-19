@@ -67,6 +67,14 @@ export function useUpdateCategoryMutation() {
   )
 }
 
+export function useDeleteCategoryMutation() {
+  return useApiMutation(
+    'menus/delete-category',
+    (categoryId: number) => menusApi.deleteCategory(categoryId),
+    ['menus'],
+  )
+}
+
 export function useAddItemMutation(menuId: number, categoryId: number) {
   return useApiMutation(
     `menus/${menuId}/categories/${categoryId}/add-item`,
