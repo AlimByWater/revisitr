@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"revisitr/internal/entity"
-	loyaltyUC "revisitr/internal/usecase/loyalty"
 	"revisitr/internal/service/poscode"
+	loyaltyUC "revisitr/internal/usecase/loyalty"
 )
 
 var (
@@ -54,6 +54,7 @@ type opsRepo interface {
 
 type integrationsRepo interface {
 	GetByID(ctx context.Context, id int) (*entity.Integration, error)
+	UpsertOrder(ctx context.Context, order *entity.ExternalOrder) error
 }
 
 type codeService interface {
@@ -128,6 +129,18 @@ type ConfigResult struct {
 	SumWithIikoDiscounts bool    `json:"sum_with_iiko_discounts"`
 }
 
+type SubmitOrderRequest struct {
+	OrderID       string            `json:"order_id"`
+	Source        string            `json:"source"`
+	OrderedAt     time.Time         `json:"ordered_at"`
+	Total         float64           `json:"total"`
+	TableNum      string            `json:"table_num"`
+	WaiterName    string            `json:"waiter_name"`
+	Items         entity.OrderItems `json:"items"`
+	CustomerPhone string            `json:"customer_phone"`
+	CustomerName  string            `json:"customer_name"`
+}
+
 type sessionData struct {
 	ClientID      int     `json:"client_id"`
 	ProgramID     int     `json:"program_id"`
@@ -135,6 +148,36 @@ type sessionData struct {
 	IntegrationID int     `json:"integration_id"`
 	OrderTotal    float64 `json:"order_total"`
 	Available     float64 `json:"available"`
+}
+
+func (uc *Usecase) SubmitOrder(ctx context.Context, key *entity.PluginKey, req SubmitOrderRequest) error {
+	if req.OrderID == "" || req.OrderedAt.IsZero() || req.Total < 0 || (req.Source != "hall" && req.Source != "delivery") {
+		return fmt.Errorf("invalid order")
+	}
+	order := &entity.ExternalOrder{
+		IntegrationID: key.IntegrationID,
+		ExternalID:    req.OrderID,
+		Source:        req.Source,
+		Items:         req.Items,
+		Total:         req.Total,
+		OrderedAt:     &req.OrderedAt,
+	}
+	if req.TableNum != "" {
+		order.TableNum = &req.TableNum
+	}
+	if req.WaiterName != "" {
+		order.WaiterName = &req.WaiterName
+	}
+	if req.CustomerPhone != "" {
+		order.CustomerPhone = &req.CustomerPhone
+	}
+	if req.CustomerName != "" {
+		order.CustomerName = &req.CustomerName
+	}
+	if err := uc.integrations.UpsertOrder(ctx, order); err != nil {
+		return fmt.Errorf("upsert order: %w", err)
+	}
+	return nil
 }
 
 // AuthenticateKey hashes the raw key and looks it up. On success it best-effort

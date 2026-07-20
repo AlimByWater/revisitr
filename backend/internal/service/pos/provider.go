@@ -58,8 +58,9 @@ type POSMenu struct {
 }
 
 type MenuCategory struct {
-	Name  string     `json:"name"`
-	Items []MenuItem `json:"items"`
+	ExternalID string     `json:"external_id"`
+	Name       string     `json:"name"`
+	Items      []MenuItem `json:"items"`
 }
 
 type MenuItem struct {
@@ -67,6 +68,18 @@ type MenuItem struct {
 	Name        string  `json:"name"`
 	Price       float64 `json:"price"`
 	Description string  `json:"description,omitempty"`
+	ImageURL    string  `json:"image_url,omitempty"`
+}
+
+type SyncMenuResult struct {
+	Added   int `json:"added"`
+	Updated int `json:"updated"`
+	Missing int `json:"missing"`
+}
+
+type SyncResult struct {
+	OrdersSynced int            `json:"orders_synced"`
+	Menu         SyncMenuResult `json:"menu"`
 }
 
 type CustomerListOpts struct {

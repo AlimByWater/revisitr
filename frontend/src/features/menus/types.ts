@@ -16,6 +16,9 @@ export interface MenuCategory {
   id: number
   menu_id: number
   name: string
+  pos_external_id?: string
+  pos_name?: string
+  display_name?: string
   icon_emoji?: string
   icon_image_url?: string
   sort_order: number
@@ -27,6 +30,10 @@ export interface MenuItem {
   id: number
   category_id: number
   name: string
+  pos_name?: string
+  pos_description?: string
+  pos_category_name?: string
+  display_name?: string
   description?: string
   price: number
   weight?: string
@@ -34,6 +41,7 @@ export interface MenuItem {
   tags: string[]
   external_id?: string
   is_available: boolean
+  missing_in_pos?: boolean
   sort_order: number
   created_at: string
   updated_at: string
@@ -71,6 +79,7 @@ export interface CreateMenuCategoryRequest {
 
 export interface UpdateMenuCategoryRequest {
   name?: string
+  display_name?: string
   icon_emoji?: string
   icon_image_url?: string
   sort_order?: number
@@ -87,6 +96,7 @@ export interface CreateMenuItemRequest {
 
 export interface UpdateMenuItemRequest {
   name?: string
+  display_name?: string
   description?: string
   price?: number
   weight?: string

@@ -301,7 +301,7 @@ func (p *IikoProvider) ListExternalMenus(ctx context.Context) ([]POSExternalMenu
 		if m.ID == "" {
 			continue
 		}
-		menus = append(menus, POSExternalMenu{ID: m.ID, Name: m.Name})
+		menus = append(menus, POSExternalMenu(m))
 	}
 	return menus, nil
 }
@@ -485,10 +485,51 @@ func (p *IikoProvider) fetchDeliveries(ctx context.Context, from, to time.Time) 
 }
 
 func (p *IikoProvider) GetMenu(ctx context.Context) (*POSMenu, error) {
-	if p.externalMenuID != "" {
-		return p.getExternalMenu(ctx)
+	menu, err := p.getNomenclatureMenu(ctx)
+	if err != nil || p.externalMenuID == "" {
+		return menu, err
 	}
-	return p.getNomenclatureMenu(ctx)
+
+	external, err := p.getExternalMenu(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return enrichNomenclatureMenu(menu, external), nil
+}
+
+// enrichNomenclatureMenu preserves iiko nomenclature as the canonical product
+// catalogue while using the external menu only for client-facing enrichment.
+func enrichNomenclatureMenu(menu, external *POSMenu) *POSMenu {
+	if menu == nil || external == nil {
+		return menu
+	}
+
+	externalItems := make(map[string]MenuItem)
+	for _, category := range external.Categories {
+		for _, item := range category.Items {
+			externalItems[item.ExternalID] = item
+		}
+	}
+
+	for categoryIndex := range menu.Categories {
+		for itemIndex := range menu.Categories[categoryIndex].Items {
+			item := &menu.Categories[categoryIndex].Items[itemIndex]
+			externalItem, ok := externalItems[item.ExternalID]
+			if !ok {
+				continue
+			}
+			if externalItem.Price > 0 {
+				item.Price = externalItem.Price
+			}
+			if externalItem.Description != "" {
+				item.Description = externalItem.Description
+			}
+			if externalItem.ImageURL != "" {
+				item.ImageURL = externalItem.ImageURL
+			}
+		}
+	}
+	return menu
 }
 
 type iikoExternalMenuResponse struct {
@@ -508,6 +549,7 @@ type iikoExternalMenuItem struct {
 	IikoItemID  string                     `json:"iikoItemId"`
 	Name        string                     `json:"name"`
 	Description string                     `json:"description"`
+	ImageLinks  []string                   `json:"imageLinks"`
 	IsHidden    bool                       `json:"isHidden"`
 	Deleted     bool                       `json:"deleted"`
 	ItemSizes   []iikoExternalMenuItemSize `json:"itemSizes"`
@@ -554,6 +596,7 @@ func (p *IikoProvider) getExternalMenu(ctx context.Context) (*POSMenu, error) {
 				Name:        item.Name,
 				Price:       externalMenuPrice(item.ItemSizes),
 				Description: item.Description,
+				ImageURL:    firstImageLink(item.ImageLinks),
 			})
 		}
 		if len(mc.Items) > 0 {
@@ -561,6 +604,13 @@ func (p *IikoProvider) getExternalMenu(ctx context.Context) (*POSMenu, error) {
 		}
 	}
 	return menu, nil
+}
+
+func firstImageLink(links []string) string {
+	if len(links) == 0 {
+		return ""
+	}
+	return links[0]
 }
 
 func externalMenuPrice(sizes []iikoExternalMenuItemSize) float64 {
@@ -646,7 +696,14 @@ func (p *IikoProvider) getNomenclatureMenu(ctx context.Context) (*POSMenu, error
 	for _, name := range names {
 		items := byCategory[name]
 		sort.Slice(items, func(i, j int) bool { return items[i].Name < items[j].Name })
-		menu.Categories = append(menu.Categories, MenuCategory{Name: name, Items: items})
+		groupID := ""
+		for id, groupName := range groups {
+			if groupName == name {
+				groupID = id
+				break
+			}
+		}
+		menu.Categories = append(menu.Categories, MenuCategory{ExternalID: groupID, Name: name, Items: items})
 	}
 	return menu, nil
 }

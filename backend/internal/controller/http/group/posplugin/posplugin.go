@@ -19,6 +19,7 @@ type pluginUsecase interface {
 	Redeem(ctx context.Context, key *entity.PluginKey, session, orderID string, amount float64) (*posUC.OpResult, error)
 	Accrue(ctx context.Context, key *entity.PluginKey, session, orderID string, amount float64) (*posUC.OpResult, error)
 	Config(ctx context.Context, key *entity.PluginKey) (*posUC.ConfigResult, error)
+	SubmitOrder(ctx context.Context, key *entity.PluginKey, req posUC.SubmitOrderRequest) error
 }
 
 type Group struct {
@@ -42,6 +43,7 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 		g.handleIdentify,
 		g.handleRedeem,
 		g.handleAccrue,
+		g.handleSubmitOrder,
 		g.handleConfig,
 	}
 }
@@ -114,6 +116,22 @@ func (g *Group) handleAccrue() (string, string, gin.HandlerFunc) {
 		}
 
 		c.JSON(http.StatusOK, res)
+	}
+}
+
+func (g *Group) handleSubmitOrder() (string, string, gin.HandlerFunc) {
+	return http.MethodPost, "/order", func(c *gin.Context) {
+		key := c.MustGet("plugin_key").(*entity.PluginKey)
+		var req posUC.SubmitOrderRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if err := g.uc.SubmitOrder(c.Request.Context(), key, req); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not save order"})
+			return
+		}
+		c.Status(http.StatusNoContent)
 	}
 }
 

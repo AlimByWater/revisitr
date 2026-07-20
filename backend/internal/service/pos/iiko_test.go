@@ -263,6 +263,17 @@ func TestIiko_GetMenu_ExternalMenu(t *testing.T) {
 		switch r.URL.Path {
 		case "/api/1/access_token":
 			_ = json.NewEncoder(w).Encode(iikoTokenResponse{Token: "tok"})
+		case "/api/1/nomenclature":
+			price := 190.0
+			_ = json.NewEncoder(w).Encode(iikoNomenclatureResponse{
+				Groups: []iikoNomenclatureGroup{{ID: "group-1", Name: "Coffee"}},
+				Products: []iikoNomenclatureProduct{{
+					ID:          "product-1",
+					Name:        "iiko Cappuccino",
+					ParentGroup: "group-1",
+					Price:       &price,
+				}},
+			})
 		case "/api/2/menu/by_id":
 			if got := r.Header.Get("Authorization"); got != "Bearer tok" {
 				t.Errorf("auth header=%q", got)
@@ -311,15 +322,11 @@ func TestIiko_GetMenu_ExternalMenu(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetMenu: %v", err)
 	}
-	if len(menu.Categories) != 1 || menu.Categories[0].Name != "Coffee" {
+	if len(menu.Categories) != 1 || menu.Categories[0].Name != "Coffee" || len(menu.Categories[0].Items) != 1 {
 		t.Fatalf("categories=%+v", menu.Categories)
 	}
 	item := menu.Categories[0].Items[0]
-	if item.ExternalID != "product-1" || item.Name != "Cappuccino" || item.Price != 250 {
-		t.Fatalf("item=%+v", item)
-	}
-	item = menu.Categories[0].Items[1]
-	if item.ExternalID != "menu-product-2" || item.Name != "Cookie" || item.Price != 250 {
+	if item.ExternalID != "product-1" || item.Name != "iiko Cappuccino" || item.Description != "Milk coffee" || item.Price != 250 {
 		t.Fatalf("item=%+v", item)
 	}
 }

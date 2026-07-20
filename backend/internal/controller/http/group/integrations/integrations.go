@@ -23,12 +23,12 @@ type integrationsUsecase interface {
 	GetByID(ctx context.Context, id, orgID int) (*entity.Integration, error)
 	Update(ctx context.Context, id, orgID int, req *entity.UpdateIntegrationRequest) (*entity.Integration, error)
 	Delete(ctx context.Context, id, orgID int) error
-	SyncNow(ctx context.Context, id, orgID int) error
+	SyncNow(ctx context.Context, id, orgID int) (*posService.SyncResult, error)
 	TestConnection(ctx context.Context, id, orgID int) error
 	GetOrders(ctx context.Context, id, orgID, limit, offset int) ([]entity.ExternalOrder, int, error)
 	GetLinkedClients(ctx context.Context, id, orgID, limit, offset int) ([]entity.IntegrationLinkedClient, int, error)
 	GetCustomers(ctx context.Context, id, orgID int, opts posService.CustomerListOpts) ([]posService.POSCustomer, error)
-	GetMenu(ctx context.Context, id, orgID int) (*posService.POSMenu, error)
+	GetMenu(ctx context.Context, id, orgID int) (*entity.Menu, error)
 	GetStats(ctx context.Context, id, orgID int) (*entity.IntegrationStats, error)
 	GetAggregates(ctx context.Context, id, orgID int, from, to time.Time) ([]entity.IntegrationAggregate, error)
 	GetDashboardData(ctx context.Context, orgID int, from, to time.Time) (*entity.DashboardAggregates, error)
@@ -218,12 +218,13 @@ func (g *Group) handleSync() (string, string, gin.HandlerFunc) {
 			return
 		}
 
-		if err := g.uc.SyncNow(c.Request.Context(), id, orgID.(int)); err != nil {
+		result, err := g.uc.SyncNow(c.Request.Context(), id, orgID.(int))
+		if err != nil {
 			handleError(c, err)
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "sync completed"})
+		c.JSON(http.StatusOK, result)
 	}
 }
 

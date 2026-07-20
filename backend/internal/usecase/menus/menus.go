@@ -201,6 +201,9 @@ func (uc *Usecase) UpdateCategory(ctx context.Context, orgID, categoryID int, re
 	if req.Name != nil {
 		category.Name = *req.Name
 	}
+	if req.DisplayName != nil {
+		category.DisplayName = emptyStringPtr(*req.DisplayName)
+	}
 	if req.IconEmoji != nil {
 		category.IconEmoji = req.IconEmoji
 	}
@@ -294,6 +297,9 @@ func (uc *Usecase) UpdateItem(ctx context.Context, orgID, itemID int, req entity
 
 	if req.Name != nil {
 		item.Name = *req.Name
+	}
+	if req.DisplayName != nil {
+		item.DisplayName = emptyStringPtr(*req.DisplayName)
 	}
 	if req.Description != nil {
 		item.Description = req.Description

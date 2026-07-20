@@ -303,21 +303,24 @@ func (r *Integrations) UpsertOrder(ctx context.Context, order *entity.ExternalOr
 	}
 
 	query := `
-		INSERT INTO external_orders (integration_id, external_id, client_id, customer_phone, customer_name, items, total, ordered_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO external_orders (integration_id, external_id, source, table_num, waiter_name, client_id, customer_phone, customer_name, items, total, ordered_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		ON CONFLICT (integration_id, external_id) DO UPDATE
-		SET client_id       = EXCLUDED.client_id,
-		    customer_phone  = EXCLUDED.customer_phone,
-		    customer_name   = EXCLUDED.customer_name,
-		    items           = EXCLUDED.items,
+		SET source          = CASE WHEN external_orders.source = 'hall' THEN external_orders.source ELSE EXCLUDED.source END,
+		    table_num       = COALESCE(external_orders.table_num, EXCLUDED.table_num),
+		    waiter_name     = COALESCE(external_orders.waiter_name, EXCLUDED.waiter_name),
+		    client_id       = COALESCE(EXCLUDED.client_id, external_orders.client_id),
+		    customer_phone  = COALESCE(EXCLUDED.customer_phone, external_orders.customer_phone),
+		    customer_name   = COALESCE(EXCLUDED.customer_name, external_orders.customer_name),
+		    items           = CASE WHEN jsonb_array_length(EXCLUDED.items) > 0 THEN EXCLUDED.items ELSE external_orders.items END,
 		    total           = EXCLUDED.total,
-		    ordered_at      = EXCLUDED.ordered_at,
+		    ordered_at      = COALESCE(EXCLUDED.ordered_at, external_orders.ordered_at),
 		    synced_at       = NOW()
 		RETURNING id, synced_at`
 
 	return r.pg.DB().QueryRowContext(ctx, query,
-		order.IntegrationID, order.ExternalID, order.ClientID,
-		order.CustomerPhone, order.CustomerName,
+		order.IntegrationID, order.ExternalID, order.Source, order.TableNum, order.WaiterName,
+		order.ClientID, order.CustomerPhone, order.CustomerName,
 		itemsVal, order.Total, order.OrderedAt,
 	).Scan(&order.ID, &order.SyncedAt)
 }

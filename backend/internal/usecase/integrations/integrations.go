@@ -28,11 +28,11 @@ type integrationsRepo interface {
 }
 
 type syncService interface {
-	Sync(ctx context.Context, integration *entity.Integration) error
+	Sync(ctx context.Context, integration *entity.Integration) (*posService.SyncResult, error)
 	TestConnection(ctx context.Context, integration *entity.Integration) error
 	Discover(ctx context.Context, integrationType string, cfg entity.IntegrationConfig) (*posService.POSDiscovery, error)
 	GetCustomers(ctx context.Context, integration *entity.Integration, opts posService.CustomerListOpts) ([]posService.POSCustomer, error)
-	GetMenu(ctx context.Context, integration *entity.Integration) (*posService.POSMenu, error)
+	GetImportedMenu(ctx context.Context, integration *entity.Integration) (*entity.Menu, error)
 }
 
 type Usecase struct {
@@ -128,20 +128,21 @@ func (uc *Usecase) Delete(ctx context.Context, id, orgID int) error {
 	return nil
 }
 
-func (uc *Usecase) SyncNow(ctx context.Context, id, orgID int) error {
+func (uc *Usecase) SyncNow(ctx context.Context, id, orgID int) (*posService.SyncResult, error) {
 	intg, err := uc.GetByID(ctx, id, orgID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := uc.syncSvc.Sync(ctx, intg); err != nil {
+	result, err := uc.syncSvc.Sync(ctx, intg)
+	if err != nil {
 		if updateErr := uc.integrations.UpdateLastSync(ctx, id, "error"); updateErr != nil {
 			uc.logger.Error("update integration status after sync error", "error", updateErr, "id", id)
 		}
-		return fmt.Errorf("sync integration: %w", err)
+		return nil, fmt.Errorf("sync integration: %w", err)
 	}
 
-	return nil
+	return result, nil
 }
 
 func (uc *Usecase) TestConnection(ctx context.Context, id, orgID int) error {
@@ -176,12 +177,12 @@ func (uc *Usecase) GetCustomers(ctx context.Context, id, orgID int, opts posServ
 	return uc.syncSvc.GetCustomers(ctx, intg, opts)
 }
 
-func (uc *Usecase) GetMenu(ctx context.Context, id, orgID int) (*posService.POSMenu, error) {
+func (uc *Usecase) GetMenu(ctx context.Context, id, orgID int) (*entity.Menu, error) {
 	intg, err := uc.GetByID(ctx, id, orgID)
 	if err != nil {
 		return nil, err
 	}
-	return uc.syncSvc.GetMenu(ctx, intg)
+	return uc.syncSvc.GetImportedMenu(ctx, intg)
 }
 
 func (uc *Usecase) GetStats(ctx context.Context, id, orgID int) (*entity.IntegrationStats, error) {

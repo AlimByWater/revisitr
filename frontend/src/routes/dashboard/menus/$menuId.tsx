@@ -744,7 +744,7 @@ function CategorySection({
 function MenuItemRow({ item, onUpdate }: { item: MenuItem; onUpdate: () => void }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState({
-    name: item.name,
+    display_name: item.display_name ?? '',
     description: item.description ?? '',
     price: item.price,
     weight: item.weight ?? '',
@@ -757,7 +757,7 @@ function MenuItemRow({ item, onUpdate }: { item: MenuItem; onUpdate: () => void 
 
   useEffect(() => {
     setDraft({
-      name: item.name,
+      display_name: item.display_name ?? '',
       description: item.description ?? '',
       price: item.price,
       weight: item.weight ?? '',
@@ -770,7 +770,7 @@ function MenuItemRow({ item, onUpdate }: { item: MenuItem; onUpdate: () => void 
     await updateItem.mutate({
       itemId: item.id,
       data: {
-        name: draft.name,
+        display_name: draft.display_name,
         description: draft.description,
         price: Number(draft.price),
         weight: draft.weight,
@@ -800,11 +800,14 @@ function MenuItemRow({ item, onUpdate }: { item: MenuItem; onUpdate: () => void 
           <div className="grid gap-3 md:grid-cols-2">
             <input
               type="text"
-              value={draft.name}
-              onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+              value={draft.display_name}
+              onChange={(event) => setDraft((current) => ({ ...current, display_name: event.target.value }))}
               className={inputClassName}
-              placeholder="Название"
+              placeholder="Отображаемое название"
             />
+            {item.pos_name && (
+              <p className="text-xs text-neutral-400 md:col-span-2">В iiko: {item.pos_name}</p>
+            )}
             <input
               type="text"
               inputMode="decimal"
@@ -890,7 +893,7 @@ function MenuItemRow({ item, onUpdate }: { item: MenuItem; onUpdate: () => void 
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-2">
               <span className={cn('text-sm font-medium text-neutral-900', !item.is_available && 'line-through opacity-50')}>
-                {item.name}
+                {item.display_name || item.name}
               </span>
               <span className="text-sm font-semibold text-neutral-900 shrink-0">
                 {new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(item.price)}

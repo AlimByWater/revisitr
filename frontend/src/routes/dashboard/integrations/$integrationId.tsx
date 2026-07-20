@@ -24,6 +24,7 @@ import {
   useUpdateIntegrationMutation,
 } from '@/features/integrations/queries'
 import { ErrorState } from '@/components/common/ErrorState'
+import { Pagination } from '@/components/common/Pagination'
 import { PluginKeysSection } from '@/components/integrations/PluginKeysSection'
 import type { Integration } from '@/features/integrations/types'
 
@@ -246,9 +247,11 @@ function OverviewTab({
         </div>
       )}
 
-      {syncMutation.isSuccess && (
+      {syncMutation.isSuccess && syncMutation.data && (
         <div className="flex items-start gap-3 rounded p-4 bg-emerald-50 border border-emerald-500/25">
-          <p className="text-sm text-emerald-800/90">Синхронизация завершена успешно.</p>
+          <p className="text-sm text-emerald-800/90">
+            Синхронизация завершена: {syncMutation.data.orders_synced} заказов, меню: +{syncMutation.data.menu.added} новых, {syncMutation.data.menu.updated} обновлено, {syncMutation.data.menu.missing} не найдено в iiko.
+          </p>
         </div>
       )}
 
@@ -312,6 +315,9 @@ function OrdersTab({ integrationId }: { integrationId: number }) {
               <th className="text-left py-2 px-3 text-neutral-500 font-medium">
                 Дата
               </th>
+              <th className="text-center py-2 px-3 text-neutral-500 font-medium">
+                Источник
+              </th>
               <th className="text-left py-2 px-3 text-neutral-500 font-medium">
                 Позиции
               </th>
@@ -334,6 +340,16 @@ function OrdersTab({ integrationId }: { integrationId: number }) {
                 </td>
                 <td className="py-2.5 px-3 text-neutral-700">
                   {formatDate(order.ordered_at)}
+                </td>
+                <td className="py-2.5 px-3 text-center">
+                  <span className={cn(
+                    'font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border',
+                    order.source === 'hall'
+                      ? 'bg-neutral-100 text-neutral-600 border-neutral-300'
+                      : 'bg-accent/10 text-accent border-accent/30',
+                  )}>
+                    {order.source === 'hall' ? 'Зал' : 'Доставка'}
+                  </span>
                 </td>
                 <td className="py-2.5 px-3 text-neutral-600">
                   {order.items?.map((it) => it.name).join(', ') || '—'}
@@ -360,33 +376,18 @@ function OrdersTab({ integrationId }: { integrationId: number }) {
       </div>
 
       {total > limit && (
-        <div className="flex justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="px-3 py-1.5 text-sm rounded border border-neutral-900 disabled:opacity-30 hover:bg-neutral-50 transition-colors"
-          >
-            Назад
-          </button>
-          <span className="px-3 py-1.5 text-sm text-neutral-500">
-            {page * limit + 1}–{Math.min((page + 1) * limit, total)} из {total}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={(page + 1) * limit >= total}
-            className="px-3 py-1.5 text-sm rounded border border-neutral-900 disabled:opacity-30 hover:bg-neutral-50 transition-colors"
-          >
-            Далее
-          </button>
-        </div>
+        <Pagination
+          page={page + 1}
+          pageCount={Math.ceil(total / limit)}
+          onChange={(nextPage) => setPage(nextPage - 1)}
+          total={total}
+          itemsLabel="заказов"
+        />
       )}
     </div>
   )
 }
 
-// --- Clients Tab ---
 // Revisitr clients linked to this integration, derived from matched orders.
 // iiko has no bulk customer list, so we surface our own matched clients here.
 function ClientsTab({ integrationId }: { integrationId: number }) {
@@ -505,29 +506,42 @@ function MenuTab({ integrationId }: { integrationId: number }) {
     return <p className="text-sm text-neutral-500">Загрузка меню...</p>
   }
 
-  if (!menu || menu.categories.length === 0) {
+  if (!menu || !menu.categories || menu.categories.length === 0) {
     return (
       <p className="text-sm text-neutral-500 py-8 text-center">
-        Меню не загружено из POS-системы.
+        Меню ещё не импортировано. Запустите синхронизацию на вкладке «Обзор».
       </p>
     )
   }
 
   return (
     <div className="space-y-6">
+      <div className="rounded border border-neutral-200 bg-neutral-50/70 p-4 text-sm text-neutral-600">
+        Оригинальные данные iiko сохранены отдельно. Отображаемые названия, описания, изображения и видимость меняются в редакторе меню.
+      </div>
+      <Link to={`/dashboard/menus/${menu.id}`} className="inline-flex text-sm font-medium text-accent hover:text-accent-hover">
+        Открыть редактор меню
+      </Link>
       {menu.categories.map((cat) => (
-        <div key={cat.name}>
+        <div key={cat.id}>
           <h3 className="text-sm font-semibold text-neutral-900 mb-2">
             {cat.name}
           </h3>
           <div className="bg-white rounded border border-neutral-900 divide-y divide-neutral-200/50">
-            {cat.items.map((item) => (
+            {(cat.items ?? []).map((item) => (
               <div
-                key={item.external_id}
-                className="flex items-center justify-between px-4 py-2.5"
+                key={item.id}
+                className={cn('flex items-center justify-between px-4 py-2.5', item.missing_in_pos && 'opacity-50')}
               >
                 <div>
-                  <span className="text-sm text-neutral-800">{item.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-neutral-800">{item.display_name || item.name}</span>
+                    {item.external_id && <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border bg-neutral-100 text-neutral-600 border-neutral-300">iiko</span>}
+                    {item.missing_in_pos && <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border bg-neutral-100 text-neutral-600 border-neutral-300">нет в iiko</span>}
+                  </div>
+                  {item.pos_name && item.pos_name !== (item.display_name || item.name) && (
+                    <p className="text-xs text-neutral-400 mt-0.5">В iiko: {item.pos_name}</p>
+                  )}
                   {item.description && (
                     <p className="text-xs text-neutral-400 mt-0.5">
                       {item.description}
