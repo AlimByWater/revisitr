@@ -21,7 +21,7 @@ import { PeriodFilter } from '@/components/common/PeriodFilter'
 import { CustomSelect } from '@/components/common/CustomSelect'
 import type { AnalyticsFilter, PieSlice } from '@/features/analytics/types'
 
-const PIE_COLORS = ['#EF3219', '#171717', '#525252', '#a3a3a3', '#d4d4d4', '#f5f5f5']
+const PIE_COLORS = ['rgb(var(--color-accent-rgb))', '#171717', '#525252', '#a3a3a3', '#d4d4d4', '#f5f5f5']
 
 export default function LoyaltyAnalyticsPage() {
   const [filter, setFilter] = useState<AnalyticsFilter>({ period: '30d' })
@@ -172,7 +172,7 @@ export default function LoyaltyAnalyticsPage() {
                     contentStyle={{ borderRadius: 4, border: '1px solid #e5e5e5', fontSize: 13 }}
                     cursor={{ fill: '#f5f5f5' }}
                   />
-                  <Bar dataKey="count" fill="#EF3219" radius={[0, 2, 2, 0]} />
+                  <Bar dataKey="count" fill="rgb(var(--color-accent-rgb))" radius={[0, 2, 2, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

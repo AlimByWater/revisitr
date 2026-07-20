@@ -36,7 +36,7 @@ export default function DashboardHome() {
   const { data: charts, isLoading: chartsLoading } =
     useDashboardChartsQuery(filter)
 
-  const accentColor = '#EF3219'
+  const accentColor = 'rgb(var(--color-accent-rgb))'
   const gridColor = '#f0f0f0'
   const tickColor = '#a3a3a3'
   const tooltipBg = '#fff'

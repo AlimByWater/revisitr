@@ -132,7 +132,7 @@ export default function SalesAnalyticsPage() {
                   formatter={(v) => [formatCurrency(Number(v)), 'Выручка']}
                   contentStyle={{ borderRadius: 4, border: '1px solid #e5e5e5', fontSize: 13 }}
                 />
-                <Bar dataKey="value" fill="#EF3219" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="value" fill="rgb(var(--color-accent-rgb))" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -161,8 +161,8 @@ export default function SalesAnalyticsPage() {
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#EF3219"
-                  fill="#EF3219"
+                  stroke="rgb(var(--color-accent-rgb))"
+                  fill="rgb(var(--color-accent-rgb))"
                   fillOpacity={0.08}
                   strokeWidth={2}
                 />
@@ -201,7 +201,7 @@ export default function SalesAnalyticsPage() {
                   contentStyle={{ borderRadius: 4, border: '1px solid #e5e5e5', fontSize: 13 }}
                   cursor={{ fill: '#f5f5f5' }}
                 />
-                <Bar dataKey="value" fill="#EF3219" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="value" fill="rgb(var(--color-accent-rgb))" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
