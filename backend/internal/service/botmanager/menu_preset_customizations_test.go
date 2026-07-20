@@ -69,7 +69,7 @@ func TestBuildCategoryTabRowsMarksActiveCategory(t *testing.T) {
 		},
 	}, 10)
 
-	if len(rows) != 1 || len(rows[0]) != 2 {
+	if len(rows) != 2 || len(rows[0]) != 1 || len(rows[1]) != 1 {
 		t.Fatalf("unexpected row layout: %#v", rows)
 	}
 	if rows[0][0].Text != "Desserts" {
@@ -86,7 +86,10 @@ func TestBuildCategoryTabRowsMarksActiveCategory(t *testing.T) {
 	}
 }
 
-func TestBuildCategoryTabRowsIsolatesLongLabels(t *testing.T) {
+// One category per row means Telegram never has to split a row's width across
+// buttons of differing label length, so this must hold regardless of how long
+// individual labels are or how categories get reordered.
+func TestBuildCategoryTabRowsOneCategoryPerRow(t *testing.T) {
 	rows := buildCategoryTabRows([]menuCategoryPresentation{
 		{Category: entity.MenuCategory{ID: 1}, ButtonText: "Закуски"},
 		{Category: entity.MenuCategory{ID: 2}, ButtonText: "Основные блюда"},
@@ -94,28 +97,13 @@ func TestBuildCategoryTabRowsIsolatesLongLabels(t *testing.T) {
 		{Category: entity.MenuCategory{ID: 4}, ButtonText: "Напитки"},
 	}, 0)
 
-	if len(rows) != 2 {
-		t.Fatalf("expected 2 rows, got %d: %#v", len(rows), rows)
+	if len(rows) != 4 {
+		t.Fatalf("expected one row per category, got %d: %#v", len(rows), rows)
 	}
-	if len(rows[0]) != 2 || len(rows[1]) != 2 {
-		t.Fatalf("expected long label to cap rows at 2 columns, got row sizes %d/%d", len(rows[0]), len(rows[1]))
-	}
-	if rows[0][1].Text != "Основные блюда" {
-		t.Fatalf("expected long label to share a row with only one sibling, got %#v", rows[0])
-	}
-}
-
-func TestBuildCategoryTabRowsPacksShortLabelsFour(t *testing.T) {
-	rows := buildCategoryTabRows([]menuCategoryPresentation{
-		{Category: entity.MenuCategory{ID: 1}, ButtonText: "Закуски"},
-		{Category: entity.MenuCategory{ID: 2}, ButtonText: "Салаты"},
-		{Category: entity.MenuCategory{ID: 3}, ButtonText: "Горячее"},
-		{Category: entity.MenuCategory{ID: 4}, ButtonText: "Напитки"},
-		{Category: entity.MenuCategory{ID: 5}, ButtonText: "Десерты"},
-	}, 0)
-
-	if len(rows) != 2 || len(rows[0]) != 4 || len(rows[1]) != 1 {
-		t.Fatalf("expected 4-per-row packing for short labels, got %#v", rows)
+	for i, row := range rows {
+		if len(row) != 1 {
+			t.Fatalf("expected row %d to hold exactly one button, got %#v", i, row)
+		}
 	}
 }
 

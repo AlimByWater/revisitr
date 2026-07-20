@@ -12,14 +12,7 @@ import (
 	"github.com/mymmrac/telego"
 )
 
-const menuTabsPerRow = 4
 const menuItemButtonsPerRow = 1
-
-// A single long category label forces Telegram to split the row's width evenly,
-// truncating every other button in that row too. Capping rows containing a long
-// label to fewer columns keeps short labels readable instead of getting squeezed.
-const menuTabLongLabelChars = 10
-const menuTabsPerRowWithLongLabel = 2
 
 func (h *handler) renderMenuTabs(ctx context.Context, chatID int64, selectedCategoryID int) {
 	h.logger.Info("renderMenuTabs called", "chat_id", chatID, "selected_category_id", selectedCategoryID)
@@ -40,33 +33,39 @@ func (h *handler) renderMenuTabs(ctx context.Context, chatID int64, selectedCate
 		return
 	}
 
-	selected := categories[0]
-	for _, category := range categories {
-		if category.Category.ID == selectedCategoryID {
-			selected = category
+	var selected *menuCategoryPresentation
+	for i := range categories {
+		if categories[i].Category.ID == selectedCategoryID {
+			selected = &categories[i]
 			break
 		}
 	}
-	h.logger.Info("renderMenuTabs: selected category", "chat_id", chatID, "category_id", selected.Category.ID, "category_name", selected.Category.Name, "item_count", len(selected.Category.Items))
+
+	activeCategoryID := 0
+	var itemsText string
+	var itemRows [][]entity.InlineButton
+	if selected != nil {
+		h.logger.Info("renderMenuTabs: selected category", "chat_id", chatID, "category_id", selected.Category.ID, "category_name", selected.Category.Name, "item_count", len(selected.Category.Items))
+		activeCategoryID = selected.Category.ID
+		itemsText = renderMenuASCIIBlock(selected.Category.Items)
+		itemRows = buildCategoryItemRows(selected.Category.ID, selected.Category.Items)
+	}
 
 	part := h.menuBasePart(menu)
 	part.Text = truncateMenuText(menuSections(
 		h.buildMenuTabsHeader(menu, custom),
-		renderMenuASCIIBlock(selected.Category.Items),
+		itemsText,
 	))
 	part = ensureMenuTextPart(part)
 
 	content := entity.MessageContent{
-		Parts: []entity.MessagePart{part},
-		Buttons: append(
-			buildCategoryTabRows(categories, selected.Category.ID),
-			buildCategoryItemRows(selected.Category.ID, selected.Category.Items)...,
-		),
+		Parts:   []entity.MessagePart{part},
+		Buttons: append(buildCategoryTabRows(categories, activeCategoryID), itemRows...),
 	}
 
 	state := h.currentFlowState(ctx, chatID)
 	state.Flow = "menu_tabs"
-	state.MenuCategoryID = selected.Category.ID
+	state.MenuCategoryID = activeCategoryID
 	state.MenuPage = 0
 	state.FlowMessageID = h.updateFlowMessage(ctx, chatID, state, content)
 	_ = h.saveFlowState(ctx, chatID, state)
@@ -84,47 +83,25 @@ func (h *handler) menuBasePart(menu *entity.Menu) entity.MessagePart {
 	return entity.MessagePart{Type: entity.PartText}
 }
 
+// Telegram splits a row's button widths evenly across however many buttons
+// share that row, and does so inconsistently between clients (desktop, Android,
+// iOS) once labels of different lengths mix. One category per row sidesteps
+// that entirely: a row with a single button can't be split unevenly.
 func buildCategoryTabRows(categories []menuCategoryPresentation, activeCategoryID int) [][]entity.InlineButton {
-	rows := make([][]entity.InlineButton, 0, (len(categories)+menuTabsPerRow-1)/menuTabsPerRow)
-	var current []entity.InlineButton
-	rowHasLongLabel := false
-
-	flush := func() {
-		if len(current) > 0 {
-			rows = append(rows, current)
-			current = nil
-			rowHasLongLabel = false
-		}
-	}
-
+	rows := make([][]entity.InlineButton, 0, len(categories))
 	for _, category := range categories {
-		text := category.ButtonText
 		style := category.ButtonStyle
 		if category.Category.ID == activeCategoryID {
 			style = "success"
 		}
 
-		isLong := len([]rune(text)) > menuTabLongLabelChars
-		rowCap := menuTabsPerRow
-		if rowHasLongLabel || isLong {
-			rowCap = menuTabsPerRowWithLongLabel
-		}
-		if len(current) >= rowCap {
-			flush()
-		}
-
-		current = append(current, entity.InlineButton{
-			Text:              text,
+		rows = append(rows, []entity.InlineButton{{
+			Text:              category.ButtonText,
 			Data:              callbackMenuTabPref + strconv.Itoa(category.Category.ID),
 			Style:             style,
 			IconCustomEmojiID: category.ButtonIconCustomEmojiID,
-		})
-		if isLong {
-			rowHasLongLabel = true
-		}
+		}})
 	}
-	flush()
-
 	return rows
 }
 
