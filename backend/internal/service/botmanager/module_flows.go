@@ -1069,19 +1069,23 @@ func (h *handler) updateMessageByID(ctx context.Context, chatID int64, messageID
 
 	switch part.Type {
 	case entity.PartPhoto:
-		params := tu.EditMessageCaption(tu.ID(chatID), messageID, part.Text)
-		if len(emojiEntities) > 0 {
-			params = params.WithCaptionEntities(emojiEntities...)
-		} else if part.ParseMode != "" {
-			params = params.WithParseMode(part.ParseMode)
+		media := tu.MediaPhoto(h.inputFile(part))
+		if part.Text != "" {
+			media = media.WithCaption(part.Text)
 		}
+		if len(emojiEntities) > 0 {
+			media = media.WithCaptionEntities(emojiEntities...)
+		} else if part.ParseMode != "" {
+			media = media.WithParseMode(part.ParseMode)
+		}
+		params := tu.EditMessageMedia(tu.ID(chatID), messageID, media)
 		if markup != nil {
 			params = params.WithReplyMarkup(markup)
 		}
-		if _, err := h.bot.EditMessageCaption(ctx, params); err == nil {
+		if _, err := h.bot.EditMessageMedia(ctx, params); err == nil {
 			return messageID
 		} else {
-			h.logger.Warn("edit message photo failed, replacing", "error", err, "chat_id", chatID, "message_id", messageID)
+			h.logger.Warn("edit message media failed, replacing", "error", err, "chat_id", chatID, "message_id", messageID)
 		}
 	case entity.PartText:
 		params := tu.EditMessageText(tu.ID(chatID), messageID, part.Text)

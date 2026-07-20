@@ -221,8 +221,7 @@ func (h *handler) handleLunchCallback(ctx context.Context, query *telego.Callbac
 			return
 		}
 		state.LunchItemIdx = idx
-		// The card photo may change — replace instead of edit.
-		h.renderLunchCourse(ctx, chatID, program, state, true)
+		h.renderLunchCourse(ctx, chatID, program, state, false)
 
 	case strings.HasPrefix(data, callbackLunchSelectPref):
 		h.answerCallback(query.ID, "")

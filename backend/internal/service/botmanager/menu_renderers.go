@@ -58,9 +58,17 @@ func (h *handler) renderMenuTabs(ctx context.Context, chatID int64, selectedCate
 	))
 	part = ensureMenuTextPart(part)
 
+	var buttons [][]entity.InlineButton
+	if selected != nil {
+		buttons = append(buttons, itemRows...)
+		buttons = append(buttons, []entity.InlineButton{{Text: "◀ Назад к категориям", Data: callbackMenuRoot}})
+	} else {
+		buttons = buildCategoryTabRows(categories, activeCategoryID)
+	}
+
 	content := entity.MessageContent{
 		Parts:   []entity.MessagePart{part},
-		Buttons: append(buildCategoryTabRows(categories, activeCategoryID), itemRows...),
+		Buttons: buttons,
 	}
 
 	state := h.currentFlowState(ctx, chatID)
@@ -220,7 +228,7 @@ func (h *handler) handleMenuCarouselCallback(ctx context.Context, chatID int64, 
 
 	state := h.currentFlowState(ctx, chatID)
 	state.CarouselIndex = index
-	state.FlowMessageID = h.replaceFlowMessage(ctx, chatID, state, h.carouselContent(items, index, custom))
+	state.FlowMessageID = h.updateFlowMessage(ctx, chatID, state, h.carouselContent(items, index, custom))
 	_ = h.saveFlowState(ctx, chatID, state)
 }
 
@@ -445,7 +453,7 @@ func (h *handler) handleMenuCardNavigationCallback(ctx context.Context, query *t
 
 	state := h.currentFlowState(ctx, chatID)
 	state.Flow = "menu"
-	state.FlowMessageID = h.replaceFlowMessage(ctx, chatID, state, content)
+	state.FlowMessageID = h.updateMessageByID(ctx, chatID, query.Message.GetMessageID(), content)
 	_ = h.saveFlowState(ctx, chatID, state)
 }
 
