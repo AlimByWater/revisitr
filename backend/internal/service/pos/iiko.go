@@ -494,6 +494,9 @@ func (p *IikoProvider) GetMenu(ctx context.Context) (*POSMenu, error) {
 	if err != nil {
 		return nil, err
 	}
+	if menu == nil || len(menu.Categories) == 0 {
+		return external, nil
+	}
 	return enrichNomenclatureMenu(menu, external), nil
 }
 
