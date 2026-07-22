@@ -56,6 +56,7 @@ export default function InvoicesPage() {
         </div>
       ) : (
         <div className="rounded border border-neutral-900 bg-white overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-100 bg-neutral-50">
@@ -84,6 +85,7 @@ export default function InvoicesPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

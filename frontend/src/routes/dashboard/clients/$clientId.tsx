@@ -428,6 +428,7 @@ function TransactionsTab({
           История транзакций
         </h2>
       </div>
+      <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
           <tr className="border-b border-neutral-200">
@@ -491,6 +492,7 @@ function TransactionsTab({
           })}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }
@@ -570,6 +572,7 @@ function OrderStatsContent({ stats }: { stats: ClientOrderStats }) {
               Популярные позиции
             </h2>
           </div>
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-neutral-200">
@@ -606,6 +609,7 @@ function OrderStatsContent({ stats }: { stats: ClientOrderStats }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

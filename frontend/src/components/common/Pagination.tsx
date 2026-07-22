@@ -15,7 +15,7 @@ export function Pagination({ page, pageCount, onChange, total, itemsLabel, class
   const canNext = page < pageCount
 
   return (
-    <div className={cn('flex items-center justify-between mt-4', className)}>
+    <div className={cn('flex flex-wrap items-center justify-between gap-3 mt-4', className)}>
       <p className="text-sm text-neutral-500">
         {total !== undefined && itemsLabel
           ? `Всего ${total.toLocaleString('ru-RU')} ${itemsLabel}`
@@ -60,7 +60,7 @@ function PageButton({
       disabled={disabled}
       aria-label={ariaLabel}
       className={cn(
-        'p-2 rounded text-neutral-500 hover:bg-neutral-100 transition-colors',
+        'inline-flex items-center justify-center p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded text-neutral-500 hover:bg-neutral-100 transition-colors',
         'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
       )}
     >

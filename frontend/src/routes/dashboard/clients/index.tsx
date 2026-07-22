@@ -295,6 +295,7 @@ export default function ClientsPage() {
       ) : (
         <>
           <div className="bg-white rounded border border-neutral-900 overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-neutral-200">
@@ -334,6 +335,7 @@ export default function ClientsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           <Pagination

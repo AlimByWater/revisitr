@@ -115,6 +115,7 @@ export default function WalletPage() {
           />
         ) : (
           <div className="bg-white rounded border border-neutral-900 overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr>
@@ -183,6 +184,7 @@ export default function WalletPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>
