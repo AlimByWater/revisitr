@@ -384,6 +384,20 @@ function ConfigForm({
               rows={3}
               className={cn(inputClass, 'font-mono')}
             />
+            <input
+              type="text"
+              placeholder="APNs Key ID (для push-обновлений)"
+              value={credentials.apns_key_id ?? ''}
+              onChange={(e) => setCredentials({ ...credentials, apns_key_id: e.target.value })}
+              className={inputClass}
+            />
+            <textarea
+              placeholder="APNs ключ (.p8, base64 или PEM)"
+              value={credentials.apns_key ?? ''}
+              onChange={(e) => setCredentials({ ...credentials, apns_key: e.target.value })}
+              rows={3}
+              className={cn(inputClass, 'font-mono')}
+            />
           </>
         ) : (
           <>

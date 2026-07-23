@@ -208,20 +208,73 @@ func (r *Wallet) GetOrgName(ctx context.Context, orgID int) (string, error) {
 	return name, nil
 }
 
-// ── Device Registrations (stub, for future APNs push) ───────────────────────
+// ── Device Registrations (Apple Wallet web service) ─────────────────────────
 
-func (r *Wallet) CreateDeviceRegistration(ctx context.Context, reg *entity.WalletDeviceRegistration) error {
-	return fmt.Errorf("wallet.CreateDeviceRegistration: not implemented")
-}
-
-func (r *Wallet) GetDeviceRegistration(ctx context.Context, deviceID, passTypeID, serial string) (*entity.WalletDeviceRegistration, error) {
-	return nil, nil
+// CreateDeviceRegistration upserts a device↔pass registration.
+// Returns true if a new registration was created, false if it already existed.
+func (r *Wallet) CreateDeviceRegistration(ctx context.Context, reg *entity.WalletDeviceRegistration) (bool, error) {
+	var created bool
+	err := r.pg.DB().GetContext(ctx, &created, `
+		INSERT INTO wallet_device_registrations (org_id, device_library_id, pass_type_id, serial_number, push_token, auth_token)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (device_library_id, pass_type_id, serial_number) DO UPDATE SET
+			push_token = EXCLUDED.push_token, updated_at = now()
+		RETURNING (xmax = 0) AS created`,
+		reg.OrgID, reg.DeviceLibraryID, reg.PassTypeID, reg.SerialNumber, reg.PushToken, reg.AuthToken)
+	if err != nil {
+		return false, fmt.Errorf("wallet.CreateDeviceRegistration: %w", err)
+	}
+	return created, nil
 }
 
 func (r *Wallet) DeleteDeviceRegistration(ctx context.Context, deviceID, passTypeID, serial string) error {
+	_, err := r.pg.DB().ExecContext(ctx, `
+		DELETE FROM wallet_device_registrations
+		WHERE device_library_id = $1 AND pass_type_id = $2 AND serial_number = $3`,
+		deviceID, passTypeID, serial)
+	if err != nil {
+		return fmt.Errorf("wallet.DeleteDeviceRegistration: %w", err)
+	}
 	return nil
 }
 
-func (r *Wallet) GetDeviceSerials(ctx context.Context, deviceID, passTypeID string) ([]string, error) {
-	return nil, nil
+// GetDeviceSerials returns serial numbers of passes registered to a device for a
+// given pass type, updated strictly after sinceEpoch (0 = all). It also returns
+// the max updated_at epoch across matched passes — the tag handed back to the device.
+func (r *Wallet) GetDeviceSerials(ctx context.Context, deviceID, passTypeID string, sinceEpoch int64) ([]string, int64, error) {
+	var rows []struct {
+		Serial string `db:"serial_number"`
+		Epoch  int64  `db:"epoch"`
+	}
+	err := r.pg.DB().SelectContext(ctx, &rows, `
+		SELECT wp.serial_number, EXTRACT(EPOCH FROM wp.updated_at)::bigint AS epoch
+		FROM wallet_device_registrations dr
+		JOIN wallet_passes wp ON wp.serial_number = dr.serial_number
+		WHERE dr.device_library_id = $1 AND dr.pass_type_id = $2
+		  AND ($3 = 0 OR wp.updated_at > to_timestamp($3))`,
+		deviceID, passTypeID, sinceEpoch)
+	if err != nil {
+		return nil, 0, fmt.Errorf("wallet.GetDeviceSerials: %w", err)
+	}
+	serials := make([]string, 0, len(rows))
+	var maxEpoch int64
+	for _, row := range rows {
+		serials = append(serials, row.Serial)
+		if row.Epoch > maxEpoch {
+			maxEpoch = row.Epoch
+		}
+	}
+	return serials, maxEpoch, nil
+}
+
+// GetRegistrationsBySerial returns all device registrations (with push tokens) for a pass.
+func (r *Wallet) GetRegistrationsBySerial(ctx context.Context, serial string) ([]entity.WalletDeviceRegistration, error) {
+	var regs []entity.WalletDeviceRegistration
+	err := r.pg.DB().SelectContext(ctx, &regs, `
+		SELECT * FROM wallet_device_registrations
+		WHERE serial_number = $1 AND push_token IS NOT NULL`, serial)
+	if err != nil {
+		return nil, fmt.Errorf("wallet.GetRegistrationsBySerial: %w", err)
+	}
+	return regs, nil
 }

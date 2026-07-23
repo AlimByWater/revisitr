@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -30,6 +31,9 @@ type walletUsecase interface {
 	GetClientsQRCode(ctx context.Context, clientID int) (string, error)
 	GetOrgName(ctx context.Context, orgID int) (string, error)
 	GenerateGoogleSaveURL(ctx context.Context, orgID int, pass *entity.WalletPass) (string, error)
+	RegisterDevice(ctx context.Context, deviceLibraryID, passTypeID, serial, authToken, pushToken string) (bool, error)
+	UnregisterDevice(ctx context.Context, deviceLibraryID, passTypeID, serial, authToken string) error
+	GetDeviceSerials(ctx context.Context, deviceLibraryID, passTypeID, passesUpdatedSince string) ([]string, string, error)
 }
 
 type Group struct {
@@ -68,6 +72,9 @@ func (g *Group) Handlers() []func() (string, string, gin.HandlerFunc) {
 func (g *Group) PublicHandlers() []func() (string, string, gin.HandlerFunc) {
 	return []func() (string, string, gin.HandlerFunc){
 		g.handleAppleGetPass,
+		g.handleAppleRegisterDevice,
+		g.handleAppleListSerials,
+		g.handleAppleUnregisterDevice,
 		g.handleAppleLogPass,
 		g.handleAppleLogCrash,
 		g.handleRegisterPushToken,
@@ -293,17 +300,21 @@ func (g *Group) generatePass(c *gin.Context, pass *entity.WalletPass, orgID int)
 }
 
 func (g *Group) verifyAppleAuth(c *gin.Context, pass *entity.WalletPass) error {
-	auth := c.GetHeader("Authorization")
-	if !strings.HasPrefix(auth, "ApplePass ") {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization"})
-		return fmt.Errorf("invalid auth header")
-	}
-	token := strings.TrimPrefix(auth, "ApplePass ")
-	if token != pass.AuthToken {
+	token, ok := appleAuthToken(c)
+	if !ok || token != pass.AuthToken {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization"})
 		return fmt.Errorf("invalid auth token")
 	}
 	return nil
+}
+
+// appleAuthToken extracts the token from an "Authorization: ApplePass <token>" header.
+func appleAuthToken(c *gin.Context) (string, bool) {
+	auth := c.GetHeader("Authorization")
+	if !strings.HasPrefix(auth, "ApplePass ") {
+		return "", false
+	}
+	return strings.TrimPrefix(auth, "ApplePass "), true
 }
 
 // ── Apple Wallet Web Service (public) ────────────────────────────────────────
@@ -325,6 +336,14 @@ func (g *Group) handleAppleGetPass() (string, string, gin.HandlerFunc) {
 			return
 		}
 
+		lastModified := pass.UpdatedAt.UTC().Truncate(time.Second)
+		if ims := c.GetHeader("If-Modified-Since"); ims != "" {
+			if t, err := http.ParseTime(ims); err == nil && !lastModified.After(t) {
+				c.Status(http.StatusNotModified)
+				return
+			}
+		}
+
 		pkpassData, err := g.generatePass(c, pass, pass.OrgID)
 		if err != nil {
 			slog.Error("wallet apple get pass", "error", err)
@@ -332,7 +351,79 @@ func (g *Group) handleAppleGetPass() (string, string, gin.HandlerFunc) {
 			return
 		}
 
+		c.Header("Last-Modified", lastModified.Format(http.TimeFormat))
 		c.Data(http.StatusOK, "application/vnd.apple.pkpass", pkpassData)
+	}
+}
+
+// ── Device registration (Apple Wallet web service) ───────────────────────────
+
+func (g *Group) handleAppleRegisterDevice() (string, string, gin.HandlerFunc) {
+	return http.MethodPost, "/v1/devices/:deviceLibraryId/registrations/:passTypeId/:serial", func(c *gin.Context) {
+		authToken, ok := appleAuthToken(c)
+		if !ok {
+			c.Status(http.StatusUnauthorized)
+			return
+		}
+		var body struct {
+			PushToken string `json:"pushToken"`
+		}
+		if err := c.ShouldBindJSON(&body); err != nil || body.PushToken == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "pushToken required"})
+			return
+		}
+
+		created, err := g.uc.RegisterDevice(c.Request.Context(),
+			c.Param("deviceLibraryId"), c.Param("passTypeId"), c.Param("serial"), authToken, body.PushToken)
+		if err != nil {
+			if errors.Is(err, walletUC.ErrPassNotFound) {
+				c.Status(http.StatusUnauthorized)
+				return
+			}
+			g.handleError(c, err)
+			return
+		}
+		if created {
+			c.Status(http.StatusCreated)
+		} else {
+			c.Status(http.StatusOK)
+		}
+	}
+}
+
+func (g *Group) handleAppleListSerials() (string, string, gin.HandlerFunc) {
+	return http.MethodGet, "/v1/devices/:deviceLibraryId/registrations/:passTypeId", func(c *gin.Context) {
+		serials, tag, err := g.uc.GetDeviceSerials(c.Request.Context(),
+			c.Param("deviceLibraryId"), c.Param("passTypeId"), c.Query("passesUpdatedSince"))
+		if err != nil {
+			g.handleError(c, err)
+			return
+		}
+		if len(serials) == 0 {
+			c.Status(http.StatusNoContent)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"lastUpdated": tag, "serialNumbers": serials})
+	}
+}
+
+func (g *Group) handleAppleUnregisterDevice() (string, string, gin.HandlerFunc) {
+	return http.MethodDelete, "/v1/devices/:deviceLibraryId/registrations/:passTypeId/:serial", func(c *gin.Context) {
+		authToken, ok := appleAuthToken(c)
+		if !ok {
+			c.Status(http.StatusUnauthorized)
+			return
+		}
+		if err := g.uc.UnregisterDevice(c.Request.Context(),
+			c.Param("deviceLibraryId"), c.Param("passTypeId"), c.Param("serial"), authToken); err != nil {
+			if errors.Is(err, walletUC.ErrPassNotFound) {
+				c.Status(http.StatusUnauthorized)
+				return
+			}
+			g.handleError(c, err)
+			return
+		}
+		c.Status(http.StatusOK)
 	}
 }
 

@@ -23,6 +23,8 @@ export interface WalletCredentials {
   pass_type_id?: string
   team_id?: string
   certificate?: string
+  apns_key_id?: string
+  apns_key?: string
   // Google
   issuer_id?: string
   service_account_key?: string

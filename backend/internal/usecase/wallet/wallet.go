@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 
 	"revisitr/internal/entity"
 )
@@ -39,6 +40,10 @@ type passRepo interface {
 	GetPassesWithPushToken(ctx context.Context, orgID int) ([]entity.WalletPass, error)
 	GetClientQRCode(ctx context.Context, clientID int) (string, error)
 	GetOrgName(ctx context.Context, orgID int) (string, error)
+	CreateDeviceRegistration(ctx context.Context, reg *entity.WalletDeviceRegistration) (bool, error)
+	DeleteDeviceRegistration(ctx context.Context, deviceID, passTypeID, serial string) error
+	GetDeviceSerials(ctx context.Context, deviceID, passTypeID string, sinceEpoch int64) ([]string, int64, error)
+	GetRegistrationsBySerial(ctx context.Context, serial string) ([]entity.WalletDeviceRegistration, error)
 }
 
 type Usecase struct {
@@ -47,6 +52,7 @@ type Usecase struct {
 	passes   passRepo
 	googleGW *GoogleSaveGenerator
 	googleAPI *GoogleWalletAPI
+	apns     *APNsClient
 }
 
 func New(configs configRepo, passes passRepo) *Usecase {
@@ -55,12 +61,14 @@ func New(configs configRepo, passes passRepo) *Usecase {
 		passes:   passes,
 		googleGW: NewGoogleSaveGenerator(),
 		googleAPI: NewGoogleWalletAPI(),
+		apns:     NewAPNsClient(),
 	}
 }
 
 func (uc *Usecase) Init(_ context.Context, logger *slog.Logger) error {
 	uc.logger = logger
 	uc.googleAPI.Init(logger)
+	uc.apns.Init(logger)
 	return nil
 }
 
@@ -228,9 +236,91 @@ func (uc *Usecase) RefreshPassBalance(ctx context.Context, clientID int, balance
 		if err := uc.passes.UpdatePassBalance(ctx, p.ID, balance, level); err != nil {
 			uc.logger.Warn("wallet: failed to update pass balance",
 				"pass_id", p.ID, "client_id", clientID, "error", err)
+			continue
+		}
+		// Notify Apple Wallet devices to pull the updated pass (fire-and-forget).
+		if p.Platform == "apple" {
+			go uc.pushAppleUpdate(context.Background(), p.OrgID, p.SerialNumber)
 		}
 	}
 	return nil
+}
+
+// pushAppleUpdate sends an APNs update push to every device registered for a
+// pass. No-op if APNs is not configured for the org.
+func (uc *Usecase) pushAppleUpdate(ctx context.Context, orgID int, serial string) {
+	cfg, err := uc.configs.GetConfig(ctx, orgID, "apple")
+	if err != nil || cfg == nil || !cfg.IsEnabled {
+		return
+	}
+	if cfg.Credentials["apns_key"] == "" || cfg.Credentials["apns_key_id"] == "" {
+		return // push updates not configured
+	}
+	regs, err := uc.passes.GetRegistrationsBySerial(ctx, serial)
+	if err != nil {
+		uc.logger.Warn("wallet apns: get registrations", "serial", serial, "error", err)
+		return
+	}
+	for _, reg := range regs {
+		if reg.PushToken == nil {
+			continue
+		}
+		if err := uc.apns.SendPush(ctx, cfg.Credentials, *reg.PushToken); err != nil {
+			uc.logger.Warn("wallet apns: push failed",
+				"serial", serial, "device", reg.DeviceLibraryID, "error", err)
+		}
+	}
+}
+
+// ── Apple Wallet device registration ─────────────────────────────────────────
+
+// RegisterDevice records a device's push token for a pass. Returns true if the
+// registration is new (HTTP 201) versus already existing (HTTP 200).
+func (uc *Usecase) RegisterDevice(ctx context.Context, deviceLibraryID, passTypeID, serial, authToken, pushToken string) (bool, error) {
+	pass, err := uc.passes.GetPassBySerial(ctx, serial)
+	if err != nil {
+		return false, err
+	}
+	if pass == nil || pass.AuthToken != authToken {
+		return false, ErrPassNotFound
+	}
+	return uc.passes.CreateDeviceRegistration(ctx, &entity.WalletDeviceRegistration{
+		OrgID:           pass.OrgID,
+		DeviceLibraryID: deviceLibraryID,
+		PassTypeID:      passTypeID,
+		SerialNumber:    serial,
+		PushToken:       &pushToken,
+		AuthToken:       authToken,
+	})
+}
+
+func (uc *Usecase) UnregisterDevice(ctx context.Context, deviceLibraryID, passTypeID, serial, authToken string) error {
+	pass, err := uc.passes.GetPassBySerial(ctx, serial)
+	if err != nil {
+		return err
+	}
+	if pass == nil || pass.AuthToken != authToken {
+		return ErrPassNotFound
+	}
+	return uc.passes.DeleteDeviceRegistration(ctx, deviceLibraryID, passTypeID, serial)
+}
+
+// GetDeviceSerials returns the serial numbers of passes for a device that changed
+// since the given tag, plus the new tag to persist. Empty since = all passes.
+func (uc *Usecase) GetDeviceSerials(ctx context.Context, deviceLibraryID, passTypeID, passesUpdatedSince string) ([]string, string, error) {
+	var since int64
+	if passesUpdatedSince != "" {
+		since, _ = strconv.ParseInt(passesUpdatedSince, 10, 64)
+	}
+	serials, maxEpoch, err := uc.passes.GetDeviceSerials(ctx, deviceLibraryID, passTypeID, since)
+	if err != nil {
+		return nil, "", err
+	}
+	tag := passesUpdatedSince
+	if maxEpoch > 0 {
+		tag = strconv.FormatInt(maxEpoch, 10)
+	}
+	return serials, tag, nil
 }
 
 // GetClientsQRCode returns the QR code string for a client.

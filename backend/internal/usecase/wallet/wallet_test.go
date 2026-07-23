@@ -54,6 +54,10 @@ type mockPassRepo struct {
 	getPassesWithPush    func(ctx context.Context, orgID int) ([]entity.WalletPass, error)
 	getClientQRCode      func(ctx context.Context, clientID int) (string, error)
 	getOrgName           func(ctx context.Context, orgID int) (string, error)
+	createDeviceReg      func(ctx context.Context, reg *entity.WalletDeviceRegistration) (bool, error)
+	deleteDeviceReg      func(ctx context.Context, deviceID, passTypeID, serial string) error
+	getDeviceSerials     func(ctx context.Context, deviceID, passTypeID string, sinceEpoch int64) ([]string, int64, error)
+	getRegsBySerial      func(ctx context.Context, serial string) ([]entity.WalletDeviceRegistration, error)
 }
 
 func (m *mockPassRepo) CreatePass(ctx context.Context, pass *entity.WalletPass) error {
@@ -97,6 +101,30 @@ func (m *mockPassRepo) GetOrgName(ctx context.Context, orgID int) (string, error
 		return "", nil
 	}
 	return m.getOrgName(ctx, orgID)
+}
+func (m *mockPassRepo) CreateDeviceRegistration(ctx context.Context, reg *entity.WalletDeviceRegistration) (bool, error) {
+	if m.createDeviceReg == nil {
+		return false, nil
+	}
+	return m.createDeviceReg(ctx, reg)
+}
+func (m *mockPassRepo) DeleteDeviceRegistration(ctx context.Context, deviceID, passTypeID, serial string) error {
+	if m.deleteDeviceReg == nil {
+		return nil
+	}
+	return m.deleteDeviceReg(ctx, deviceID, passTypeID, serial)
+}
+func (m *mockPassRepo) GetDeviceSerials(ctx context.Context, deviceID, passTypeID string, sinceEpoch int64) ([]string, int64, error) {
+	if m.getDeviceSerials == nil {
+		return nil, 0, nil
+	}
+	return m.getDeviceSerials(ctx, deviceID, passTypeID, sinceEpoch)
+}
+func (m *mockPassRepo) GetRegistrationsBySerial(ctx context.Context, serial string) ([]entity.WalletDeviceRegistration, error) {
+	if m.getRegsBySerial == nil {
+		return nil, nil
+	}
+	return m.getRegsBySerial(ctx, serial)
 }
 
 func newTestUC(configs *mockConfigRepo, passes *mockPassRepo) *Usecase {
@@ -408,6 +436,74 @@ func TestGenerateGoogleSaveURL_Success(t *testing.T) {
 	}
 	if !strings.HasPrefix(url, "https://pay.google.com/gp/v/save/") {
 		t.Fatalf("unexpected url: %s", url)
+	}
+}
+
+func TestRegisterDevice_Success(t *testing.T) {
+	var got *entity.WalletDeviceRegistration
+	passes := &mockPassRepo{
+		getPassBySerial: func(_ context.Context, serial string) (*entity.WalletPass, error) {
+			return &entity.WalletPass{ID: 1, OrgID: 7, SerialNumber: serial, AuthToken: "tok"}, nil
+		},
+		createDeviceReg: func(_ context.Context, reg *entity.WalletDeviceRegistration) (bool, error) {
+			got = reg
+			return true, nil
+		},
+	}
+	uc := newTestUC(&mockConfigRepo{}, passes)
+	created, err := uc.RegisterDevice(context.Background(), "dev1", "pass.test", "s1", "tok", "push1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !created {
+		t.Error("expected created=true")
+	}
+	if got.OrgID != 7 || got.DeviceLibraryID != "dev1" || got.PushToken == nil || *got.PushToken != "push1" {
+		t.Fatalf("unexpected registration: %+v", got)
+	}
+}
+
+func TestRegisterDevice_WrongAuth(t *testing.T) {
+	passes := &mockPassRepo{
+		getPassBySerial: func(_ context.Context, serial string) (*entity.WalletPass, error) {
+			return &entity.WalletPass{ID: 1, SerialNumber: serial, AuthToken: "correct"}, nil
+		},
+	}
+	uc := newTestUC(&mockConfigRepo{}, passes)
+	_, err := uc.RegisterDevice(context.Background(), "dev1", "pass.test", "s1", "wrong", "push1")
+	if err != ErrPassNotFound {
+		t.Fatalf("expected ErrPassNotFound, got %v", err)
+	}
+}
+
+func TestUnregisterDevice_WrongAuth(t *testing.T) {
+	passes := &mockPassRepo{
+		getPassBySerial: func(_ context.Context, serial string) (*entity.WalletPass, error) {
+			return &entity.WalletPass{ID: 1, SerialNumber: serial, AuthToken: "correct"}, nil
+		},
+	}
+	uc := newTestUC(&mockConfigRepo{}, passes)
+	if err := uc.UnregisterDevice(context.Background(), "dev1", "pass.test", "s1", "wrong"); err != ErrPassNotFound {
+		t.Fatalf("expected ErrPassNotFound, got %v", err)
+	}
+}
+
+func TestGetDeviceSerials_Tag(t *testing.T) {
+	passes := &mockPassRepo{
+		getDeviceSerials: func(_ context.Context, _, _ string, since int64) ([]string, int64, error) {
+			if since != 100 {
+				t.Errorf("expected since=100, got %d", since)
+			}
+			return []string{"s1", "s2"}, 250, nil
+		},
+	}
+	uc := newTestUC(&mockConfigRepo{}, passes)
+	serials, tag, err := uc.GetDeviceSerials(context.Background(), "dev1", "pass.test", "100")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(serials) != 2 || tag != "250" {
+		t.Fatalf("unexpected serials=%v tag=%s", serials, tag)
 	}
 }
 
