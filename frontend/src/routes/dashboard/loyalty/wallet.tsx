@@ -434,6 +434,13 @@ function ConfigForm({
         />
         <input
           type="text"
+          placeholder="Надпись сверху карты (logo text)"
+          value={design.logo_text ?? ''}
+          onChange={(e) => setDesign({ ...design, logo_text: e.target.value })}
+          className={inputClass}
+        />
+        <input
+          type="text"
           placeholder="Описание на карте"
           value={design.description ?? ''}
           onChange={(e) => setDesign({ ...design, description: e.target.value })}

@@ -42,6 +42,7 @@ type WalletDesign struct {
 	LabelColor       string `json:"label_color,omitempty"`
 	Description      string `json:"description,omitempty"`
 	OrganizationName string `json:"organization_name,omitempty"`
+	LogoText         string `json:"logo_text,omitempty"`
 	WebServiceURL    string `json:"web_service_url,omitempty"`
 }
 

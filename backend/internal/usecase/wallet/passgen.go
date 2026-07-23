@@ -192,6 +192,21 @@ func (g *PassGenerator) GeneratePass(
 	}
 	manifest["icon.png"] = sha1Hex(iconData)
 
+	// Generate decorative strip (pattern behind the primary field)
+	bgc := parseHexColor(cfg.Design.BackgroundColor, color.RGBA{26, 26, 26, 255})
+	acc := parseHexColor(cfg.Design.LabelColor, color.RGBA{255, 107, 53, 255})
+	strips := map[string][]byte{}
+	for name, sz := range map[string][2]int{
+		"strip.png":    {375, 123},
+		"strip@2x.png": {750, 246},
+		"strip@3x.png": {1125, 369},
+	} {
+		if d, err := g.generateStrip(sz[0], sz[1], bgc, acc); err == nil {
+			strips[name] = d
+			manifest[name] = sha1Hex(d)
+		}
+	}
+
 	// Generate QR code
 	var qrData []byte
 	if clientQRCode != "" {
@@ -214,7 +229,7 @@ func (g *PassGenerator) GeneratePass(
 	}
 
 	// 5. Zip everything
-	return g.zipPass(passJSON, manifestJSON, iconData, qrData, logoData, signature)
+	return g.zipPass(passJSON, manifestJSON, iconData, qrData, logoData, signature, strips)
 }
 
 func (g *PassGenerator) buildPassJSON(
@@ -235,6 +250,7 @@ func (g *PassGenerator) buildPassJSON(
 		TeamIdentifier:     cfg.Credentials["team_id"],
 		OrganizationName:   orgName,
 		Description:        cfg.Design.Description,
+		LogoText:           cfg.Design.LogoText,
 		ForegroundColor:    rgbColor(cfg.Design.ForegroundColor),
 		BackgroundColor:    rgbColor(cfg.Design.BackgroundColor),
 		LabelColor:         rgbColor(cfg.Design.LabelColor),
@@ -370,7 +386,7 @@ func (g *PassGenerator) signManifest(manifestJSON []byte, key *rsa.PrivateKey, c
 	return asn1.Marshal(ci)
 }
 
-func (g *PassGenerator) zipPass(passJSON, manifestJSON, iconData, qrData, logoData, signature []byte) ([]byte, error) {
+func (g *PassGenerator) zipPass(passJSON, manifestJSON, iconData, qrData, logoData, signature []byte, strips map[string][]byte) ([]byte, error) {
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
 
@@ -388,6 +404,12 @@ func (g *PassGenerator) zipPass(passJSON, manifestJSON, iconData, qrData, logoDa
 			name string
 			data []byte
 		}{"logo.png", logoData})
+	}
+	for name, data := range strips {
+		files = append(files, struct {
+			name string
+			data []byte
+		}{name, data})
 	}
 
 	for _, file := range files {
@@ -416,6 +438,47 @@ func (g *PassGenerator) generateIcon(bgColor string) ([]byte, error) {
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
 		return nil, fmt.Errorf("encode icon: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+// generateStrip renders a subtle diagonal cross-hatch pattern in the accent
+// color over the background color — a decorative strip behind the primary field.
+func (g *PassGenerator) generateStrip(w, h int, bg, ac color.RGBA) ([]byte, error) {
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	draw.Draw(img, img.Bounds(), &image.Uniform{bg}, image.Point{}, draw.Src)
+
+	period := w / 9
+	if period < 8 {
+		period = 8
+	}
+	thick := w / 240
+	if thick < 1 {
+		thick = 1
+	}
+	blend := func(a float64) color.RGBA {
+		return color.RGBA{
+			R: uint8(float64(bg.R)*(1-a) + float64(ac.R)*a),
+			G: uint8(float64(bg.G)*(1-a) + float64(ac.G)*a),
+			B: uint8(float64(bg.B)*(1-a) + float64(ac.B)*a),
+			A: 255,
+		}
+	}
+	strong := blend(0.24)
+	faint := blend(0.12)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			if (x+y)%period < thick {
+				img.SetRGBA(x, y, strong)
+			} else if (x-y+w*h)%period < thick {
+				img.SetRGBA(x, y, faint)
+			}
+		}
+	}
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		return nil, fmt.Errorf("encode strip: %w", err)
 	}
 	return buf.Bytes(), nil
 }
