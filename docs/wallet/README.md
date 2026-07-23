@@ -4,7 +4,7 @@
 
 | Платформа | Статус | Примечание |
 |-----------|--------|------------|
-| Apple Wallet | ~70% | pkpass генерация + web service + admin download готово. Нужен Apple Developer ($99) для теста |
+| Apple Wallet | ~95% | pkpass генерация + web service + device registration + APNs push-обновления + admin download. Проверено на реальном продакшн-`.p12` (подпись верифицируется до Apple Root). Осталось открыть пасс на iPhone |
 | Google Wallet | ~85% | REST API создание класса/объекта + JWT save URL + admin save button готово. Нужен Google Cloud service account + Google Pay & Wallet console |
 
 ---
@@ -16,7 +16,8 @@
 - **`internal/usecase/wallet/passgen.go`** — генератор `.pkpass`:
   - pass.json (store card, balance → primaryFields, level → secondaryFields, QR-code → barcode)
   - QR-код (go-qrcode, данные из `bot_clients.qr_code`)
-  - Загрузка .p12 сертификата (base64 из credentials, pkcs12 decode)
+  - Загрузка .p12 сертификата (base64 из credentials, декод через `software.sslmate.com/src/go-pkcs12` — поддерживает современные `.p12` с SHA-256 MAC)
+  - Apple WWDR G4 промежуточный сертификат вшит в `wwdr.go` и автоматически добавляется в цепочку подписи (в `.p12` обычно только leaf)
   - manifest.json (SHA-1 хеши)
   - PKCS#7 detached signature (encoding/asn1, без внешних зависимостей)
   - Zip-сборка (icon.png, logo.png опционально из logo_url, signature)
@@ -24,12 +25,15 @@
   - `OrganizationName` — отображается на карте
   - `WebServiceURL` — переопределение URL вэб-сервиса (автоопределяется из request)
 - **Apple Web Service эндпоинты** (public, без JWT):
-  - `GET /v1/passes/:passTypeId/:serial` — отдаёт pkpass (auth: `ApplePass <token>`)
-  - `POST /v1/passes/:passTypeId/:serial/log` — заглушка
-  - `POST /v1/log` — заглушка
+  - `GET /v1/passes/:passTypeId/:serial` — отдаёт pkpass (auth: `ApplePass <token>`, поддержка `If-Modified-Since` → 304)
+  - `POST /v1/devices/:deviceLibraryId/registrations/:passTypeId/:serial` — регистрация устройства (сохраняет push-токен, auth: `ApplePass <token>`)
+  - `GET /v1/devices/:deviceLibraryId/registrations/:passTypeId?passesUpdatedSince=<tag>` — список серийников обновлённых пассов
+  - `DELETE /v1/devices/:deviceLibraryId/registrations/:passTypeId/:serial` — отмена регистрации
+  - `POST /v1/passes/:passTypeId/:serial/log`, `POST /v1/log` — заглушки логирования
 - **Admin download** (JWT):
   - `GET /passes/:serial/download` — для админки
-- **Device registration** — таблица `wallet_device_registrations` + репозиторий (заглушка, для будущих APNs пушей)
+- **Device registration** — таблица `wallet_device_registrations` + репозиторий (upsert/delete/list — реализовано)
+- **APNs push-обновления** — `internal/usecase/wallet/apns.go`: token-based (.p8, ES256 JWT) отправка пустого пуша на `api.push.apple.com`. При изменении баланса (`RefreshPassBalance`) всем зарегистрированным устройствам пасса шлётся пуш → устройство подтягивает обновлённый pkpass. Конфиг: `apns_key` (base64/PEM .p8) + `apns_key_id` в credentials Apple-конфига (team_id/pass_type_id переиспользуются)
 - **Интеграция с loyalty** — `EarnPoints` / `SpendPoints` вызывают `RefreshPassBalance` (обновляет кешированный баланс в `wallet_passes`)
 
 ### Фронтенд
@@ -106,20 +110,16 @@ cd backend && go test ./internal/usecase/wallet/... -v -count=1
 2. Выпустить сертификат, скачать `.p12`
 3. `base64 -i certificate.p12 | pbcopy`
 4. В админке: заполнить Pass Type ID, Team ID, base64 сертификата
-5. Включить, сохранить
-6. Через API выпустить пасс клиенту
-7. Скачать `.pkpass` из админки → открыть на iPhone
+5. (Опционально, для push-обновлений баланса) создать APNs-ключ `.p8`, заполнить APNs Key ID + содержимое `.p8`
+6. Включить, сохранить
+7. Через API выпустить пасс клиенту
+8. Скачать `.pkpass` из админки → открыть на iPhone
+
+> WWDR-промежуточный сертификат добавлять не нужно — он вшит в код и подмешивается в подпись автоматически.
 
 ---
 
 ## Что не реализовано (deferred)
-
-### APNs Push-уведомления
-
-- При изменении баланса пушить на устройство через Apple Push Notification service
-- Требует: APNs-ключ (.p8) или отдельный APNs-сертификат
-- После пуша Apple вызывает `GET /v1/passes/:passTypeId/:serial` для обновления
-- Без пуша: пользователь обновляет карту pull-to-refresh в Wallet
 
 ### Google Wallet (partial — ~60%)
 

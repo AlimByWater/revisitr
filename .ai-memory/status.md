@@ -25,7 +25,7 @@ Last updated: 2026-06-17
 
 ## Known Incomplete / Stubs
 
-- **Wallet**: pass generation + RefreshPassBalance called from loyalty — done. ~60-70% overall. See `docs/wallet/README.md`
+- **Wallet**: Apple pkpass generation (signing bugs fixed), web service, device registration, APNs push updates (.p8) + RefreshPassBalance — done. Verified against real production `.p12` (WWDR G4 embedded + auto-chained, sslmate decoder for SHA-256-MAC .p12; signature verifies to Apple Root). ~95% overall. On-device verified: a pass generated from the production cert adds to Wallet on a real iPhone (2026-07-23). Note: `webServiceURL` MUST be HTTPS or iOS silently rejects the pass (won't recognize the file). APNs push not yet tested on-device. See `docs/wallet/README.md`
 - **Billing**: payment provider integration missing
 - **Marketplace**: bot interface + loyalty integration missing
 - **Campaigns+**: A/B statistics incomplete
