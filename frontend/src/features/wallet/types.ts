@@ -15,6 +15,7 @@ export interface WalletDesign {
   label_color?: string
   description?: string
   organization_name?: string
+  logo_text?: string
   web_service_url?: string
 }
 
