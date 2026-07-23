@@ -31,6 +31,7 @@ namespace Revisitr.IikoPlugin
 
             var processor = new RevisitrPaymentProcessor(apiClient);
             disposables.Add(processor);
+            disposables.Add(new ClosedOrderReporter(apiClient));
 
             try
             {

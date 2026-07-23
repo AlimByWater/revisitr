@@ -44,10 +44,22 @@ export interface UpdateIntegrationRequest {
   status?: string
 }
 
+export interface SyncResult {
+  orders_synced: number
+  menu: {
+    added: number
+    updated: number
+    missing: number
+  }
+}
+
 export interface ExternalOrder {
   id: number
   integration_id: number
   external_id: string
+  source: 'delivery' | 'hall'
+  table_num?: string
+  waiter_name?: string
   client_id?: number
   items: OrderItem[]
   total: number

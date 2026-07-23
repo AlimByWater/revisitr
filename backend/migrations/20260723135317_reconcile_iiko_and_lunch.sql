@@ -1,7 +1,44 @@
 -- +goose Up
 -- +goose StatementBegin
 
-CREATE TABLE lunch_programs (
+-- dev previously used version 48 for lunch while main used it for iiko menu
+-- overrides. Reconcile both schemas under a unique timestamp version.
+ALTER TABLE menu_categories
+    ADD COLUMN IF NOT EXISTS pos_external_id VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS pos_name VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS display_name VARCHAR(255);
+
+ALTER TABLE menu_items
+    ADD COLUMN IF NOT EXISTS pos_name VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS pos_description TEXT,
+    ADD COLUMN IF NOT EXISTS pos_image_url VARCHAR(500),
+    ADD COLUMN IF NOT EXISTS pos_category_name VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS display_name VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS missing_in_pos BOOLEAN NOT NULL DEFAULT false;
+
+UPDATE menu_categories
+SET pos_name = name
+WHERE pos_name IS NULL;
+
+UPDATE menu_items
+SET pos_name = name
+WHERE external_id IS NOT NULL AND pos_name IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_menu_categories_pos_external_id
+    ON menu_categories(menu_id, pos_external_id)
+    WHERE pos_external_id IS NOT NULL;
+
+ALTER TABLE external_orders
+    ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'delivery',
+    ADD COLUMN IF NOT EXISTS table_num VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS waiter_name VARCHAR(255);
+
+UPDATE external_orders SET source = 'delivery' WHERE source = 'cloud';
+
+CREATE INDEX IF NOT EXISTS idx_external_orders_source
+    ON external_orders(integration_id, source, ordered_at DESC);
+
+CREATE TABLE IF NOT EXISTS lunch_programs (
     id          SERIAL PRIMARY KEY,
     bot_id      INT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
     name        VARCHAR(255) NOT NULL DEFAULT 'Бизнес-ланч',
@@ -12,7 +49,7 @@ CREATE TABLE lunch_programs (
     UNIQUE (bot_id)
 );
 
-CREATE TABLE lunch_courses (
+CREATE TABLE IF NOT EXISTS lunch_courses (
     id               SERIAL PRIMARY KEY,
     program_id       INT NOT NULL REFERENCES lunch_programs(id) ON DELETE CASCADE,
     code             VARCHAR(8) NOT NULL,
@@ -22,16 +59,16 @@ CREATE TABLE lunch_courses (
     UNIQUE (program_id, code)
 );
 
-CREATE INDEX idx_lunch_courses_program ON lunch_courses(program_id);
+CREATE INDEX IF NOT EXISTS idx_lunch_courses_program ON lunch_courses(program_id);
 
-CREATE TABLE lunch_course_items (
+CREATE TABLE IF NOT EXISTS lunch_course_items (
     course_id    INT NOT NULL REFERENCES lunch_courses(id) ON DELETE CASCADE,
     menu_item_id INT NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
     surcharge    NUMERIC(10,2) NOT NULL DEFAULT 0,
     PRIMARY KEY (course_id, menu_item_id)
 );
 
-CREATE TABLE lunch_formats (
+CREATE TABLE IF NOT EXISTS lunch_formats (
     id         SERIAL PRIMARY KEY,
     program_id INT NOT NULL REFERENCES lunch_programs(id) ON DELETE CASCADE,
     name       VARCHAR(255) NOT NULL,
@@ -42,27 +79,27 @@ CREATE TABLE lunch_formats (
     sort_order INT NOT NULL DEFAULT 0
 );
 
-CREATE INDEX idx_lunch_formats_program ON lunch_formats(program_id);
+CREATE INDEX IF NOT EXISTS idx_lunch_formats_program ON lunch_formats(program_id);
 
-CREATE TABLE lunch_format_courses (
+CREATE TABLE IF NOT EXISTS lunch_format_courses (
     format_id INT NOT NULL REFERENCES lunch_formats(id) ON DELETE CASCADE,
     course_id INT NOT NULL REFERENCES lunch_courses(id) ON DELETE CASCADE,
     position  INT NOT NULL DEFAULT 0,
     PRIMARY KEY (format_id, course_id)
 );
 
-CREATE TABLE lunch_availability (
+CREATE TABLE IF NOT EXISTS lunch_availability (
     id         SERIAL PRIMARY KEY,
     program_id INT NOT NULL REFERENCES lunch_programs(id) ON DELETE CASCADE,
-    weekday    SMALLINT NOT NULL CHECK (weekday BETWEEN 1 AND 7), -- ISO: 1 = понедельник
+    weekday    SMALLINT NOT NULL CHECK (weekday BETWEEN 1 AND 7),
     time_from  TIME NOT NULL,
     time_to    TIME NOT NULL,
     CHECK (time_from < time_to)
 );
 
-CREATE INDEX idx_lunch_availability_program ON lunch_availability(program_id);
+CREATE INDEX IF NOT EXISTS idx_lunch_availability_program ON lunch_availability(program_id);
 
-CREATE TABLE lunch_orders (
+CREATE TABLE IF NOT EXISTS lunch_orders (
     id            SERIAL PRIMARY KEY,
     bot_id        INT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
     bot_client_id INT NOT NULL REFERENCES bot_clients(id) ON DELETE CASCADE,
@@ -75,9 +112,9 @@ CREATE TABLE lunch_orders (
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_lunch_orders_bot_status ON lunch_orders(bot_id, status);
+CREATE INDEX IF NOT EXISTS idx_lunch_orders_bot_status ON lunch_orders(bot_id, status);
 
-CREATE TABLE lunch_order_items (
+CREATE TABLE IF NOT EXISTS lunch_order_items (
     id             SERIAL PRIMARY KEY,
     lunch_order_id INT NOT NULL REFERENCES lunch_orders(id) ON DELETE CASCADE,
     course_id      INT REFERENCES lunch_courses(id) ON DELETE SET NULL,
@@ -88,20 +125,10 @@ CREATE TABLE lunch_order_items (
     surcharge      NUMERIC(10,2) NOT NULL DEFAULT 0
 );
 
-CREATE INDEX idx_lunch_order_items_order ON lunch_order_items(lunch_order_id);
+CREATE INDEX IF NOT EXISTS idx_lunch_order_items_order ON lunch_order_items(lunch_order_id);
 
 -- +goose StatementEnd
 
 -- +goose Down
--- +goose StatementBegin
-
-DROP TABLE IF EXISTS lunch_order_items;
-DROP TABLE IF EXISTS lunch_orders;
-DROP TABLE IF EXISTS lunch_availability;
-DROP TABLE IF EXISTS lunch_format_courses;
-DROP TABLE IF EXISTS lunch_formats;
-DROP TABLE IF EXISTS lunch_course_items;
-DROP TABLE IF EXISTS lunch_courses;
-DROP TABLE IF EXISTS lunch_programs;
-
--- +goose StatementEnd
+-- Repair migration intentionally has no destructive rollback.
+SELECT 1;

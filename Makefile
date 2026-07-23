@@ -29,6 +29,7 @@ migrate-status:
 	cd backend && goose -dir migrations postgres "$$DATABASE_URL" status
 
 migrate-create:
+	@test -n "$(name)" || (echo "Usage: make migrate-create name=description" && exit 1)
 	cd backend && goose -dir migrations create $(name) sql
 
 # ─── Quality ─────────────────────────────────────────────────

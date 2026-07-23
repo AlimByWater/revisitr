@@ -25,7 +25,8 @@ type clientsRepo interface {
 
 type menusRepo interface {
 	GetByOrgAndIntegration(ctx context.Context, orgID, integrationID int) (*entity.Menu, error)
-	UpsertFromPOS(ctx context.Context, integrationID, orgID int, posMenu *POSMenu) error
+	GetFullMenu(ctx context.Context, menuID int) (*entity.Menu, error)
+	UpsertFromPOS(ctx context.Context, integrationID, orgID int, posMenu *POSMenu) (SyncMenuResult, error)
 }
 
 // SyncService orchestrates POS data synchronisation using provider adapters.
@@ -131,19 +132,30 @@ func (s *SyncService) GetMenu(ctx context.Context, integration *entity.Integrati
 	return provider.GetMenu(ctx)
 }
 
-// Sync syncs orders from a single integration.
-func (s *SyncService) Sync(ctx context.Context, integration *entity.Integration) error {
+func (s *SyncService) GetImportedMenu(ctx context.Context, integration *entity.Integration) (*entity.Menu, error) {
+	if s.menus == nil {
+		return nil, nil
+	}
+	menu, err := s.menus.GetByOrgAndIntegration(ctx, integration.OrgID, integration.ID)
+	if err != nil || menu == nil {
+		return menu, err
+	}
+	return s.menus.GetFullMenu(ctx, menu.ID)
+}
+
+// Sync syncs orders and menu data from a single integration.
+func (s *SyncService) Sync(ctx context.Context, integration *entity.Integration) (*SyncResult, error) {
 	provider, err := NewProvider(integration)
 	if err != nil {
-		return fmt.Errorf("create provider: %w", err)
+		return nil, fmt.Errorf("create provider: %w", err)
 	}
 
 	if err := provider.TestConnection(ctx); err != nil {
 		s.integrations.UpdateLastSync(ctx, integration.ID, "error")
-		return fmt.Errorf("test connection: %w", err)
+		return nil, fmt.Errorf("test connection: %w", err)
 	}
 
-	since := time.Now().Add(-30 * 24 * time.Hour) // initial sync: 30 days
+	since := time.Now().Add(-30 * 24 * time.Hour)
 	if integration.LastSyncAt != nil {
 		since = *integration.LastSyncAt
 	}
@@ -151,18 +163,18 @@ func (s *SyncService) Sync(ctx context.Context, integration *entity.Integration)
 	orders, err := provider.GetOrders(ctx, since, time.Now())
 	if err != nil {
 		s.integrations.UpdateLastSync(ctx, integration.ID, "error")
-		return fmt.Errorf("get orders: %w", err)
+		return nil, fmt.Errorf("get orders: %w", err)
 	}
 
 	for _, order := range orders {
 		extOrder := &entity.ExternalOrder{
 			IntegrationID: integration.ID,
 			ExternalID:    order.ExternalID,
+			Source:        "delivery",
 			Items:         toEntityItems(order.Items),
 			Total:         order.Total,
 			OrderedAt:     &order.OrderedAt,
 		}
-
 		if order.CustomerPhone != "" {
 			phone := order.CustomerPhone
 			extOrder.CustomerPhone = &phone
@@ -172,45 +184,43 @@ func (s *SyncService) Sync(ctx context.Context, integration *entity.Integration)
 				}
 			}
 		}
-
 		if err := s.integrations.UpsertOrder(ctx, extOrder); err != nil {
 			s.logger.Error("upsert order", "error", err, "external_id", order.ExternalID)
 		}
 	}
 
 	s.integrations.UpdateLastSync(ctx, integration.ID, "active")
-	s.logger.Info("sync completed", "integration_id", integration.ID, "orders_synced", len(orders))
-
-	// Auto-import menu from POS if menus repo is configured.
+	result := &SyncResult{OrdersSynced: len(orders)}
 	if s.menus != nil {
-		if err := s.syncMenu(ctx, provider, integration); err != nil {
+		menuResult, err := s.syncMenu(ctx, provider, integration)
+		if err != nil {
 			s.logger.Error("menu sync failed", "error", err, "integration_id", integration.ID)
-			// Menu sync failure is non-fatal; orders were already synced successfully.
+		} else {
+			result.Menu = menuResult
 		}
 	}
 
-	return nil
+	s.logger.Info("sync completed", "integration_id", integration.ID, "orders_synced", result.OrdersSynced)
+	return result, nil
 }
 
 // syncMenu fetches the menu from the POS provider and upserts it into the database.
-func (s *SyncService) syncMenu(ctx context.Context, provider POSProvider, integration *entity.Integration) error {
+func (s *SyncService) syncMenu(ctx context.Context, provider POSProvider, integration *entity.Integration) (SyncMenuResult, error) {
 	posMenu, err := provider.GetMenu(ctx)
 	if err != nil {
-		return fmt.Errorf("get menu: %w", err)
+		return SyncMenuResult{}, fmt.Errorf("get menu: %w", err)
 	}
 	if posMenu == nil || len(posMenu.Categories) == 0 {
-		return nil
+		return SyncMenuResult{}, nil
 	}
 
-	if err := s.menus.UpsertFromPOS(ctx, integration.ID, integration.OrgID, posMenu); err != nil {
-		return fmt.Errorf("upsert menu: %w", err)
+	result, err := s.menus.UpsertFromPOS(ctx, integration.ID, integration.OrgID, posMenu)
+	if err != nil {
+		return SyncMenuResult{}, fmt.Errorf("upsert menu: %w", err)
 	}
 
-	s.logger.Info("menu synced",
-		"integration_id", integration.ID,
-		"categories", len(posMenu.Categories),
-	)
-	return nil
+	s.logger.Info("menu synced", "integration_id", integration.ID, "categories", len(posMenu.Categories), "added", result.Added, "updated", result.Updated, "missing", result.Missing)
+	return result, nil
 }
 
 // SyncAggregates syncs daily aggregates and client phone mappings from a POS provider.
@@ -277,7 +287,7 @@ func (s *SyncService) SyncAll(ctx context.Context) error {
 	}
 
 	for i := range intgs {
-		if err := s.Sync(ctx, &intgs[i]); err != nil {
+		if _, err := s.Sync(ctx, &intgs[i]); err != nil {
 			s.logger.Error("sync failed", "integration_id", intgs[i].ID, "type", intgs[i].Type, "error", err)
 			continue
 		}

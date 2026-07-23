@@ -17,30 +17,39 @@ type Menu struct {
 }
 
 type MenuCategory struct {
-	ID           int        `db:"id"             json:"id"`
-	MenuID       int        `db:"menu_id"        json:"menu_id"`
-	Name         string     `db:"name"           json:"name"`
-	IconEmoji    *string    `db:"icon_emoji"     json:"icon_emoji,omitempty"`
-	IconImageURL *string    `db:"icon_image_url" json:"icon_image_url,omitempty"`
-	SortOrder    int        `db:"sort_order"     json:"sort_order"`
-	CreatedAt    time.Time  `db:"created_at"     json:"created_at"`
-	Items        []MenuItem `db:"-"              json:"items,omitempty"`
+	ID            int        `db:"id"               json:"id"`
+	MenuID        int        `db:"menu_id"          json:"menu_id"`
+	Name          string     `db:"name"             json:"name"`
+	POSExternalID *string    `db:"pos_external_id"  json:"pos_external_id,omitempty"`
+	POSName       *string    `db:"pos_name"         json:"pos_name,omitempty"`
+	DisplayName   *string    `db:"display_name"     json:"display_name,omitempty"`
+	IconEmoji     *string    `db:"icon_emoji"       json:"icon_emoji,omitempty"`
+	IconImageURL  *string    `db:"icon_image_url"   json:"icon_image_url,omitempty"`
+	SortOrder     int        `db:"sort_order"       json:"sort_order"`
+	CreatedAt     time.Time  `db:"created_at"       json:"created_at"`
+	Items         []MenuItem `db:"-"                json:"items,omitempty"`
 }
 
 type MenuItem struct {
-	ID          int       `db:"id"           json:"id"`
-	CategoryID  int       `db:"category_id"  json:"category_id"`
-	Name        string    `db:"name"         json:"name"`
-	Description *string   `db:"description"  json:"description,omitempty"`
-	Price       float64   `db:"price"        json:"price"`
-	Weight      *string   `db:"weight"       json:"weight,omitempty"`
-	ImageURL    *string   `db:"image_url"    json:"image_url,omitempty"`
-	Tags        Tags      `db:"tags"         json:"tags"`
-	ExternalID  *string   `db:"external_id"  json:"external_id,omitempty"`
-	IsAvailable bool      `db:"is_available" json:"is_available"`
-	SortOrder   int       `db:"sort_order"   json:"sort_order"`
-	CreatedAt   time.Time `db:"created_at"   json:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at"   json:"updated_at"`
+	ID              int       `db:"id"                json:"id"`
+	CategoryID      int       `db:"category_id"       json:"category_id"`
+	Name            string    `db:"name"              json:"name"`
+	POSName         *string   `db:"pos_name"          json:"pos_name,omitempty"`
+	POSDescription  *string   `db:"pos_description"   json:"pos_description,omitempty"`
+	POSImageURL     *string   `db:"pos_image_url"     json:"pos_image_url,omitempty"`
+	POSCategoryName *string   `db:"pos_category_name" json:"pos_category_name,omitempty"`
+	DisplayName     *string   `db:"display_name"      json:"display_name,omitempty"`
+	Description     *string   `db:"description"       json:"description,omitempty"`
+	Price           float64   `db:"price"             json:"price"`
+	Weight          *string   `db:"weight"            json:"weight,omitempty"`
+	ImageURL        *string   `db:"image_url"         json:"image_url,omitempty"`
+	Tags            Tags      `db:"tags"              json:"tags"`
+	ExternalID      *string   `db:"external_id"       json:"external_id,omitempty"`
+	IsAvailable     bool      `db:"is_available"      json:"is_available"`
+	MissingInPOS    bool      `db:"missing_in_pos"    json:"missing_in_pos"`
+	SortOrder       int       `db:"sort_order"        json:"sort_order"`
+	CreatedAt       time.Time `db:"created_at"        json:"created_at"`
+	UpdatedAt       time.Time `db:"updated_at"        json:"updated_at"`
 }
 
 type MenuPOSBinding struct {
@@ -75,6 +84,7 @@ type CreateMenuCategoryRequest struct {
 
 type UpdateMenuCategoryRequest struct {
 	Name         *string `json:"name,omitempty"`
+	DisplayName  *string `json:"display_name,omitempty"`
 	IconEmoji    *string `json:"icon_emoji,omitempty"`
 	IconImageURL *string `json:"icon_image_url,omitempty"`
 	SortOrder    *int    `json:"sort_order,omitempty"`
@@ -91,6 +101,7 @@ type CreateMenuItemRequest struct {
 
 type UpdateMenuItemRequest struct {
 	Name        *string  `json:"name,omitempty"`
+	DisplayName *string  `json:"display_name,omitempty"`
 	Description *string  `json:"description,omitempty"`
 	Price       *float64 `json:"price,omitempty"`
 	Weight      *string  `json:"weight,omitempty"`

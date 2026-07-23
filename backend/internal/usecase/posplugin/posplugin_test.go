@@ -53,11 +53,11 @@ func (m *mockClients) GetByID(ctx context.Context, orgID, clientID int) (*entity
 }
 
 type mockKeys struct {
-	create           func(ctx context.Context, k *entity.PluginKey) error
-	getActiveByHash  func(ctx context.Context, hash string) (*entity.PluginKey, error)
+	create            func(ctx context.Context, k *entity.PluginKey) error
+	getActiveByHash   func(ctx context.Context, hash string) (*entity.PluginKey, error)
 	listByIntegration func(ctx context.Context, integrationID int) ([]entity.PluginKey, error)
-	touchLastUsed    func(ctx context.Context, id int) error
-	revoke           func(ctx context.Context, id, orgID int) error
+	touchLastUsed     func(ctx context.Context, id int) error
+	revoke            func(ctx context.Context, id, orgID int) error
 }
 
 func (m *mockKeys) Create(ctx context.Context, k *entity.PluginKey) error {
@@ -109,6 +109,10 @@ type mockIntegrations struct {
 
 func (m *mockIntegrations) GetByID(ctx context.Context, id int) (*entity.Integration, error) {
 	return m.getByID(ctx, id)
+}
+
+func (m *mockIntegrations) UpsertOrder(context.Context, *entity.ExternalOrder) error {
+	return nil
 }
 
 // mockNotifier records PublishNotifyClient calls and can return a canned error.

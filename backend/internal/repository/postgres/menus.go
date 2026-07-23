@@ -147,96 +147,76 @@ func (r *Menus) GetByOrgAndIntegration(ctx context.Context, orgID, integrationID
 	return &m, nil
 }
 
-// UpsertFromPOS creates or updates a menu from POS provider data.
-// It only overwrites name and price for existing items, preserving
-// manually edited description, tags, and image_url fields.
-func (r *Menus) UpsertFromPOS(ctx context.Context, integrationID, orgID int, posMenu *posService.POSMenu) error {
+// UpsertFromPOS updates POS source fields only. Manual display and marketing
+// category changes remain owned by the venue.
+func (r *Menus) UpsertFromPOS(ctx context.Context, integrationID, orgID int, posMenu *posService.POSMenu) (posService.SyncMenuResult, error) {
+	result := posService.SyncMenuResult{}
 	tx, err := r.pg.DB().BeginTxx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("menus.UpsertFromPOS begin: %w", err)
+		return result, fmt.Errorf("menus.UpsertFromPOS begin: %w", err)
 	}
 	defer tx.Rollback()
 
-	// Find or create the POS-imported menu for this integration.
 	var menuID int
-	err = tx.QueryRowContext(ctx,
-		"SELECT id FROM menus WHERE org_id = $1 AND integration_id = $2 AND source = 'pos_import' LIMIT 1",
-		orgID, integrationID).Scan(&menuID)
+	err = tx.QueryRowContext(ctx, "SELECT id FROM menus WHERE org_id = $1 AND integration_id = $2 AND source = 'pos_import' LIMIT 1", orgID, integrationID).Scan(&menuID)
 	if err == sql.ErrNoRows {
-		err = tx.QueryRowContext(ctx,
-			`INSERT INTO menus (org_id, integration_id, name, source)
-			 VALUES ($1, $2, $3, 'pos_import')
-			 RETURNING id`,
-			orgID, integrationID, "POS Menu").Scan(&menuID)
-		if err != nil {
-			return fmt.Errorf("menus.UpsertFromPOS create menu: %w", err)
-		}
-	} else if err != nil {
-		return fmt.Errorf("menus.UpsertFromPOS find menu: %w", err)
+		err = tx.QueryRowContext(ctx, `INSERT INTO menus (org_id, integration_id, name, source) VALUES ($1, $2, $3, 'pos_import') RETURNING id`, orgID, integrationID, "POS Menu").Scan(&menuID)
+	}
+	if err != nil {
+		return result, fmt.Errorf("menus.UpsertFromPOS menu: %w", err)
 	}
 
-	for catIdx, posCat := range posMenu.Categories {
-		// Find or create category by name within this menu.
-		var catID int
-		err = tx.QueryRowContext(ctx,
-			"SELECT id FROM menu_categories WHERE menu_id = $1 AND name = $2 LIMIT 1",
-			menuID, posCat.Name).Scan(&catID)
+	if _, err := tx.ExecContext(ctx, `UPDATE menu_items mi SET missing_in_pos = true
+		FROM menu_categories mc WHERE mi.category_id = mc.id AND mc.menu_id = $1 AND mi.external_id IS NOT NULL`, menuID); err != nil {
+		return result, fmt.Errorf("menus.UpsertFromPOS mark missing: %w", err)
+	}
+
+	for categoryIndex, posCategory := range posMenu.Categories {
+		var categoryID int
+		err = tx.QueryRowContext(ctx, `SELECT id FROM menu_categories WHERE menu_id = $1 AND pos_external_id = $2`, menuID, posCategory.ExternalID).Scan(&categoryID)
 		if err == sql.ErrNoRows {
-			err = tx.QueryRowContext(ctx,
-				`INSERT INTO menu_categories (menu_id, name, sort_order)
-					 VALUES ($1, $2, $3) RETURNING id`,
-				menuID, posCat.Name, catIdx).Scan(&catID)
-			if err != nil {
-				return fmt.Errorf("menus.UpsertFromPOS create category %q: %w", posCat.Name, err)
-			}
-		} else if err != nil {
-			return fmt.Errorf("menus.UpsertFromPOS find category: %w", err)
+			err = tx.QueryRowContext(ctx, `INSERT INTO menu_categories (menu_id, name, pos_external_id, pos_name, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING id`, menuID, posCategory.Name, posCategory.ExternalID, posCategory.Name, categoryIndex).Scan(&categoryID)
+		}
+		if err != nil {
+			return result, fmt.Errorf("menus.UpsertFromPOS category %q: %w", posCategory.Name, err)
 		}
 
-		for itemIdx, posItem := range posCat.Items {
+		for itemIndex, posItem := range posCategory.Items {
 			if posItem.ExternalID == "" {
 				continue
 			}
-			// Find existing item by external_id within this category's menu.
 			var itemID int
-			err = tx.QueryRowContext(ctx,
-				`SELECT mi.id FROM menu_items mi
-				 JOIN menu_categories mc ON mc.id = mi.category_id
-				 WHERE mc.menu_id = $1 AND mi.external_id = $2 LIMIT 1`,
-				menuID, posItem.ExternalID).Scan(&itemID)
-
+			err = tx.QueryRowContext(ctx, `SELECT mi.id FROM menu_items mi JOIN menu_categories mc ON mc.id = mi.category_id WHERE mc.menu_id = $1 AND mi.external_id = $2`, menuID, posItem.ExternalID).Scan(&itemID)
 			if err == sql.ErrNoRows {
-				// Create new item.
-				_, err = tx.ExecContext(ctx,
-					`INSERT INTO menu_items (category_id, name, price, external_id, sort_order, is_available)
-					 VALUES ($1, $2, $3, $4, $5, true)`,
-					catID, posItem.Name, posItem.Price, posItem.ExternalID, itemIdx)
-				if err != nil {
-					return fmt.Errorf("menus.UpsertFromPOS create item %q: %w", posItem.Name, err)
-				}
-			} else if err != nil {
-				return fmt.Errorf("menus.UpsertFromPOS find item: %w", err)
-			} else {
-				// Update only name and price; preserve description, tags, image_url.
-				_, err = tx.ExecContext(ctx,
-					`UPDATE menu_items SET name = $1, price = $2, category_id = $3, updated_at = NOW()
-					 WHERE id = $4`,
-					posItem.Name, posItem.Price, catID, itemID)
-				if err != nil {
-					return fmt.Errorf("menus.UpsertFromPOS update item %q: %w", posItem.Name, err)
-				}
+				_, err = tx.ExecContext(ctx, `INSERT INTO menu_items (category_id, name, pos_name, pos_description, pos_image_url, pos_category_name, description, image_url, price, external_id, sort_order, is_available) VALUES ($1, $2, $3, $4, $5, $6, $4, $5, $7, $8, $9, true)`, categoryID, posItem.Name, posItem.Name, nullableString(posItem.Description), nullableString(posItem.ImageURL), posCategory.Name, posItem.Price, posItem.ExternalID, itemIndex)
+				result.Added++
+			} else if err == nil {
+				_, err = tx.ExecContext(ctx, `UPDATE menu_items SET pos_name = $1, pos_description = $2, pos_image_url = $3, pos_category_name = $4, price = $5, image_url = COALESCE(image_url, $3), missing_in_pos = false, updated_at = NOW() WHERE id = $6`, posItem.Name, nullableString(posItem.Description), nullableString(posItem.ImageURL), posCategory.Name, posItem.Price, itemID)
+				result.Updated++
+			}
+			if err != nil {
+				return result, fmt.Errorf("menus.UpsertFromPOS item %q: %w", posItem.Name, err)
 			}
 		}
 	}
 
-	// Update last_synced_at on the menu.
-	_, err = tx.ExecContext(ctx,
-		"UPDATE menus SET last_synced_at = NOW(), updated_at = NOW() WHERE id = $1", menuID)
-	if err != nil {
-		return fmt.Errorf("menus.UpsertFromPOS update last_synced_at: %w", err)
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM menu_items mi JOIN menu_categories mc ON mc.id = mi.category_id WHERE mc.menu_id = $1 AND mi.missing_in_pos`, menuID).Scan(&result.Missing); err != nil {
+		return result, fmt.Errorf("menus.UpsertFromPOS count missing: %w", err)
 	}
+	if _, err := tx.ExecContext(ctx, "UPDATE menus SET last_synced_at = NOW(), updated_at = NOW() WHERE id = $1", menuID); err != nil {
+		return result, fmt.Errorf("menus.UpsertFromPOS update menu: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return result, fmt.Errorf("menus.UpsertFromPOS commit: %w", err)
+	}
+	return result, nil
+}
 
-	return tx.Commit()
+func nullableString(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }
 
 func (r *Menus) Update(ctx context.Context, m *entity.Menu) error {
@@ -307,9 +287,9 @@ func (r *Menus) GetCategory(ctx context.Context, id int) (*entity.MenuCategory, 
 func (r *Menus) UpdateCategory(ctx context.Context, category *entity.MenuCategory) error {
 	result, err := r.pg.DB().ExecContext(ctx, `
 		UPDATE menu_categories
-		SET name = $1, icon_emoji = $2, icon_image_url = $3, sort_order = $4
-		WHERE id = $5`,
-		category.Name, category.IconEmoji, category.IconImageURL, category.SortOrder, category.ID)
+		SET name = $1, display_name = $2, icon_emoji = $3, icon_image_url = $4, sort_order = $5
+		WHERE id = $6`,
+		category.Name, category.DisplayName, category.IconEmoji, category.IconImageURL, category.SortOrder, category.ID)
 	if err != nil {
 		return fmt.Errorf("menus.UpdateCategory: %w", err)
 	}
@@ -360,10 +340,10 @@ func (r *Menus) UpdateItem(ctx context.Context, item *entity.MenuItem) error {
 	tagsVal, _ := item.Tags.Value()
 	result, err := r.pg.DB().ExecContext(ctx, `
 		UPDATE menu_items
-		SET name = $1, description = $2, price = $3, weight = $4, image_url = $5,
-		    tags = $6, is_available = $7, sort_order = $8, updated_at = NOW()
-		WHERE id = $9`,
-		item.Name, item.Description, item.Price, item.Weight, item.ImageURL,
+		SET name = $1, display_name = $2, description = $3, price = $4, weight = $5, image_url = $6,
+		    tags = $7, is_available = $8, sort_order = $9, updated_at = NOW()
+		WHERE id = $10`,
+		item.Name, item.DisplayName, item.Description, item.Price, item.Weight, item.ImageURL,
 		tagsVal, item.IsAvailable, item.SortOrder, item.ID)
 	if err != nil {
 		return fmt.Errorf("menus.UpdateItem: %w", err)

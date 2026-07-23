@@ -163,7 +163,7 @@ func TestSync_Success(t *testing.T) {
 	}
 
 	svc := NewSyncService(intRepo, nil, syncLogger())
-	err := svc.Sync(context.Background(), mockIntegration(1))
+	_, err := svc.Sync(context.Background(), mockIntegration(1))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -192,7 +192,7 @@ func TestSync_WithPhoneMatch(t *testing.T) {
 	}
 
 	svc := NewSyncService(intRepo, cRepo, syncLogger())
-	err := svc.Sync(context.Background(), mockIntegration(1))
+	_, err := svc.Sync(context.Background(), mockIntegration(1))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -210,7 +210,7 @@ func TestSync_SubsequentUsesLastSyncAt(t *testing.T) {
 	intg := mockIntegration(1)
 	intg.LastSyncAt = &lastSync
 
-	err := svc.Sync(context.Background(), intg)
+	_, err := svc.Sync(context.Background(), intg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -229,7 +229,7 @@ func TestSync_UpsertOrderPartialFail(t *testing.T) {
 	}
 
 	svc := NewSyncService(intRepo, nil, syncLogger())
-	err := svc.Sync(context.Background(), mockIntegration(1))
+	_, err := svc.Sync(context.Background(), mockIntegration(1))
 	if err != nil {
 		t.Fatalf("partial upsert failure should not stop sync: %v", err)
 	}
@@ -344,7 +344,7 @@ func TestSyncAll_PartialFailure(t *testing.T) {
 		getActiveFn: func(_ context.Context) ([]entity.Integration, error) {
 			return []entity.Integration{
 				{ID: 1, OrgID: 10, Type: "nonexistent"}, // will fail
-				{ID: 2, OrgID: 10, Type: "mock"},         // should still sync
+				{ID: 2, OrgID: 10, Type: "mock"},        // should still sync
 			}, nil
 		},
 		upsertOrderFn: func(_ context.Context, _ *entity.ExternalOrder) error {

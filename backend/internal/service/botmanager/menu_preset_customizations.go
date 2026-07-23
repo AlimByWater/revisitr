@@ -22,13 +22,13 @@ type menuPresetCustomizations struct {
 }
 
 type menuPresetCategoryCustomization struct {
-	CategoryID        int                          `json:"category_id"`
-	Label             string                       `json:"label,omitempty"`
-	IconImageURL      string                       `json:"icon_image_url,omitempty"`
-	IconCustomEmojiID string                       `json:"icon_custom_emoji_id,omitempty"`
-	Style             string                       `json:"style,omitempty"`
-	EmojiOnly         bool                         `json:"emoji_only,omitempty"`
-	ItemOrder         []int                        `json:"item_order,omitempty"`
+	CategoryID        int                           `json:"category_id"`
+	Label             string                        `json:"label,omitempty"`
+	IconImageURL      string                        `json:"icon_image_url,omitempty"`
+	IconCustomEmojiID string                        `json:"icon_custom_emoji_id,omitempty"`
+	Style             string                        `json:"style,omitempty"`
+	EmojiOnly         bool                          `json:"emoji_only,omitempty"`
+	ItemOrder         []int                         `json:"item_order,omitempty"`
 	Items             []menuPresetItemCustomization `json:"items,omitempty"`
 }
 
@@ -255,7 +255,7 @@ func menuCategoryItemsTextWithDensity(category entity.MenuCategory, density stri
 			continue
 		}
 
-		line := item.Name + " — " + strings.TrimSpace(formatMenuPrice(item.Price))
+		line := menuItemDisplayName(item) + " — " + strings.TrimSpace(formatMenuPrice(item.Price))
 		if strings.TrimSpace(density) != menuListDensityCompact && item.Weight != nil && *item.Weight != "" {
 			line += " • " + strings.TrimSpace(*item.Weight)
 		}

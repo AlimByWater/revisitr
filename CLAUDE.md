@@ -129,7 +129,7 @@ tuna http 9722 --basic-auth="login:password"
 - **Go**: стандартный Go-стиль, slog для логирования, явный DI (без фреймворков)
 - **Frontend**: file-based routing (TanStack Router), feature-based организация
 - **API**: RESTful, JSON, префикс `/api/v1/`
-- **Миграции**: goose, формат `YYYYMMDDHHMMSS_description.sql`
+- **Миграции**: goose, новые файлы только `YYYYMMDDHHMMSS_description.sql` через `make migrate-create name=description`; старые numeric migration IDs не переименовывать
 - **Коммиты**: conventional commits (feat/fix/refactor/docs/chore)
 - **Ветки**: feature branches → PR → main
 

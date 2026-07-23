@@ -138,7 +138,7 @@ func buildCategoryItemRows(categoryID int, items []entity.MenuItem) [][]entity.I
 		}
 
 		current = append(current, entity.InlineButton{
-			Text: item.Name,
+			Text: menuItemDisplayName(item),
 			Data: callbackMenuCardPref + strconv.Itoa(item.ID) + ":" + strconv.Itoa(categoryID),
 		})
 
@@ -153,6 +153,13 @@ func buildCategoryItemRows(categoryID int, items []entity.MenuItem) [][]entity.I
 	}
 
 	return rows
+}
+
+func menuItemDisplayName(item entity.MenuItem) string {
+	if item.DisplayName != nil && *item.DisplayName != "" {
+		return *item.DisplayName
+	}
+	return item.Name
 }
 
 func buildMenuListCategoryRows(categories []menuCategoryPresentation) [][]entity.InlineButton {
@@ -339,7 +346,7 @@ func (h *handler) sendCarouselItem(ctx context.Context, chatID int64, items []ca
 func formatMenuItemCardText(heading string, item entity.MenuItem) string {
 	lines := []string{
 		"/// " + html.EscapeString(heading),
-		"<b>" + html.EscapeString(item.Name) + " — " + formatMenuPrice(item.Price) + "</b>",
+		"<b>" + html.EscapeString(menuItemDisplayName(item)) + " — " + formatMenuPrice(item.Price) + "</b>",
 	}
 	if item.Weight != nil && strings.TrimSpace(*item.Weight) != "" {
 		lines = append(lines, "<i>"+html.EscapeString(strings.TrimSpace(*item.Weight))+"</i>")

@@ -14,13 +14,13 @@ import (
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 type mockIntegrationsRepo struct {
-	createFn        func(ctx context.Context, intg *entity.Integration) error
-	getByIDFn       func(ctx context.Context, id int) (*entity.Integration, error)
-	getByOrgIDFn    func(ctx context.Context, orgID int) ([]entity.Integration, error)
-	updateFn        func(ctx context.Context, intg *entity.Integration) error
-	deleteFn        func(ctx context.Context, id int) error
+	createFn         func(ctx context.Context, intg *entity.Integration) error
+	getByIDFn        func(ctx context.Context, id int) (*entity.Integration, error)
+	getByOrgIDFn     func(ctx context.Context, orgID int) ([]entity.Integration, error)
+	updateFn         func(ctx context.Context, intg *entity.Integration) error
+	deleteFn         func(ctx context.Context, id int) error
 	updateLastSyncFn func(ctx context.Context, id int, status string) error
-	upsertOrderFn   func(ctx context.Context, order *entity.ExternalOrder) error
+	upsertOrderFn    func(ctx context.Context, order *entity.ExternalOrder) error
 }
 
 func (m *mockIntegrationsRepo) Create(ctx context.Context, intg *entity.Integration) error {
@@ -61,10 +61,13 @@ func (m *mockIntegrationsRepo) GetDashboardAggregates(_ context.Context, _ int, 
 }
 
 type mockSyncService struct {
-	syncFn func(ctx context.Context, integration *entity.Integration) error
+	syncFn func(ctx context.Context, integration *entity.Integration) (*posService.SyncResult, error)
 }
 
-func (m *mockSyncService) Sync(ctx context.Context, integration *entity.Integration) error {
+func (m *mockSyncService) Sync(ctx context.Context, integration *entity.Integration) (*posService.SyncResult, error) {
+	if m.syncFn == nil {
+		return &posService.SyncResult{}, nil
+	}
 	return m.syncFn(ctx, integration)
 }
 func (m *mockSyncService) TestConnection(_ context.Context, _ *entity.Integration) error {
@@ -74,6 +77,9 @@ func (m *mockSyncService) Discover(_ context.Context, _ string, _ entity.Integra
 	return &posService.POSDiscovery{}, nil
 }
 func (m *mockSyncService) GetCustomers(_ context.Context, _ *entity.Integration, _ posService.CustomerListOpts) ([]posService.POSCustomer, error) {
+	return nil, nil
+}
+func (m *mockSyncService) GetImportedMenu(_ context.Context, _ *entity.Integration) (*entity.Menu, error) {
 	return nil, nil
 }
 func (m *mockSyncService) GetMenu(_ context.Context, _ *entity.Integration) (*posService.POSMenu, error) {
@@ -149,14 +155,14 @@ func TestSyncNow_CallsSyncService(t *testing.T) {
 		},
 	}
 	syncSvc := &mockSyncService{
-		syncFn: func(_ context.Context, _ *entity.Integration) error {
+		syncFn: func(_ context.Context, _ *entity.Integration) (*posService.SyncResult, error) {
 			syncCalled = true
-			return nil
+			return &posService.SyncResult{}, nil
 		},
 	}
 	uc := New(repo, syncSvc)
 
-	if err := uc.SyncNow(context.Background(), 1, 1); err != nil {
+	if _, err := uc.SyncNow(context.Background(), 1, 1); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if !syncCalled {

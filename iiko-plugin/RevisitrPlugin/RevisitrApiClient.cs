@@ -48,6 +48,8 @@ namespace Revisitr.IikoPlugin
     {
         private readonly HttpClient http;
         private readonly JavaScriptSerializer json = new JavaScriptSerializer();
+        // The payment processor and closed-order reporter use one client concurrently.
+        private readonly object jsonSync = new object();
 
         public RevisitrApiClient(PluginSettings settings)
         {
@@ -109,9 +111,17 @@ namespace Revisitr.IikoPlugin
             return new OpResult { BalanceAfter = Dec(resp, "balance_after"), Accrued = Dec(resp, "accrued") };
         }
 
+        /// <summary>Best-effort report of an order closed in iikoFront.</summary>
+        public void ReportClosedOrder(Dictionary<string, object> order)
+        {
+            Post("api/v1/pos-plugin/order", order);
+        }
+
         private Dictionary<string, object> Post(string path, Dictionary<string, object> body)
         {
-            var payload = json.Serialize(body);
+            string payload;
+            lock (jsonSync)
+                payload = json.Serialize(body);
             using (var content = new StringContent(payload, Encoding.UTF8, "application/json"))
             using (var resp = http.PostAsync(path, content).GetAwaiter().GetResult())
             {
@@ -126,7 +136,8 @@ namespace Revisitr.IikoPlugin
         {
             if (string.IsNullOrEmpty(text))
                 return new Dictionary<string, object>();
-            return json.Deserialize<Dictionary<string, object>>(text) ?? new Dictionary<string, object>();
+            lock (jsonSync)
+                return json.Deserialize<Dictionary<string, object>>(text) ?? new Dictionary<string, object>();
         }
 
         private string ExtractError(string text)

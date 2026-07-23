@@ -536,7 +536,7 @@ func (h *handler) handleMenuCategoryCallback(ctx context.Context, chatID int64, 
 	var buttons [][]entity.InlineButton
 	for _, item := range category.Category.Items[start:end] {
 		buttons = append(buttons, []entity.InlineButton{{
-			Text: item.Name,
+			Text: menuItemDisplayName(item),
 			Data: callbackMenuItemPref + strconv.Itoa(item.ID) + ":" + strconv.Itoa(categoryID) + ":" + strconv.Itoa(page),
 		}})
 	}

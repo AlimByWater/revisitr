@@ -9,10 +9,11 @@ import type {
   IntegrationClient,
   IntegrationStats,
   POSCustomer,
-  POSMenu,
   POSDiscovery,
   PaginatedResponse,
+  SyncResult,
 } from './types'
+import type { Menu } from '@/features/menus/types'
 
 export const integrationsApi = {
   list: async (): Promise<Integration[]> => {
@@ -50,8 +51,9 @@ export const integrationsApi = {
     await api.delete(`/integrations/${id}`)
   },
 
-  sync: async (id: number): Promise<void> => {
-    await api.post(`/integrations/${id}/sync`)
+  sync: async (id: number): Promise<SyncResult> => {
+    const response = await api.post<SyncResult>(`/integrations/${id}/sync`)
+    return response.data
   },
 
   testConnection: async (id: number): Promise<void> => {
@@ -95,8 +97,8 @@ export const integrationsApi = {
     return response.data
   },
 
-  getMenu: async (id: number): Promise<POSMenu> => {
-    const response = await api.get<POSMenu>(`/integrations/${id}/menu`)
+  getMenu: async (id: number): Promise<Menu | null> => {
+    const response = await api.get<Menu | null>(`/integrations/${id}/menu`)
     return response.data
   },
 
