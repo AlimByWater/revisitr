@@ -22,7 +22,7 @@ import (
 	"time"
 
 	qrcode "github.com/skip2/go-qrcode"
-	"golang.org/x/crypto/pkcs12"
+	pkcs12 "software.sslmate.com/src/go-pkcs12"
 
 	"revisitr/internal/entity"
 )
@@ -141,7 +141,7 @@ func (g *PassGenerator) GeneratePass(
 		password = pwd
 	}
 
-	privateKey, certificate, err := pkcs12.Decode(certData, password)
+	privateKey, certificate, caCerts, err := pkcs12.DecodeChain(certData, password)
 	if err != nil {
 		return nil, fmt.Errorf("pkcs12 decode: %w", err)
 	}
@@ -151,17 +151,18 @@ func (g *PassGenerator) GeneratePass(
 		return nil, fmt.Errorf("certificate private key is not RSA")
 	}
 
-	// Extract additional CA certificates from the PKCS12 bundle
-	var caCerts []*x509.Certificate
-	if pemBlocks, err := pkcs12.ToPEM(certData, password); err == nil {
-		for _, block := range pemBlocks {
-			if block.Type == "CERTIFICATE" {
-				if c, err := x509.ParseCertificate(block.Bytes); err == nil {
-					if !c.Equal(certificate) {
-						caCerts = append(caCerts, c)
-					}
-				}
+	// Ensure the Apple WWDR intermediate is in the signature chain — .p12 bundles
+	// frequently ship only the leaf, and Apple rejects passes without it.
+	if wwdr, err := appleWWDRCAG4(); err == nil {
+		present := false
+		for _, c := range caCerts {
+			if c.Equal(wwdr) {
+				present = true
+				break
 			}
+		}
+		if !present {
+			caCerts = append(caCerts, wwdr)
 		}
 	}
 
@@ -175,18 +176,17 @@ func (g *PassGenerator) GeneratePass(
 	manifest := map[string]string{}
 	manifest["pass.json"] = sha1Hex(passJSON)
 
-	// Add images
-	var iconData []byte
+	// Add images — fetch logo once so the manifest hash and the zipped bytes match.
+	var logoData []byte
 	if cfg.Design.LogoURL != "" {
-		logoData, err := fetchImage(cfg.Design.LogoURL)
-		if err == nil {
+		if data, err := fetchImage(cfg.Design.LogoURL); err == nil {
+			logoData = data
 			manifest["logo.png"] = sha1Hex(logoData)
-			_ = logoData // stored below
 		}
 	}
 
 	// Generate icon
-	iconData, err = g.generateIcon(cfg.Design.BackgroundColor)
+	iconData, err := g.generateIcon(cfg.Design.BackgroundColor)
 	if err != nil {
 		return nil, fmt.Errorf("generate icon: %w", err)
 	}
@@ -214,7 +214,7 @@ func (g *PassGenerator) GeneratePass(
 	}
 
 	// 5. Zip everything
-	return g.zipPass(passJSON, iconData, qrData, signature, cfg.Design.LogoURL)
+	return g.zipPass(passJSON, manifestJSON, iconData, qrData, logoData, signature)
 }
 
 func (g *PassGenerator) buildPassJSON(
@@ -292,31 +292,33 @@ func (g *PassGenerator) signManifest(manifestJSON []byte, key *rsa.PrivateKey, c
 		{Type: oidSigningTime, Values: []asn1.RawValue{{FullBytes: timeVal}}},
 	}
 
-	// DER-encode authenticated attributes (for signing)
-	aaDER, err := asn1.Marshal(struct {
-		Attrs []pkcs7Attribute `asn1:"set,implicit,tag:0"`
+	// DER-encode authenticated attributes for signing. Per RFC 5652 §5.4 the
+	// signature is computed over the attributes with an EXPLICIT SET OF tag
+	// (0x31), not the IMPLICIT [0] tag they carry inside SignerInfo.
+	wrapped, err := asn1.Marshal(struct {
+		Attrs []pkcs7Attribute `asn1:"set"`
 	}{Attrs: attrs})
 	if err != nil {
 		return nil, fmt.Errorf("marshal auth attrs: %w", err)
 	}
+	var aaRaw asn1.RawValue
+	if _, err := asn1.Unmarshal(wrapped, &aaRaw); err != nil {
+		return nil, fmt.Errorf("unwrap auth attrs: %w", err)
+	}
+	aaSetDER := aaRaw.Bytes // the SET OF encoding (0x31 ...)
 
-	// RSA-SHA1 sign the authenticated attributes DER
-	sig, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA1, aaDER)
+	// RSA-SHA1 sign the SHA-1 digest of the DER-encoded attributes.
+	aaHash := sha1.Sum(aaSetDER)
+	sig, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA1, aaHash[:])
 	if err != nil {
 		return nil, fmt.Errorf("rsa sign: %w", err)
 	}
 
-	// Build certificates SET
-	var certDERs []asn1.RawValue
+	// Build the certificates [0] IMPLICIT field: the concatenated certificate
+	// DER encodings, tagged as context-specific [0] (not a SEQUENCE/SET).
+	var certBytes []byte
 	for _, c := range certs {
-		certDERs = append(certDERs, asn1.RawValue{FullBytes: c.Raw})
-	}
-
-	certSet, err := asn1.Marshal(struct {
-		Certs []asn1.RawValue `asn1:"set"`
-	}{Certs: certDERs})
-	if err != nil {
-		return nil, fmt.Errorf("marshal cert set: %w", err)
+		certBytes = append(certBytes, c.Raw...)
 	}
 
 	issuerName := asn1.RawValue{FullBytes: certs[0].RawIssuer}
@@ -349,7 +351,7 @@ func (g *PassGenerator) signManifest(manifestJSON []byte, key *rsa.PrivateKey, c
 		ContentInfo: pkcs7ContentInfo{
 			ContentType: oidData,
 		},
-		Certificates: asn1.RawValue{FullBytes: certSet, Class: asn1.ClassContextSpecific, Tag: 0, IsCompound: true},
+		Certificates: asn1.RawValue{Class: asn1.ClassContextSpecific, Tag: 0, IsCompound: true, Bytes: certBytes},
 		SignerInfos:  []pkcs7SignerInfo{signerInfo},
 	}
 
@@ -358,58 +360,44 @@ func (g *PassGenerator) signManifest(manifestJSON []byte, key *rsa.PrivateKey, c
 		return nil, fmt.Errorf("marshal signedData: %w", err)
 	}
 
-	// Build top-level ContentInfo
+	// Build top-level ContentInfo. The SignedData is carried in a [0] EXPLICIT
+	// wrapper, so use Bytes (not FullBytes) to let the marshaler emit the tag.
 	ci := pkcs7ContentInfo{
 		ContentType: oidSignedData,
-		Content:     asn1.RawValue{FullBytes: sdDER, Class: asn1.ClassContextSpecific, Tag: 0, IsCompound: true},
+		Content:     asn1.RawValue{Class: asn1.ClassContextSpecific, Tag: 0, IsCompound: true, Bytes: sdDER},
 	}
 
 	return asn1.Marshal(ci)
 }
 
-func (g *PassGenerator) zipPass(passJSON, iconData, qrData, signature []byte, logoURL string) ([]byte, error) {
+func (g *PassGenerator) zipPass(passJSON, manifestJSON, iconData, qrData, logoData, signature []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
 
-	// pass.json
-	f, err := w.Create("pass.json")
-	if err != nil {
-		return nil, fmt.Errorf("zip pass.json: %w", err)
+	files := []struct {
+		name string
+		data []byte
+	}{
+		{"pass.json", passJSON},
+		{"manifest.json", manifestJSON},
+		{"signature", signature},
+		{"icon.png", iconData},
 	}
-	if _, err := f.Write(passJSON); err != nil {
-		return nil, fmt.Errorf("write pass.json: %w", err)
-	}
-
-	// icon.png
-	f, err = w.Create("icon.png")
-	if err != nil {
-		return nil, fmt.Errorf("zip icon.png: %w", err)
-	}
-	if _, err := f.Write(iconData); err != nil {
-		return nil, fmt.Errorf("write icon.png: %w", err)
+	if len(logoData) > 0 {
+		files = append(files, struct {
+			name string
+			data []byte
+		}{"logo.png", logoData})
 	}
 
-	// logo.png (if available)
-	if logoURL != "" {
-		logoData, err := fetchImage(logoURL)
-		if err == nil {
-			f, err = w.Create("logo.png")
-			if err != nil {
-				return nil, fmt.Errorf("zip logo.png: %w", err)
-			}
-			if _, err := f.Write(logoData); err != nil {
-				return nil, fmt.Errorf("write logo.png: %w", err)
-			}
+	for _, file := range files {
+		f, err := w.Create(file.name)
+		if err != nil {
+			return nil, fmt.Errorf("zip %s: %w", file.name, err)
 		}
-	}
-
-	// signature
-	f, err = w.Create("signature")
-	if err != nil {
-		return nil, fmt.Errorf("zip signature: %w", err)
-	}
-	if _, err := f.Write(signature); err != nil {
-		return nil, fmt.Errorf("write signature: %w", err)
+		if _, err := f.Write(file.data); err != nil {
+			return nil, fmt.Errorf("write %s: %w", file.name, err)
+		}
 	}
 
 	if err := w.Close(); err != nil {
